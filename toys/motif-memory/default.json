@@ -1,0 +1,67 @@
+{
+  "toy": "motif-memory",
+  "params": {
+    "bpm": 150,
+    "voices": {
+      "kick": {
+        "density": 0.29,
+        "rate": 1,
+        "fidelity": 1
+      },
+      "knock": {
+        "density": 0.45,
+        "rate": 2,
+        "fidelity": 1
+      },
+      "cowbell": {
+        "density": 0.5,
+        "rate": 4,
+        "fidelity": 1
+      },
+      "click": {
+        "density": 0.6,
+        "rate": 1,
+        "fidelity": 1
+      },
+      "hum": {
+        "density": 0.14,
+        "rate": 8,
+        "fidelity": 1
+      }
+    },
+    "strips": {
+      "kick": {
+        "gain": 0.75,
+        "mute": false,
+        "pan": 0
+      },
+      "knock": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "cowbell": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "click": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "hum": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      }
+    },
+    "seed": 1234567
+  },
+  "fx": {
+    "master": 0.9,
+    "drive": 0,
+    "glue": 0.65,
+    "reverb": 0.15
+  }
+}

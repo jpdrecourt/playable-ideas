@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>statistical-feedback</title>
+<meta name="description" content="Dice have no memory. Six voices and a silence share one pulse by keeping books: every option carries a running debt of attention, playing charges it, and the next turn goes to whoever is furthest behind. The ledger is on screen; turn it off and the same weights become dice.">
+<meta property="og:title" content="statistical-feedback — Playable Papers">
+<meta property="og:description" content="Charles Ames' statistical feedback, playable. Choice with a ledger: variety with balance, where weighted dice give you clumps and droughts and a fair rotation gives you a machine.">
+<meta property="og:image" content="https://play.noisewrangler.art/statistical-feedback/og.png">
+<meta property="og:url" content="https://play.noisewrangler.art/statistical-feedback/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Noise Wrangler">
+<link rel="alternate" type="text/markdown" href="spec.md" title="statistical-feedback — mechanism spec">
+<link rel="icon" href="../../lib/icon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../../lib/icon/favicon.ico" sizes="32x32">
+<link rel="icon" href="../../lib/icon/favicon-192.png" type="image/png" sizes="192x192">
+<link rel="icon" href="../../lib/icon/favicon-512.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="../../lib/icon/apple-touch-icon.png">
+<link rel="stylesheet" href="../../lib/lab.css">
+<script>
+/* ---- the stale-library guard, and why it is here rather than in the library ----
+   A browser holding a cached `lib/*.js` that no longer matches this file gets a
+   script that throws at its first statement and a `.wrap` that stays completely
+   empty: a blank black page, no message, nothing to act on. That is exactly
+   what a returning visitor sees after a deploy, and it is the failure that
+   looks most like the site being gone.
+
+   `Lab.page` makes the same check for the pieces it calls — but it cannot run
+   at all if `page.js` is itself the stale file, which is why this one is inline,
+   in the head, ahead of every library script, and depends on nothing.
+
+   Serve the collection with `Cache-Control: no-store` while developing. A fresh
+   port does NOT clear it: Chrome's heuristic freshness holds a file that carries
+   `Last-Modified` and no `Cache-Control`, which is what python's http.server
+   sends. */
+(function () {
+  var PARTS = ['audio', 'clock', 'voices', 'roll', 'ui', 'shell', 'page', 'state'];
+
+  function gone() {
+    if (!window.Lab) return ['Lab'];
+    var out = PARTS.filter(function (n) { return !window.Lab[n]; }).map(function (n) {
+      return 'Lab.' + n;
+    });
+    if (!out.length && window.Lab.page && window.Lab.page.missing) {
+      try { out = window.Lab.page.missing(); } catch (e) {}
+    }
+    return out;
+  }
+
+  function report(e) {
+    var w = document.querySelector('.wrap');
+    if (!w || w.children.length) return;
+    var missing = gone();
+    var p = document.createElement('p');
+    p.className = 'hint';
+    if (missing.length) {
+      p.innerHTML = 'This page needs a hard reload ' +
+        '(<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>): the browser is holding a ' +
+        'cached copy of the library that no longer matches it. Missing: ';
+      p.appendChild(document.createTextNode(missing.join(', ')));
+    } else {
+      p.textContent = 'This page did not start. The library is all here, so this is ' +
+        'the page\'s own error: ';
+      var c = document.createElement('code');
+      c.textContent = (e && (e.message || (e.error && e.error.message))) || 'no message';
+      p.appendChild(c);
+    }
+    w.appendChild(p);
+  }
+
+  /* Three ways a page fails to start, and three listeners. A throw at the top
+     level is an 'error'. A throw inside `Lab.state.open(...).then` — where a
+     page that opens on its default.json builds — is an unhandled REJECTION,
+     which 'error' never hears. And a library piece that is simply absent is
+     named at load. An empty .wrap at load is NOT evidence by itself: a page
+     that opens asynchronously is legitimately empty while its default is
+     fetched, so the load check reports only when `gone()` names a piece. */
+  addEventListener('error', report);
+  addEventListener('unhandledrejection', function (e) { report(e.reason); });
+  addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { if (gone().length) report(); }, 0);
+  });
+})();
+</script>
+<style>
+/* Toy-specifics only — everything else is the lab bench (lab.css) and the
+   composition (Lab.page).
+
+   Hue means "this option" and nothing else — the swatch in the rack, the
+   ledger bar beside it, and the lane in the record are the same colour
+   because they are three views of one option. Every control stays greyscale.
+   The ledger is not a control: it is the mechanism's own state, drawn, and it
+   wears the identity of the option whose debt it shows. Silence is a citizen
+   of the pool with no sound, so its row is the one grey one. */
+
+/* ---- the ledger cell ----
+   Centre-zero, one per row. Left of the line is a debt the machine owes this
+   option, right of it is credit it has already spent. `color` is set per row
+   to the voice's hue and the fill reads it, so one property carries identity
+   into every part of the cell. */
+.led { position: relative; width: 116px; height: 17px; flex: 0 0 auto;
+  background: #0a0b0f; border: 1px solid var(--line); border-radius: 4px; overflow: hidden }
+.led .lzero { position: absolute; left: 50%; top: 1px; bottom: 1px; width: 1px;
+  background: var(--line2) }
+.led .lfill { position: absolute; top: 2px; bottom: 2px; background: currentColor;
+  border-radius: 2px }
+/* the selection flash: this row is the one that just paid */
+.led .lflash { position: absolute; inset: 0; background: #fff; opacity: 0;
+  pointer-events: none }
+
+/* ---- tap to invoke ----
+   The name is a button because tapping it plays the voice and charges the
+   books. lab.css gives every button a 44 px floor on a coarse pointer, so
+   this target grows on a phone without a rule of its own. */
+.tapname { display: flex; align-items: center; gap: 6px; min-height: 32px;
+  padding: 4px 8px; background: transparent; border: 1px solid transparent;
+  border-radius: 6px; font: inherit; font-size: 11.5px; font-weight: 700;
+  color: var(--ink); white-space: nowrap; cursor: pointer }
+.tapname:hover { border-color: var(--line2) }
+.tapname:active { border-color: var(--accent); background: var(--panel2) }
+
+/* ---- the stress row ----
+   Eight bars, one pointer surface: a press picks the bar under the finger and
+   a drag paints the contour across all eight. `touch-action:none` because
+   every gesture here is a drag, and a vertical one — without it the page
+   scrolls instead. The bars are pointer-transparent so the strip owns the
+   gesture, and still focusable, so each is a slider for the keyboard. */
+.stress { display: flex; gap: 3px; align-items: stretch; height: 56px; padding: 3px;
+  width: 100%; max-width: 400px; min-width: 236px;
+  background: #0a0b0f; border: 1px solid var(--line2); border-radius: 6px;
+  touch-action: none; cursor: ns-resize }
+.sbar { position: relative; flex: 1 1 0; min-width: 0; border-radius: 3px;
+  background: #191c22; overflow: hidden; pointer-events: none }
+.sbar .sfill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--dim) }
+/* where the loop stands right now — the stress row doubles as the transport's
+   own eight-step readout, so the pattern is legible as a thing being played */
+.sbar.now { box-shadow: inset 0 0 0 1px var(--accent) }
+.sbar.now .sfill { background: var(--ink) }
+.sbar .snum { position: absolute; left: 0; right: 0; top: 2px; text-align: center;
+  font-size: 8.5px; color: var(--faint); mix-blend-mode: difference }
+.sbar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+@media (pointer: coarse) { .stress { height: 64px } }
+
+#record { height: 196px }
+</style>
+</head>
+<body>
+
+<!-- The page is a composition the library lays out: this toy declares its
+     master strip, its stage, its rack, its session controls and its keys, and
+     `Lab.page` puts them in the collection's order. There is nothing to write
+     here but the mount. -->
+<div class="wrap"></div>
+
+<script src="../../lib/audio.js"></script>
+<script src="../../lib/clock.js"></script>
+<script src="../../lib/voices.js"></script>
+<script src="../../lib/roll.js"></script>
+<script src="../../lib/ui.js"></script>
+<script src="../../lib/shell.js"></script>
+<script src="../../lib/page.js"></script>
+<script src="../../lib/state.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   statistical-feedback — choice with a ledger.
+
+   Charles Ames' statistical feedback: not "what are the odds of
+   this one now" but "who is furthest behind their fair share".
+   Every option — the six voices AND the silence — carries a
+   running debt of attention. Playing charges it, everyone takes
+   their weight-proportional share of that payment, and the next
+   turn goes to whoever the books say is owed most.
+
+   The whole experiment is one switch: the books are kept
+   identically whether or not selection reads them. Turn memory
+   off and the same weights become dice; the droughted voices go
+   on accumulating visible debt, and turning it back on pays
+   them at once.
+
+   Read spec.md for the mechanism in prose and pseudocode.
+   ============================================================ */
+
+/* ---- AMES BEGIN ----------------------------------------------------------
+   The mechanism, and nothing else: no audio, no DOM, no library, no clock of
+   its own. Everything between these two markers runs on plain numbers and an
+   injected source of randomness, which is what makes it testable in
+   isolation — lift the block into a bare script, feed it weights and a stress
+   value, and you have the paper's process with none of the page around it.
+
+   Every option m carries a WEIGHT W[m] (its long-run share, a live control)
+   and a STATISTIC S[m] (its running debt of attention). Each turn:
+
+       value(m) = S[m] + (A + H·U[m]) / W[m]      U ~ Uniform(-1,1), fresh
+       select the LOWEST value                     W[m] = 0 is out of the game
+
+   and the books are settled — the selected pays for its turn, everyone takes
+   their weight-proportional share of that payment:
+
+       S[m] += A
+       S[k] -= A · W[k] / ΣW              for every k with W[k] > 0
+
+   The two moves cancel exactly (the decrements sum to A), so ΣS stays 0
+   forever. An option at W = 0 is in neither loop, so its statistic FREEZES:
+   it waits, remembering, and re-enters with its old debt when its weight
+   returns. That is the whole answer to "how do I take a voice out" — no
+   removal rule, no redistribution, no forgetting.
+
+   S is a debt in TURNS: turns taken, less the turns this option's weight
+   entitled it to over the same stretch. That is what pins the long-run
+   shares to the weights, and it is the UPDATE that does it — the selection
+   rule cannot move them, whatever it reads.
+   ------------------------------------------------------------------------- */
+
+const AMES = {
+  /* The silence control's ceiling. W_sil = p/(1-p)·ΣW diverges as p → 1, and
+     a probability of exactly 1 is not a musical setting anyway — it is the
+     instrument switched off. */
+  P_MAX: 0.95,
+
+  /* TIE_EPS is not a rounding nicety. At H = 0 with equal weights every option
+     is exactly level at the end of each round, and a bare `<` then breaks that
+     tie on floating-point residue — which differs between engines, so the
+     clockwork would be a different rotation on a different browser. Treating
+     values within TIE_EPS as level and letting the lowest index win makes the
+     degenerate case exactly reproducible; with any H at all it never fires. */
+  TIE_EPS: 1e-9,
+
+  create: function (n) {
+    return { n: n, S: new Float64Array(n) };
+  },
+
+  /* The option weights, silence last. Silence is a citizen with its own
+     weight, and that weight is normalized LIVE so the PROBABILITY of silence
+     stays p whatever the pool holds: with W_sil = p/(1-p)·ΣW_voices,
+     W_sil/(W_sil + ΣW_voices) = p for any number of voices at any weights.
+     Removing a voice therefore changes who plays, never how much silence
+     there is. */
+  weights: function (out, voiceW, p) {
+    let sv = 0;
+    for (let i = 0; i < voiceW.length; i++) {
+      const w = (isFinite(voiceW[i]) && voiceW[i] > 0) ? voiceW[i] : 0;
+      out[i] = w;
+      sv += w;
+    }
+    const q = Math.min(Math.max(isFinite(p) ? p : 0, 0), AMES.P_MAX);
+    out[voiceW.length] = (q > 0) ? (q / (1 - q)) * sv : 0;
+    return out;
+  },
+
+  total: function (W, n) {
+    let s = 0;
+    for (let m = 0; m < n; m++) if (W[m] > 0) s += W[m];
+    return s;
+  },
+
+  /* Selection under the law: whoever is furthest behind their fair share.
+
+     Both extra terms are divided by W[m], and both do work.
+
+     A/W[m] is a per-option offset that BREATHES WITH THE STRESS. At a
+     constant A it changes nothing — a fixed offset per option just shifts
+     where that option's statistic sits and leaves the dynamics alone. When A
+     moves it spreads the field: on a hard beat a light option is pushed far
+     up and a heavy one barely at all, so strong beats go to heavy voices and
+     weak beats level the field. Nothing is sequenced; the meter is a
+     consequence of the offsets breathing.
+
+     H·U[m]/W[m] scatters the comparison, and it scatters a LIGHT option
+     further than a heavy one. What that does is measured rather than
+     assumed: it does NOT change anyone's share — no selection rule can,
+     since the update alone pins the equilibrium — it changes how REGULAR
+     each option's turns are, and it loosens the rare far more than the
+     common. H is a texture control from clockwork to dice with the
+     proportions nailed throughout. */
+  selectAmes: function (st, W, A, H, rnd) {
+    let best = -1, bestV = Infinity;
+    for (let m = 0; m < st.n; m++) {
+      if (!(W[m] > 0)) continue;
+      const v = st.S[m] + (A + H * (rnd() * 2 - 1)) / W[m];
+      if (v < bestV - AMES.TIE_EPS) { bestV = v; best = m; }
+    }
+    return best;
+  },
+
+  // Memory OFF: dice with no memory at all — probability W[m]/ΣW.
+  selectRandom: function (st, W, sumW, rnd) {
+    if (!(sumW > 0)) return -1;
+    let x = rnd() * sumW, last = -1;
+    for (let m = 0; m < st.n; m++) {
+      if (!(W[m] > 0)) continue;
+      last = m;
+      x -= W[m];
+      if (x <= 0) return m;
+    }
+    return last;                       // float dust at the very top of the range
+  },
+
+  /* The books, kept identically whether or not selection reads them. This is
+     the whole of the memory toggle: while it is off the droughted options go
+     on accumulating visible debt, and turning it back on pays that debt at
+     once. It is also what a visitor's tap runs, so a gesture from outside
+     enters the same books as a turn the machine took itself. */
+  charge: function (st, m, W, sumW, A) {
+    if (m < 0 || !(W[m] > 0) || !(sumW > 0)) return;
+    st.S[m] += A;
+    const share = A / sumW;
+    for (let k = 0; k < st.n; k++) if (W[k] > 0) st.S[k] -= share * W[k];
+  },
+
+  // One turn. Returns the selected option index, or -1 when nothing carries
+  // any weight at all (every voice at 0 with silence out) — a pool with no
+  // citizens chooses nobody and charges nobody.
+  tick: function (st, W, A, H, memory, rnd) {
+    const sumW = AMES.total(W, st.n);
+    if (!(sumW > 0)) return -1;
+    const m = memory ? AMES.selectAmes(st, W, A, H, rnd)
+                     : AMES.selectRandom(st, W, sumW, rnd);
+    AMES.charge(st, m, W, sumW, A);
+    return m;
+  },
+
+  /* Stress scales the CHARGE, not the odds. A turn taken on the downbeat
+     costs more and buys a longer absence; an offbeat turn is cheap and can
+     recur straight away. Metrical hierarchy is a consequence, not a
+     sequence. */
+  stressAt: function (pattern, n) {
+    const L = pattern.length;
+    return pattern[((n % L) + L) % L];
+  }
+};
+/* ---- AMES END ----------------------------------------------------------- */
+
+/* ============================================================
+   THE POOL — six voices from the shared palette and a silence.
+
+   Chosen to be tellable apart in a fast stream more than to make
+   a kit: a hiss, a wooden tick, a low drum, a plucked string, a
+   303 and a long cymbal. Six families rather than six drums,
+   because at a fast tempo a listener gets one event and then the
+   next one, and two members of the same family arriving in that
+   window read as one voice with a wobble.
+
+   Which six is a measurement, not a taste. Every synth voice in
+   the palette was rendered under this toy's envelope, cut at a
+   150 ms turn, and compared as a log-mel spectrogram in three time
+   slices; of the 1716 ways to pick six of the thirteen, this is
+   one of the two furthest apart. The bar it had to clear was the
+   pool that shipped before it, measured the same way — 10.1 dB
+   between its closest pair, against 14.0 dB here.
+
+   The comparison is run twice, with level and without it. A set
+   can look separable because one voice is simply louder, which is
+   a distinction a mix can erase, so the number that counts is the
+   one with each voice's level divided out. Tuning the gains to
+   maximise the score is possible and is not done: these trims
+   equalise per-hit energy across the window instead, which is a
+   stated principle rather than a fit to the scorer, and they
+   still clear the bar by 4 dB.
+
+   The default weights are deliberately unequal, spread over six
+   to one, so the proportion law is audible the first time anyone
+   presses Play — and the rarest of them, `crash`, is the longest
+   and most distinctive, which is what makes its drought the one
+   an ear notices.
+
+   `gain` is the voice's EVENT level and is fixed rather than a
+   control: the rack's level column is the voice's output bus,
+   which is a mix, and the weight is how often — two different
+   questions, and neither is the event gain the palette was
+   equalised at.
+   ============================================================ */
+const VOICES = [
+  { id: 'hat',   w: 3.0, gain: 1.00 },
+  { id: 'clave', w: 2.0, gain: 1.00 },
+  { id: 'tom',   w: 1.5, gain: 0.31 },
+  { id: 'pluck', w: 1.0, gain: 1.00 },
+  { id: 'acid',  w: 1.6, gain: 0.65 },
+  { id: 'crash', w: 0.5, gain: 0.85 }
+];
+const NV = VOICES.length;
+const SIL = NV;                    // silence is the last option, always
+const NOPT = NV + 1;
+const VOICE_IDS = VOICES.map(v => v.id);
+const SILENCE_HUE = '#7a808d';
+
+/* The factory is default.json (JP's state of 2026-10-09), so reset and the
+   double-press land where the page opens and a page opened off a disk plays
+   the same pool. Silence is rounded to its control's step (the file carries
+   0.3410…, a thumb position). Heterogeneity 0 is the design: the teaser
+   runs from there, weighted randomness, toward pure randomness. */
+const BPM = { min: 40, max: 300 };
+const DEFAULT_BPM = 120;           // eighth-note turns: 250 ms each, a bar per stress cycle
+const DEFAULT_HET = 0;
+const DEFAULT_SILENCE = 0.34;
+const DEFAULT_STRESS = [1, 0.25, 0.5, 0.25, 0.7, 0.25, 0.5, 0.25];
+const STRESS_STEPS = DEFAULT_STRESS.length;
+const STRESS_MIN = 0.05, STRESS_STEP = 0.05;
+const WEIGHT_MAX = 4;
+
+/* The seed is fixed rather than drawn. Nothing on the page exposes it and
+   there is no reseed, so a random one would buy nobody anything and cost the
+   ability to reproduce a report of what the instrument did. */
+const SEED = 0xA3E5;
+
+const colorOf = id => { const v = Lab.voices.get(id); return v ? v.color : '#999'; };
+const nameOf = id => { const v = Lab.voices.get(id); return v ? v.name : id; };
+
+/* The gesture phrase, written once and read by the composition: every
+   cold-hand answer on this page — the rack's, the master chain's and the four
+   controls' — ends on it, and `Lab.page` is what appends it. */
+const GESTURE = 'Press ▶ Play';
+
+/* ---------- params: written by the controls, read live by the engine ---------- */
+const params = {
+  bpm: DEFAULT_BPM,
+  het: DEFAULT_HET,
+  silence: DEFAULT_SILENCE,
+  memory: true,
+  weights: {},
+  strips: {},                      // id -> { gain, mute, pan } — the rack writes here
+  stress: DEFAULT_STRESS.slice()
+};
+VOICES.forEach(v => {
+  params.weights[v.id] = v.w;
+  params.strips[v.id] = { gain: 1, mute: false, pan: 0 };
+});
+
+/* Restore-before-build: the snapshot lands in params first and the controls
+   take their initial value from params, so nothing needs syncing afterwards.
+   Each field is adopted by name AND shape rather than merged wholesale — a
+   scalar arriving where the stress array lives would break the engine on
+   load, and a saved file is a thing a stranger can hand you. */
+/* ---- what the page opens on ----
+   A returning visitor's session, else default.json, else the factory above
+   (which IS the file's values, so a page opened off a disk, which cannot
+   fetch, plays the same pool and says it is opening bare).
+
+   THE REST OF THIS SCRIPT IS THE CALLBACK'S BODY AND IS NOT RE-INDENTED: a
+   one-change re-indent of a thousand lines destroys the history of every line
+   in it. The callback closes at the foot of the script. */
+Lab.state.open('statistical-feedback').then(function (saved) {
+if (saved && saved.params) {
+  const s = saved.params;
+  // `typeof v === 'number'` and not `isFinite(v)` alone: isFinite coerces, so
+  // null and '' both test finite and would land as 0 — which is a weight of
+  // zero, a voice silently dropped out of the pool by a stale save.
+  const num = (v, lo, hi) =>
+    (typeof v === 'number' && isFinite(v)) ? Math.max(lo, Math.min(hi, v)) : null;
+  // `period`, a key some sessions still carry, is read nowhere: such a
+  // session opens at the default tempo.
+  if (num(s.bpm, BPM.min, BPM.max) !== null) params.bpm = num(s.bpm, BPM.min, BPM.max);
+  if (num(s.het, 0, 2) !== null) params.het = num(s.het, 0, 2);
+  // to the gate's own step (0.01), so a file carrying a thumb position opens
+  // where reset lands, rather than a hair beside it
+  if (num(s.silence, 0, 1) !== null) params.silence = Math.round(num(s.silence, 0, 1) * 100) / 100;
+  if (typeof s.memory === 'boolean') params.memory = s.memory;
+  if (s.weights && typeof s.weights === 'object') VOICE_IDS.forEach(id => {
+    const w = num(s.weights[id], 0, WEIGHT_MAX);
+    if (w !== null) params.weights[id] = w;
+  });
+  if (s.strips && typeof s.strips === 'object') VOICE_IDS.forEach(id => {
+    const ss = s.strips[id];
+    if (!ss || typeof ss !== 'object') return;
+    const g = num(ss.gain, 0, 1.5), p = num(ss.pan, -1, 1);
+    if (g !== null) params.strips[id].gain = g;
+    if (p !== null) params.strips[id].pan = p;
+    params.strips[id].mute = !!ss.mute;
+  });
+  if (Array.isArray(s.stress) && s.stress.length === STRESS_STEPS) {
+    for (let i = 0; i < STRESS_STEPS; i++) {
+      const a = num(s.stress[i], STRESS_MIN, 1);
+      if (a !== null) params.stress[i] = a;
+    }
+  }
+}
+
+/* ============================================================
+   THE ENGINE — the law inside the lookahead ticker.
+
+   One selection per tick, scheduled at the tick's own absolute
+   timestamp, so JS timer slop never reaches the audio. Tails may
+   overlap: there is no busy state and no stealing, because a
+   voice that refused a turn would be a second scheduling rule
+   fighting the first.
+   ============================================================ */
+const state = AMES.create(NOPT);
+const prng = Lab.prng.create(SEED);
+const rnd = () => prng.next();
+
+const W = new Float64Array(NOPT);      // the live option weights, rebuilt per tick
+const voiceW = new Float64Array(NV);
+let sumW = 0;                          // ΣW, for the readout and for taps
+let lastStress = DEFAULT_STRESS[0];    // what a tap between ticks is charged at
+let tickTime = 0, tickIndex = 0;       // where the grid is, re-anchored each tick
+
+const HEARD_WINDOW = 240;
+const heard = [];                      // recent selections, for the measured readout
+
+function readWeights() {
+  for (let i = 0; i < NV; i++) voiceW[i] = params.weights[VOICE_IDS[i]];
+  AMES.weights(W, voiceW, params.silence);
+  sumW = AMES.total(W, NOPT);
+  return sumW;
+}
+
+const ticker = Lab.clock.createTicker({
+  periodSec: () => 30 / params.bpm,       // one turn is an eighth note
+  onTick: function (n, t) {
+    tickTime = t;
+    tickIndex = n;
+    const A = AMES.stressAt(params.stress, n);
+    lastStress = A;
+    readWeights();
+    const m = AMES.tick(state, W, A, params.het, params.memory, rnd);
+    if (m >= 0 && m < NV) {
+      Lab.voices.play(VOICES[m].id, t, { gain: VOICES[m].gain });
+    }
+    pushLedger(t, m, n);
+    heard.push(m);
+    if (heard.length > HEARD_WINDOW) heard.shift();
+  }
+});
+
+/* ---- the visitor's tap ----
+   A tap is a selection the machine did not make, and it enters the books as
+   one: the same charge, the same weight-proportional credit to everyone else,
+   at the stress of the most recent tick. So hammering a voice really does buy
+   its silence afterwards — the machine absorbs the gesture instead of
+   ignoring it. At weight 0 the voice still sounds and the books are not
+   touched, because an option out of the pool is out of the pool. */
+function invoke(id) {
+  const ctx = Lab.audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const i = VOICE_IDS.indexOf(id);
+  const t = ctx.currentTime + 0.005;
+  Lab.voices.play(id, t, { gain: VOICES[i].gain });
+  readWeights();
+  if (W[i] > 0) {
+    AMES.charge(state, i, W, sumW, lastStress);
+    pushLedger(t, i, -1);
+  } else {
+    Lab.ui.status(nameOf(id) + ' is at weight 0 — it sounds, but it is outside the game');
+  }
+}
+
+/* A name pressed from cold is a hand asking for sound, so it presses Play
+   first and then sounds: the collection's rule is that anything inside the
+   instrument that asks for sound starts it. Either way the id waits for
+   `onStart`, which is the only place the context is known to be running.
+
+   Who does the pressing changes once. From cold it is the composition: the
+   name column declares `asks`, so these cells are roots of the same start
+   gesture the globals use, and pressing Play is what that gesture does. That
+   arm is spent as soon as the audio is unlocked — so on a stopped-but-warm
+   instrument the press is made here instead, and only where the transport is
+   genuinely stopped, or a tap during an interruption would read as a Stop. */
+let pendingTap = null;
+
+function tapName(id) {
+  const ctx = Lab.audio.ctx;
+  if (page.transport.running && ctx && ctx.state === 'running') { invoke(id); return; }
+  pendingTap = id;
+  if (page.everStarted && !page.transport.running) page.transport.press();
+}
+
+/* ============================================================
+   THE LEDGER, VISIBLE.
+
+   The see-saw is the mechanism on screen, so it has to be seen
+   at the instant it is heard — and the engine runs up to 150 ms
+   ahead of the audio clock. Every tick queues a copy of the
+   books against its own timestamp and the animation frame
+   releases them against `ctx.currentTime`, exactly as the sound
+   is released.
+   ============================================================ */
+const ledgerQ = [];                    // { t, S, sel, n } waiting for the audio clock
+const shown = new Float64Array(NOPT);  // the books as currently drawn
+const flash = new Float64Array(NOPT);  // 1 at a selection, decaying to 0
+
+const LEDGER_MIN_SCALE = 1.5;   // the band the law itself sits in; see spec.md §8
+const FLASH_SEC = 0.26;
+let ledScale = LEDGER_MIN_SCALE;
+let heardIndex = -1;            // the tick the EAR is on, which is not tickIndex
+
+// `n` is the tick's own number, or -1 for a tap, which belongs to no tick and
+// must not move the step marker.
+function pushLedger(t, sel, n) {
+  ledgerQ.push({ t: t, S: Float64Array.from(state.S), sel: sel, n: n });
+  if (ledgerQ.length > 512) ledgerQ.shift();
+}
+
+// A stop fades out events already committed to the audio clock, so the ticks
+// behind them will never be heard — but they are in the books, and the books
+// are the books. Flushing keeps what is drawn equal to what is recorded
+// rather than leaving the display a few ticks behind the truth.
+function flushLedger() {
+  while (ledgerQ.length) shown.set(ledgerQ.shift().S);
+  heardIndex = -1;
+}
+
+// Reset empties them instead: nothing is owed, nothing is drawn, nothing is
+// waiting for a clock that will release it a moment later.
+function clearLedger() {
+  ledgerQ.length = 0;
+  shown.fill(0);
+  flash.fill(0);
+  state.S.fill(0);
+  heard.length = 0;
+  heardIndex = -1;
+  ledScale = LEDGER_MIN_SCALE;
+}
+
+/* ============================================================
+   THE VOICES' RECORD — Lab.roll, one lane per voice.
+
+   The grid is the tick period and it is anchored on the ticker's
+   most recent tick rather than on a start time held since the
+   transport began: the ticker reads its period live, so after a
+   tempo move its true positions are no longer start + n·period,
+   and only re-anchoring keeps the drawn lines on the grid the
+   engine is actually playing. `originIndex` carries the tick
+   NUMBERING with it, which is what puts the heavy line where the
+   stress loop starts.
+
+   Silence draws nothing. The empty column is the mark.
+   ============================================================ */
+const RECORD_HINT = 'the record: one lane per voice, one column per turn, newest at the ' +
+  'right. A silent turn draws nothing, and that gap in an otherwise regular column is ' +
+  'silence taking its turn. The heavy line is where the stress loop starts.';
+
+const recordEl = document.createElement('canvas');
+recordEl.id = 'record';
+recordEl.className = 'tl';
+recordEl.setAttribute('aria-label', RECORD_HINT);
+recordEl.dataset.hint = RECORD_HINT;
+recordEl.title = RECORD_HINT;
+
+const roll = Lab.roll.attach(recordEl, {
+  laneIds: VOICE_IDS,
+  gridSec: () => 30 / params.bpm,
+  origin: () => tickTime,
+  originIndex: () => tickIndex,
+  accentEvery: 4,
+  strongEvery: STRESS_STEPS,
+  pxPerSec: () => (Lab.shell.env.small ? 78 : 112),
+  windowSec: 10
+});
+
+/* ============================================================
+   THE RACK — one row per option, silence included.
+
+   name · mute · level · weight · the ledger bar. The first three
+   are the mix — what this voice sounds like coming out — and the
+   last two are the mechanism: how often it is chosen, and how far
+   behind it is. The level and the weight are the pair a visitor
+   is most likely to confuse, so each says which it is when it is
+   pressed from cold.
+   ============================================================ */
+const WEIGHT_HINT = 'this voice’s share of the pool. It is a share of the STRESS the ' +
+  'pattern spends, not of the turns — a light voice takes more turns, on weaker beats, ' +
+  'to pay the same. At 0 the voice leaves the game and its ledger freezes where it stands.';
+const LEDGER_HINT = 'the ledger: turns this option has taken, less the turns its weight ' +
+  'entitled it to. Right of the line is credit already spent, left of it is a debt the ' +
+  'machine owes. The seven always sum to zero, so one bar can only rise by the others sinking.';
+const TAP_HINT = 'play this voice now, off the grid — and charge it to the books exactly ' +
+  'as a turn would be, at the current beat’s stress. Hammer it and the machine avoids it ' +
+  'afterwards. From cold it presses Play first, because it is asking for sound.';
+const SILENCE_ROW_HINT = 'silence is an option like the others: it has a weight, it takes ' +
+  'turns, and it keeps a ledger. It is the only one you cannot tap.';
+const SILENCE_W_HINT = 'silence’s own weight, computed live as p/(1−p)·ΣW so the ' +
+  'PROBABILITY of silence stays where you set it however many voices are in the pool.';
+
+const ledCells = [];       // per option: { fill, glow }
+let silWeightEl = null;
+let rack = null;           // the composition builds it; assigned from page.rack
+
+function ledgerCell(index, hue) {
+  const box = document.createElement('div');
+  box.className = 'led';
+  box.style.color = hue;
+  const zero = document.createElement('div'); zero.className = 'lzero';
+  const fill = document.createElement('div'); fill.className = 'lfill';
+  const glow = document.createElement('div'); glow.className = 'lflash';
+  box.append(zero, fill, glow);
+  ledCells[index] = { fill: fill, glow: glow };
+  return Lab.ui.inline('debt', box, LEDGER_HINT);
+}
+
+const rackRows = VOICE_IDS.map(id => ({ key: id, voice: id }))
+  .concat([{ key: 'silence', name: 'Silence', color: SILENCE_HUE }]);
+
+const RACK_COLUMNS = [
+  /* `name` is this toy's own column and not the library's, because the name IS
+     a control here: pressing it plays the voice and charges the books. `asks`
+     is what says so — the opposite of `decline`: the cell is marked, so the
+     composition's blanket "the instrument is stopped" answer leaves it alone,
+     and on this transport page it becomes a root of the same start gesture the
+     globals use, so the press that asks is the press that presses Play.
+
+     It is a function of the row and not a flag, because the seventh row is
+     Silence, whose name cell is a label that neither plays nor shapes: marking
+     it would make a label a root of the start gesture and take away the one
+     answer it has. `c.voice` is exactly the difference — a row with no voice
+     asks for nothing. */
+  { key: 'name', width: 'auto', asks: c => !!c.voice, cell: function (c) {
+      if (c.key === 'silence') {
+        const n = document.createElement('span');
+        n.className = 'rname';
+        const sw = document.createElement('span');
+        sw.className = 'rsw';
+        sw.style.background = SILENCE_HUE;
+        n.append(sw, document.createTextNode('Silence'));
+        n.dataset.hint = SILENCE_ROW_HINT;
+        n.title = SILENCE_ROW_HINT;
+        return n;
+      }
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tapname';
+      const sw = document.createElement('span');
+      sw.className = 'rsw';
+      sw.style.background = colorOf(c.key);
+      b.append(sw, document.createTextNode(nameOf(c.key)));
+      b.dataset.hint = TAP_HINT;
+      b.title = TAP_HINT;
+      b.addEventListener('click', () => tapName(c.key));
+      return b;
+    } },
+  'mute',
+  'gain',
+  /* `false` for Silence, not an empty reason: its weight cell is a readout with
+     no control in it, so it neither asks for sound nor shapes the output. A row
+     that does not decline is left unmarked, and the region's answer covers it —
+     where a reason of `''` would have marked the cell, taken it out of that
+     answer, and had none of its own. */
+  { key: 'weight', width: '132px',
+    decline: c => (c.key === 'silence' ? false :
+      'that is ' + nameOf(c.key) + '’s weight — how often it is chosen, and nothing ' +
+      'is chosen while the pulse is stopped'),
+    cell: function (c) {
+      if (c.key === 'silence') {
+        const v = document.createElement('span');
+        v.className = 'val';
+        silWeightEl = v;
+        return Lab.ui.inline('weight', v, SILENCE_W_HINT);
+      }
+      return Lab.ui.knob({
+        label: 'weight', min: 0, max: WEIGHT_MAX, step: 0.05,
+        value: params.weights[c.key],
+        def: VOICES[c.index].w,
+        fmt: v => v.toFixed(2),
+        hint: WEIGHT_HINT,
+        onChange: v => { params.weights[c.key] = v; paintPool(); }
+      });
+    } },
+  { key: 'debt', width: '176px', cell: function (c) {
+      return ledgerCell(c.index, c.key === 'silence' ? SILENCE_HUE : colorOf(c.key));
+    } },
+  { key: 'pad', width: 'minmax(0,1fr)' }
+];
+
+/* The rack's own words for a cold hand. `says` returns the REASON; the
+   composition appends the remedy out of `start.gesture`, so the clause has one
+   reader. Both sentences do a second job: level and weight are the two knobs a
+   visitor is most likely to mix up, and the answer is where the difference is
+   easiest to say. */
+function declineWords(kind, name) {
+  if (kind === 'mute') {
+    return 'that is ' + name + '’s mute — it takes the voice out of the mix and ' +
+           'changes nothing in the books';
+  }
+  if (kind === 'gain') {
+    return 'that is ' + name + '’s level — how loud it is, not how often; the weight ' +
+           'beside it is how often';
+  }
+  return 'that is ' + name + '’s ' + kind + ' — it shapes the mix, not the books';
+}
+
+/* ============================================================
+   THE MASTER STRIP'S OWN CONTROLS
+
+   Four things that shape what the pulse does and none of which
+   asks for sound, so they sit in `controls`, outside the armed
+   region, each answering a cold hand in its own words.
+   ============================================================ */
+/* The tempo is the library's pulse slot (see the page below), and heterogeneity
+   has a TWIN on the phone: two controls writing one parameter, each showing
+   the other's writes. */
+let tHet = null;
+const dHet = Lab.ui.dial({
+  label: 'heterogeneity', min: 0, max: 2, step: 0.01, value: params.het,
+  fmt: v => v.toFixed(2),
+  hint: 'how regular the turns are, and only that. 0 is as regular as the pool ' +
+        'allows — a strict rotation only with equal weights, a flat stress and no ' +
+        'silence; 2 is loose, nearly dice. The proportions ' +
+        'are held exactly all the way across: what loosens is WHEN each option ' +
+        'comes round, and the rare voices loosen far more than the common ones.',
+  onInput: v => { params.het = v; if (tHet) tHet.show(v); },
+  onDefault: () => dHet.set(DEFAULT_HET)
+});
+tHet = Lab.ui.dial({
+  label: 'heterogeneity', min: 0, max: 2, step: 0.01, value: params.het,
+  fmt: v => v.toFixed(2),
+  hint: 'how loosely the books are read. At 0 each voice comes round as regularly as ' +
+        'its weight allows; turn it up and the same shares arrive with less grain, ' +
+        'toward plain dice.',
+  onInput: v => { params.het = v; dHet.show(v); },
+  onDefault: () => dHet.set(DEFAULT_HET)
+});
+
+const SILENCE_HINT = 'how much of the pulse goes to silence. It is a probability and it ' +
+  'holds: take voices out or change their weights and this stays where you put it. The ' +
+  'control tops out at 0.95 — at 1 nothing else could ever be chosen.';
+const gSilence = Lab.ui.gate({
+  value: params.silence, def: DEFAULT_SILENCE, left: '0', right: '.95', width: 108,
+  label: 'silence', hint: SILENCE_HINT,
+  onChange: v => { params.silence = v; paintPool(); }
+});
+const silenceCtl = Lab.ui.inline('silence', gSilence, SILENCE_HINT);
+
+const MEM_HINT = 'whether selection READS the ledger. On: the next turn goes to whoever ' +
+  'is furthest behind. Off: the same weights, rolled as dice. The books are kept either ' +
+  'way — so leave it off, watch the debts grow, and turn it back on.';
+const memDot = Lab.ui.dot({
+  text: 'S', on: params.memory, title: MEM_HINT,
+  // the readout is otherwise repainted on the composition's own 200 ms poll,
+  // which is up to a fifth of a second of the one control this page is about
+  // looking as though it did nothing
+  onToggle: v => { params.memory = v; page.paint(); }
+});
+const memCtl = Lab.ui.inline('memory', memDot, MEM_HINT);
+
+/* ============================================================
+   THE STRESS ROW — eight bars on one pointer surface.
+
+   A press picks the bar under the finger, a drag paints the
+   contour across all eight, a double-click puts one bar back to
+   its default. The bars themselves are pointer-transparent so the
+   strip owns the gesture; each stays in the tab order and answers
+   the arrows, so the contour can be drawn from a keyboard one bar
+   at a time.
+   ============================================================ */
+const STRESS_HINT = 'the eight-step loop of stress, looping with the ticks. Stress scales ' +
+  'what a turn COSTS, never the odds: a voice taken on a heavy step pays more and stays ' +
+  'away longer, so the metre is something the ledger produces rather than something ' +
+  'anyone sequenced. Drag along the row to draw the shape; double-click a bar to reset it.';
+
+const stressEl = document.createElement('div');
+stressEl.className = 'stress';
+stressEl.setAttribute('role', 'group');
+stressEl.setAttribute('aria-label', 'stress pattern, eight steps');
+/* The hint is on the STRIP and not on a bar: `hints` swallows a press on the
+   hinted element at capture, so in hint mode the eight bars are one
+   inspectable thing and none of them can be dragged by accident. */
+stressEl.dataset.hint = STRESS_HINT;
+stressEl.title = STRESS_HINT;
+
+const stressBars = [];
+for (let i = 0; i < STRESS_STEPS; i++) {
+  const b = document.createElement('div');
+  b.className = 'sbar';
+  b.tabIndex = 0;
+  b.setAttribute('role', 'slider');
+  /* Each bar is named for the step it IS, and the group above carries what the
+     eight of them are. Without a name here the only identity a screen reader
+     had was inside the value text, which is the place a value goes — so a bar
+     announced its number as part of its reading and had none of its own. */
+  b.setAttribute('aria-label', 'step ' + (i + 1));
+  b.setAttribute('aria-valuemin', STRESS_MIN);
+  b.setAttribute('aria-valuemax', 1);
+  const f = document.createElement('div'); f.className = 'sfill';
+  const num = document.createElement('div'); num.className = 'snum';
+  b.append(f, num);
+  b.addEventListener('keydown', function (e) {
+    const big = (e.key === 'PageUp' || e.key === 'PageDown') ? 5 : 1;
+    let v = null;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === 'PageUp')
+      v = params.stress[i] + STRESS_STEP * big;
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'PageDown')
+      v = params.stress[i] - STRESS_STEP * big;
+    else if (e.key === 'Home') v = STRESS_MIN;
+    else if (e.key === 'End') v = 1;
+    if (v === null) return;
+    e.preventDefault();
+    setStress(i, v);
+  });
+  stressBars.push({ el: b, fill: f, num: num });
+  stressEl.append(b);
+}
+
+function setStress(i, v) {
+  const q = Math.round(v / STRESS_STEP) * STRESS_STEP;
+  params.stress[i] = Math.max(STRESS_MIN, Math.min(1, parseFloat(q.toFixed(2))));
+  paintStress();
+}
+
+// The bar under a point, from rects cached at the start of the gesture: a
+// drag consults this on every move, and eight getBoundingClientRect calls per
+// pointermove is work the frame does not need to do.
+let stressRects = null, stressPointer = null;
+function cacheStressRects() {
+  stressRects = stressBars.map(b => b.el.getBoundingClientRect());
+}
+function stressIndexAt(x) {
+  if (!stressRects) cacheStressRects();
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < stressRects.length; i++) {
+    const r = stressRects[i];
+    if (x >= r.left && x <= r.right) return i;
+    const d = Math.min(Math.abs(x - r.left), Math.abs(x - r.right));
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+function stressValueAt(y) {
+  const r = stressEl.getBoundingClientRect();
+  const top = r.top + 3, h = Math.max(1, r.height - 6);
+  return STRESS_MIN + (1 - Math.max(0, Math.min(1, (y - top) / h))) * (1 - STRESS_MIN);
+}
+
+stressEl.addEventListener('pointerdown', function (e) {
+  if (e.button) return;
+  e.preventDefault();
+  cacheStressRects();
+  stressPointer = e.pointerId;
+  try { stressEl.setPointerCapture(e.pointerId); } catch (_) {}
+  const i = stressIndexAt(e.clientX);
+  stressBars[i].el.focus();
+  setStress(i, stressValueAt(e.clientY));
+});
+stressEl.addEventListener('pointermove', function (e) {
+  if (stressPointer !== e.pointerId) return;
+  setStress(stressIndexAt(e.clientX), stressValueAt(e.clientY));
+});
+// pointercancel is not an edge case on touch: the browser fires it whenever it
+// takes the gesture over, and a handler that only listens for pointerup keeps
+// tracking a finger that is no longer there.
+function endStress(e) {
+  if (stressPointer !== e.pointerId) return;
+  stressPointer = null;
+  stressRects = null;
+  try { stressEl.releasePointerCapture(e.pointerId); } catch (_) {}
+}
+stressEl.addEventListener('pointerup', endStress);
+stressEl.addEventListener('pointercancel', endStress);
+stressEl.addEventListener('lostpointercapture', endStress);
+stressEl.addEventListener('dblclick', function (e) {
+  cacheStressRects();
+  const i = stressIndexAt(e.clientX);
+  stressRects = null;
+  setStress(i, DEFAULT_STRESS[i]);
+});
+window.addEventListener('resize', () => { stressRects = null; });
+
+function paintStress() {
+  for (let i = 0; i < STRESS_STEPS; i++) {
+    const v = params.stress[i];
+    const b = stressBars[i];
+    b.fill.style.height = ((v - STRESS_MIN) / (1 - STRESS_MIN) * 88 + 12).toFixed(1) + '%';
+    b.num.textContent = v.toFixed(2).replace(/^0/, '');
+    b.el.setAttribute('aria-valuenow', v);
+    // the value alone: the step number is the bar's NAME, written once at build
+    b.el.setAttribute('aria-valuetext', 'stress ' + v.toFixed(2));
+  }
+}
+paintStress();
+
+const stressPanel = Lab.ui.panel({
+  title: 'the stress loop',
+  note: 'what a turn costs at each of eight steps, turning with the ticks',
+  label: 'the stress loop, eight steps'
+});
+stressPanel.appendChild(stressEl);
+
+/* ============================================================
+   RESET — the control that persistence obliges.
+
+   Everything on this page survives a reload except the books, so
+   reset is the way back: it puts every setting where the file
+   opens it — the six weights, the stress shape, tempo, heterogeneity,
+   silence, the memory switch, and every level, mute and pan — and
+   clears the ledger. It keeps the master chain, which is the
+   session's setting rather than the instrument's state.
+   ============================================================ */
+function atDefaults() {
+  // A tolerance on the tempo and the dial, not on the rest: a dial round-trips
+  // a value through a position, so a value can come back from its own default
+  // a billionth away and no amount of pressing reset would ever satisfy an
+  // exact comparison.
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  if (!near(params.bpm, DEFAULT_BPM) || !near(params.het, DEFAULT_HET)) return false;
+  if (!near(params.silence, DEFAULT_SILENCE) || params.memory !== true) return false;
+  for (let i = 0; i < STRESS_STEPS; i++) if (params.stress[i] !== DEFAULT_STRESS[i]) return false;
+  for (let i = 0; i < NV; i++) {
+    const v = VOICES[i], s = params.strips[v.id];
+    if (params.weights[v.id] !== v.w) return false;
+    if (s.gain !== 1 || s.mute || s.pan !== 0) return false;
+  }
+  for (let m = 0; m < NOPT; m++) if (state.S[m] !== 0) return false;
+  return true;
+}
+
+// Through the CONTROLS, so the knob, params and the engine cannot come out of
+// this disagreeing.
+function resetAll() {
+  page.bpmKnob.set(DEFAULT_BPM);
+  dHet.set(DEFAULT_HET);
+  gSilence.set(DEFAULT_SILENCE);
+  // a dot's .set renders without firing onToggle, so the param goes by hand
+  memDot.set(true);
+  params.memory = true;
+  for (let i = 0; i < STRESS_STEPS; i++) setStress(i, DEFAULT_STRESS[i]);
+  VOICES.forEach(v => {
+    const k = rack && rack.cell(v.id, 'weight');
+    if (k && k.set) k.set(v.w); else params.weights[v.id] = v.w;
+    if (rack) rack.set(v.id, { gain: 1, mute: false, pan: 0 });
+  });
+  clearLedger();
+  paintPool();
+  autosave.save();                 // so the reset is what a reload finds
+  page.paint();
+  Lab.ui.status('the settings are back where they opened, and the books are clear');
+}
+
+const resetBtn = Lab.ui.confirm({
+  text: 'reset',
+  armed: 'reset — sure?',
+  hint: 'put every setting back where it opened — the six weights, the stress shape, ' +
+        'tempo, heterogeneity, silence, the memory switch and the mix — and clear the ' +
+        'ledger. The master chain stays. It asks twice: there is no undo, and the ' +
+        'autosave means a reload will not bring your settings back.',
+  onArm: () => {
+    if (!atDefaults()) return true;
+    Lab.ui.status('everything is already where it opened and the books are clear');
+    return false;
+  },
+  onConfirm: resetAll
+});
+
+/* ============================================================
+   THE PAGE
+
+   A transport and not an arm: this piece has a beginning. The
+   ticks are numbered from 0, the stress loop is measured against
+   that numbering, and the play button is the name of the moment
+   before the first turn.
+   ============================================================ */
+let page = null;
+
+/* Two different counts, and the difference is the whole point of the mute
+   column. A muted voice is still IN THE POOL — it takes its turns and its
+   ledger goes on moving — so the readout, which reports the mechanism, counts
+   weight alone. `shut` is the ear's question, so it counts what can be heard. */
+function poolVoices() {
+  readWeights();
+  let n = 0;
+  for (let i = 0; i < NV; i++) if (W[i] > 0) n++;
+  return n;
+}
+
+function audibleVoices() {
+  readWeights();
+  let n = 0;
+  for (let i = 0; i < NV; i++) {
+    if (W[i] > 0 && !(params.strips[VOICE_IDS[i]] || {}).mute) n++;
+  }
+  return n;
+}
+
+page = Lab.page.build({
+  title: 'statistical-feedback',
+  shows: 'Dice have no memory, and the ear hears the difference. Six voices and a ' +
+         'silence share one pulse by keeping books: every option carries a running debt ' +
+         'of attention, playing charges it, and the next turn goes to whoever is furthest ' +
+         'behind. The ledger is on the screen. Turn it off and the same weights become dice.',
+  spec: 'spec.md',
+  // repo: '…',            ← SET BEFORE PUBLISHING (no remote configured yet)
+  site: 'https://noisewrangler.art',
+
+  transport: {
+    hint: 'start and stop the pulse. The books survive a stop — the ledger is what the ' +
+          'instrument remembers, and the transport does not reset it.',
+    onStart: async function () {
+      await Lab.voices.ensureRendered();
+      Lab.audio.fadeIn(0.03);
+      ticker.start(Lab.audio.ctx.currentTime + 0.06);
+      // the press that unlocked the audio may have been a press on a voice's
+      // name, which is a hand asking for that voice and not only for the pulse
+      if (pendingTap) { const id = pendingTap; pendingTap = null; invoke(id); }
+    },
+    onStop: function () {
+      ticker.stop();
+      Lab.audio.fadeOut(0.05);
+      flushLedger();
+      pendingTap = null;
+    }
+  },
+
+  /* The pulse slot, in BPM: the eight-step stress loop reads as eighth notes,
+     so one turn is 30 / bpm seconds and one stress cycle is a bar of 4/4. The
+     law counts turns, not seconds, so the tempo moves no proportion. */
+  bpm: {
+    min: BPM.min, max: BPM.max, def: DEFAULT_BPM, value: params.bpm,
+    hint: 'the tempo. One turn is an eighth note, so the eight-step stress loop is one ' +
+          'bar. The law counts turns, not seconds, so this changes no proportion.',
+    says: 'that is bpm, the tempo — one turn is an eighth note, and the law counts ' +
+          'turns, so it moves no proportion',
+    onChange: v => { params.bpm = v; }
+  },
+  master: saved && saved.fx ? saved.fx : { reverb: 0.1 },
+  /* Each `says` is the REASON alone; the composition closes the sentence with
+     the gesture phrase above. All three change the sound; they just do not
+     start it. */
+  controls: [
+    { el: dHet, says: 'that is heterogeneity — it loosens WHEN each option comes ' +
+        'round, never how often' },
+    { el: silenceCtl, says: 'that is silence — the share of the pulse that goes ' +
+        'to nobody, held against the pool' },
+    { el: memCtl, says: 'that is memory — whether selection reads the books. ' +
+        'They are kept either way' }
+  ],
+  hints: true,
+
+  status: () => {
+    const live = poolVoices();
+    let sil = 0;
+    for (let i = 0; i < heard.length; i++) if (heard[i] === SIL) sil++;
+    // `ticker.running` and not `page.transport.running`: the composition paints
+    // the readout once from inside `build()`, before this file's `page` has
+    // been assigned, and the ticker is the truth either way.
+    const bits = [ticker.running ? 'running' : 'stopped',
+                  'memory ' + (params.memory ? 'on' : 'off'),
+                  live + (live === 1 ? ' voice' : ' voices')];
+    if (heard.length >= 40) bits.push('silence heard ' + Math.round(sil / heard.length * 100) + '%');
+    return bits.join(' · ');
+  },
+
+  /* ---- the start line ----
+     Five states, four of which speak. It is never STUCK: whatever the books
+     say, the next turn goes to somebody, and there is no configuration this
+     instrument cannot leave. */
+  start: {
+    gesture: GESTURE,
+    state: () => {
+      readWeights();
+      if (!(sumW > 0)) return 'nothing';
+      const fx = Lab.audio.getState ? Lab.audio.getState() : null;
+      if (audibleVoices() === 0 || (fx && fx.master <= 0)) return 'shut';
+      return null;
+    },
+    words: {
+      notStarted: 'press ▶ Play, or the Space bar, and one option is chosen on every turn.',
+      nothing: 'nothing carries any weight, so nobody can be chosen — turn a voice’s ' +
+               'weight up, or open silence.',
+      stuck: '',
+      shut: 'it is running and nothing reaches you: every voice is muted, at weight zero, ' +
+            'or the master level is at zero.',
+      running: 'turn memory off and watch the debts walk apart, then turn it back on — ' +
+               'the starved voices are all paid at once.'
+    }
+  },
+
+  /* What the hands play comes before what the eyes read: the weights are the
+     instrument, so the rack precedes the stage. */
+  instrument: 'rack',
+
+  /* Both of these are time, which a strip cannot hold: the stress loop is a
+     shape spread over eight turns, and the record is what the pool actually
+     did with them. */
+  stage: [stressPanel, recordEl],
+
+  rack: {
+    rows: rackRows,
+    columns: RACK_COLUMNS,
+    state: params.strips,
+    onStrip: (id, strip) => { if (params.strips[id]) params.strips[id] = strip; },
+    declineWords: declineWords
+  },
+
+  session: [resetBtn, Lab.state.buttons()],
+
+  text: [
+    { head: 'Press Play.', body: 'One option is chosen per pulse — six voices and a ' +
+      'silence, which is an option like any other. Nothing here rolls dice for each voice ' +
+      'in turn; instead every option keeps a <b>ledger</b>, the bar beside its name, and ' +
+      'the next turn goes to whoever the books say is furthest behind. Playing charges ' +
+      'you; while you wait, everyone sinks a little. The seven bars always sum to zero, ' +
+      'so one can only rise by the others falling — that is the see-saw, and it is the ' +
+      'whole law.' },
+    { head: 'Turn memory off', body: 'and selection stops reading the books, though the ' +
+      'books go on being kept: the same weights become plain dice, the stream clumps and ' +
+      'droughts, and you can watch the starved voices sink further and further left. Turn ' +
+      'it back on and they are paid at once — a burst of exactly the voices that were ' +
+      'owed. That payoff is the argument in one gesture.' },
+    { head: 'Weight is share.', body: 'Turn one down and it comes round less; turn it to ' +
+      'zero and the voice leaves the game, its row dims and <i>its ledger freezes where ' +
+      'it stood</i>. Bring the weight back and it re-enters carrying the debt it went ' +
+      'away with — there is no removal rule and no forgetting, only a weight of zero. The ' +
+      'level beside it is a different question: how loud, not how often.' },
+    { head: 'Stress is cost, not odds.', body: 'The eight bars scale what a turn is ' +
+      'charged, so a voice taken on a heavy step pays more and stays away longer. Nothing ' +
+      'is sequenced, and yet the heavy steps fill with the heavy voices and the light ' +
+      'steps level out: the metre is something the ledger produces. Drag along the row to ' +
+      'draw a different shape.' },
+    { head: 'Tap a name', body: 'to play that voice now, off the grid — and it is charged ' +
+      'to the books exactly as a turn would be, so hammering a voice really does buy its ' +
+      'silence afterwards.' },
+    { head: 'Heterogeneity', body: 'is a regularity control and nothing else: at 0 each ' +
+      'option comes round as regularly as the pool allows; at 2 the turns arrive ' +
+      'unpredictably, nearly dice. The proportions are held exactly all the way across — what changes is ' +
+      '<i>when</i> each option comes round, and the rare voices loosen far more than the ' +
+      'common ones.' }
+  ],
+
+  keys: '<kbd>Space</kbd> play · <kbd>?</kbd> what does this do — then tap anything · ' +
+        '<kbd>Tab</kbd> to any control, including each stress bar, then arrows · ' +
+        'drag knobs vertically, gates along the bar, the stress row up and down; ' +
+        'double-click resets',
+
+  /* THE TEASER. Heterogeneity alone, the desktop dial's twin: the file opens
+     it at 0, weighted randomness read off the books, and the thumb moves it
+     toward pure randomness with every share held. The record is kept because
+     it is passive; the stress row writes, so it is the desk. */
+  teaser: {
+    controls: [tHet],
+    stage: [recordEl],
+    gesture: GESTURE,
+    words: {
+      notStarted: 'press ▶ Play, and one of six voices or a silence takes every turn.',
+      nothing: 'nothing carries any weight, so nobody can be chosen; the weights are on ' +
+               'the desktop page.',
+      shut: 'it is running and nothing reaches you: it is muted or at zero on the ' +
+            'desktop page.',
+      running: 'turn heterogeneity up and hear the same shares lose their grain.'
+    },
+    share: { text: 'Six voices share one pulse by keeping books. One knob loosens how ' +
+                   'closely they read them. The ledger itself wants a desktop.' },
+    /* The phone's standing text: only what the phone shows — Play, the dial
+       and the record — and the claim in the visitor's words. */
+    text: [{ head: 'Dice with a ledger.', body: 'Six voices and a silence share one ' +
+      'pulse, and each turn goes to whoever is furthest behind its fair share. ' +
+      'Heterogeneity loosens how closely that ledger is read: at 0 each voice comes ' +
+      'round as regularly as its share allows, and turned up the same shares arrive ' +
+      'like dice. The record shows every turn; a gap in a column is silence taking ' +
+      'its own.' }]
+  }
+});
+
+rack = page.rack;
+
+/* ---- Space is the transport, except where a control already owns it ----
+   Space activates a focused button, and this page is full of them: the six
+   names, the mutes, reset, Save/Load, the hint toggle. Taking the key from
+   them would leave a keyboard visitor unable to tap a voice at all. Every
+   slider on the page — knob, dial, gate, stress bar — answers the arrows and
+   not Space, so the transport keeps it everywhere else. */
+window.addEventListener('keydown', function (e) {
+  if (e.code !== 'Space') return;
+  const t = e.target;
+  if (t && t.closest && t.closest('button, input, select, textarea, a[href], [contenteditable]')) return;
+  e.preventDefault();
+  if (!e.repeat) page.transport.press();
+});
+
+/* ============================================================
+   THE FRAME LOOP — releasing the books against the audio clock.
+   ============================================================ */
+let lastMs = 0, slowTick = 0;
+
+function paintPool() {
+  readWeights();
+  if (silWeightEl) silWeightEl.textContent = W[SIL].toFixed(2);
+  if (!rack) return;
+  // silence at p = 0 is out of the game exactly as a voice at weight 0 is, so
+  // its row dims by the same rule — the freeze is a property of the pool, not
+  // a privilege of the voices
+  rack.dim('silence', !(W[SIL] > 0));
+  for (let i = 0; i < NV; i++) {
+    const id = VOICE_IDS[i];
+    // a muted row is already dimmed by the rack's own mute cell; a row is
+    // dimmed here when it is out of the POOL, which is the other reason
+    rack.dim(id, !(params.weights[id] > 0) || !!params.strips[id].mute);
+  }
+}
+
+function frame(ms) {
+  const dt = lastMs ? Math.min(0.1, (ms - lastMs) / 1000) : 0.016;
+  lastMs = ms;
+  const now = Lab.audio.ctx ? Lab.audio.ctx.currentTime : 0;
+
+  while (ledgerQ.length && ledgerQ[0].t <= now) {
+    const e = ledgerQ.shift();
+    shown.set(e.S);
+    if (e.sel >= 0) flash[e.sel] = 1;
+    if (e.n >= 0) heardIndex = e.n;
+  }
+  for (let m = 0; m < NOPT; m++) {
+    if (flash[m] > 0) flash[m] = Math.max(0, flash[m] - dt / FLASH_SEC);
+  }
+
+  /* Auto-scale, and asymmetrically: it opens up quickly enough that a debt
+     built during a memory-off stretch stays inside the cell, and closes slowly,
+     because a scale that chased the maximum down would make every bar twitch
+     between ticks. The floor is the band the law's own steady state occupies,
+     so an idle ledger does not magnify float dust into a full bar. */
+  let mx = 0;
+  for (let m = 0; m < NOPT; m++) mx = Math.max(mx, Math.abs(shown[m]));
+  const target = Math.max(LEDGER_MIN_SCALE, mx * 1.12);
+  ledScale += (target - ledScale) * Math.min(1, dt / (target > ledScale ? 0.55 : 3.2));
+
+  for (let m = 0; m < NOPT; m++) {
+    const c = Math.max(-1, Math.min(1, shown[m] / ledScale));
+    const w = Math.abs(c) * 50;
+    const cell = ledCells[m];
+    if (!cell) continue;
+    cell.fill.style.left = (c >= 0 ? 50 : 50 - w) + '%';
+    cell.fill.style.width = w + '%';
+    cell.glow.style.opacity = (flash[m] * 0.42).toFixed(3);
+  }
+
+  /* The lit step is the one being HEARD, not the one being scheduled. The
+     engine runs up to 150 ms ahead of the audio clock — more than half a turn
+     at the default 120 bpm, and a whole one from 200 bpm up — so lighting
+     `tickIndex` would put the marker in front of the sound and the row would
+     read as out of time with itself. */
+  const step = (ticker.running && heardIndex >= 0)
+    ? ((heardIndex % STRESS_STEPS) + STRESS_STEPS) % STRESS_STEPS : -1;
+  for (let i = 0; i < STRESS_STEPS; i++) stressBars[i].el.classList.toggle('now', i === step);
+
+  if ((slowTick = (slowTick + 1) % 10) === 0) paintPool();
+  requestAnimationFrame(frame);
+}
+
+/* ---- go ---- */
+roll.start();
+paintPool();
+requestAnimationFrame(frame);
+
+/* The autosave handle is KEPT rather than dropped: the poll is otherwise a
+   permanent background write loop with no way out, which is not a thing to
+   leave running on a public page.
+
+   The ledger is not in the snapshot. The weights, the stress shape and the
+   settings are the instrument; the books are what this run of it has done, and
+   a debt restored against a pool that has changed underneath it would be a
+   fiction. */
+const autosave = Lab.state.attach({
+  key: 'statistical-feedback',
+  collect: () => ({ params: params, fx: Lab.audio.getState() })
+});
+
+});   // the end of `Lab.state.open('statistical-feedback').then(function (saved) {`
+</script>
+</body>
+</html>

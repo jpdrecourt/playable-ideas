@@ -1,0 +1,503 @@
+/* ============================================================
+   lab.css — the standard lab-bench theme.
+   Extracted from somitsu-grid (chrome, lanes, gates, mini-ranges)
+   plus the somitsu-circles rotary knob visuals.
+
+   THE RULE: chrome is greyscale — whites, blacks, muted greys;
+   interactive = white on black. Hue belongs to EVENTS only
+   (voice colors, event marks, armed/warning states). A toy that
+   wants a colored control states why in its own <style>.
+
+   Markup grammar (see lib/README.md):
+     .wrap > h1 + .sub + .bar + panels/.lane rows + canvas.tl + .hint
+     .bar  > button.pri | .ctl (label above control) | .sep | .spacer
+     .lane > controls…  (optionally the fixed-width .lc cluster
+             with .lc-r1/.lc-r2 rows, then a canvas.tl)
+     controls: .knob-wrap rotary (Lab.ui.knob), .km mini-range,
+               .gate probability bar, .dot 20px toggles
+     .ictl inline label + control (Lab.ui.inline)
+     .rackwrap > .rack > .rrow (Lab.ui.rack), one row per voice
+     #status is a fixed toast (Lab.ui.status), out of page flow.
+
+   NAMES THIS FILE OWNS — a toy's own stylesheet must not INVENT one
+   for a thing of its own. (Restyling a library component on purpose —
+   `.rack .dial-wrap`, `#rack .rrow` — is a different act and is fine.)
+   The failure is silent, cosmetic, and looks like the toy's CSS being
+   wrong: a trail that marked every sixteenth slot with class `bar`
+   took this file's panel background, border, 11x13 px padding and
+   13 px bottom margin, and in a centre-aligned grid that margin
+   lifted every sixteenth slot off the line the other thirty-one sit
+   on. It was visible in a screenshot before it was visible in the
+   code. `Lab.page` warns at build when a page's own stylesheet
+   defines one of the ordinary words in the first row below — the ones
+   a toy is likely to invent and not expect to be taken.
+
+     CHECKED — ordinary words, easy to invent by accident:
+       bar  lane  blk  wrap  sub  hint  val  ctl  dot  km  kl
+
+     ALSO OWNED — component names, restyled deliberately or not at all:
+       blk-head  rack  rackwrap  rrow  rcap  rcap-group  rcapl  rname
+       rsw  ictl  gate  gfill  knob  knob-wrap  ptr  dial  dial-wrap
+       dial-label  dial-val  sep  spacer  status  muted  on  off  ro
+       armed  pri  tog  tl  lc  lc-r1  lc-r2  vname  gk  gpct  kn
+       and every pp-* name.
+
+   A toy's own classes are its own: prefix them, or pick a word this
+   list does not hold. `blin`, not `bar`.
+   ============================================================ */
+:root{
+  /* ground + surfaces — greyscale chrome, muted high contrast */
+  --bg:#070809;
+  --panel:#131519;
+  --panel2:#1e2026;
+  --cell:#22252c;
+  --cell-line:#464b56;
+  --line:#3a3d45;
+  --line2:#5a5f6a;
+
+  --ink:#ffffff;           /* pure white primary */
+  --dim:#d3d7df;           /* high-contrast secondary */
+  --faint:#888d99;
+
+  /* the events are the ONLY hue; everything else is greyscale */
+  --duple:#ff8a2b;         /* event hue 1 (somitsu: duple) */
+  --triplet:#38b7f3;       /* event hue 2 (somitsu: triplet) */
+  --one:#ffffff;           /* bar line — white */
+  --beat-line:rgba(255,255,255,0.55);   /* beat gridlines */
+  --guide:rgba(255,255,255,0.15);       /* snap guides */
+  --accent:#ffffff;        /* interactive = white (max contrast) */
+  --accent-ink:#070809;    /* black text on white */
+  --good:#54e08a;
+  --warn:#ffbe3d;
+
+  --f:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
+  --r:8px;
+
+  /* ---- THE ONE BREAKPOINT: the teaser width ----
+     Above it the page is the desktop page and may reflow at widths of its
+     own choosing, stated in the toy's spec. Below it is the teaser's
+     business, per toy. This declaration is where the number lives.
+
+     Scripts read it from here (`Lab.shell.env.teaser`), so prose that names
+     a position — "the dial below the rack" — asks the stylesheet rather than
+     carrying a second copy of the layout.
+
+     A media query cannot read a custom property: `@media (max-width:var(…))`
+     is not a thing in any engine, and there is no honest way to make it one.
+     So there is exactly ONE unavoidable copy of this number in the whole
+     collection — the `@media (max-width:720px)` block at the foot of this
+     file, which has to sit there rather than here because it overrides rules
+     declared in between. It is the only other place 720 may be written.
+     Every other reader, CSS or JS, comes through this property. */
+  --teaser:720px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:13px/1.45 var(--f);font-variant-numeric:tabular-nums}
+.wrap{max-width:1320px;margin:0 auto;padding:18px 18px 64px}
+
+/* ---- nameplate ---- */
+h1{font-size:17px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin:0;
+  display:flex;align-items:baseline;gap:12px}
+.sub{color:var(--dim);font-size:12px;margin:6px 0 16px;line-height:1.6;max-width:96ch}
+.sub b{color:var(--ink);font-weight:700}
+
+/* ---- transport bar ---- */
+.bar{display:flex;flex-wrap:wrap;gap:11px;align-items:center;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;margin-bottom:13px}
+.ctl{display:flex;flex-direction:column;gap:3px;min-width:56px}
+.ctl label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.ctl .v{color:var(--ink);font-weight:700}
+input[type=range]{width:100px;accent-color:var(--accent);vertical-align:middle}
+input[type=number],select,input[type=text]{background:#0a0b0f;color:var(--ink);border:1px solid var(--line2);
+  border-radius:6px;padding:5px 6px;font:inherit;font-size:12px}
+input[type=number]{width:58px}
+button{background:var(--panel2);color:var(--ink);border:1px solid var(--line2);border-radius:7px;
+  padding:6px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:border-color .12s,background .12s}
+button:hover{border-color:var(--accent)}
+button.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.pri.on{background:var(--panel2);border-color:var(--line2);color:var(--ink)}
+button.tog.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+/* Lab.ui.confirm, armed and waiting for the second press. Amber is the
+   collection's warning hue, the same one a mute wears: this is the one place
+   a chrome control is allowed a colour, because the state it reports is that
+   the next press destroys something. */
+button.armed{background:var(--warn);border-color:var(--warn);color:#1a1204}
+button.armed:hover{border-color:var(--warn)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.sep{width:1px;align-self:stretch;background:var(--line2);margin:0 3px}
+.spacer{flex:1}
+.status{font-size:11px;color:var(--dim)}
+.status .ok,#status .ok{color:var(--good);font-weight:700}
+.status .no,#status .no{color:var(--warn);font-weight:700}
+/* system messages: a fixed toast, out of page flow — never shifts the toolbar or page */
+#status{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:8px 14px;
+  font-size:12px;box-shadow:0 8px 28px rgba(0,0,0,.55);pointer-events:none;max-width:82vw}
+#status:empty{display:none}
+
+/* ============================================================
+   LANES — one compact row each; a canvas timeline is the hero
+   ============================================================ */
+.lane{display:flex;gap:8px;align-items:center;background:var(--panel);
+  border:1px solid var(--line);border-radius:6px;padding:4px 7px}
+.lane.muted{opacity:.5}
+.lane:focus-within{border-color:var(--line2)}
+
+/* fixed-width control cluster (2 rows) → every timeline starts at the same x */
+.lc{display:flex;flex-direction:column;justify-content:center;gap:3px;width:290px;flex:0 0 290px}
+.lc-r1,.lc-r2{display:flex;align-items:center;gap:5px}
+.vname{background:transparent;border:none;border-bottom:1px solid transparent;color:var(--ink);
+  font:inherit;font-weight:700;font-size:11.5px;flex:1;min-width:0;padding:2px 2px}
+.vname:hover{border-bottom-color:var(--line2)}
+.vname:focus{border-bottom-color:var(--accent);outline:none}
+
+/* 20px square toggles: m = mute (amber), s = solo (green), neutral = grey */
+.dot{width:20px;height:20px;border-radius:5px;border:1px solid var(--line2);background:#0a0b0f;
+  cursor:pointer;font-size:9.5px;font-weight:700;color:var(--dim);display:flex;align-items:center;
+  justify-content:center;padding:0;flex:0 0 auto}
+.dot:hover{border-color:var(--accent)}
+.dot.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.dot.m.on{background:var(--warn);border-color:var(--warn);color:#1a1204}
+.dot.s.on{background:var(--good);border-color:var(--good);color:#04180c}
+
+/* mini-range "knob" cluster — tiny label + narrow range slider */
+.km{display:inline-flex;align-items:center;gap:3px;flex:1;min-width:0}
+.kl{font-size:8.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.02em;flex:0 0 auto;line-height:1}
+input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(--accent)}
+
+/* label-beside-control wrapper (Lab.ui.inline) — the row-wise sibling of .ctl,
+   for naming a control that carries no label of its own */
+.ictl{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+
+/* bright numeric readout (knobs, mini-ranges) */
+.val{color:var(--ink);font-weight:700;font-size:11px;font-variant-numeric:tabular-nums;
+  flex:0 0 auto;white-space:nowrap}
+
+/* rotary knob (somitsu-circles visuals) — Lab.ui.knob builds this.
+   Pointer line: up at mid, −135°..+135° sweep, driven by JS transform. */
+.knob-wrap{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+.knob{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2a2d35,#111318 70%);
+  border:1px solid var(--line2);position:relative;cursor:ns-resize;flex:0 0 auto;touch-action:none}
+.knob:hover{border-color:var(--accent)}
+.knob .ptr{position:absolute;left:50%;bottom:50%;width:1.5px;height:9px;background:var(--ink);
+  transform-origin:50% 100%;transform:translateX(-50%) rotate(0deg)}
+
+/* rack (Lab.ui.rack) — one row per voice. The columns belong to the RACK, so
+   they line up down the page whatever each row happens to fill; a row owns its
+   own panel, border and dimmed state, which is why it is a real element with
+   `subgrid` rather than display:contents. The swatch wears the voice's own hue
+   because a row names an event source; every control on it stays greyscale. */
+.rackwrap{overflow-x:auto;max-width:100%;margin-bottom:13px}
+.rack{display:grid;grid-template-columns:var(--rack-cols);
+  column-gap:8px;row-gap:4px;align-items:center;
+  /* the three numbers a dial cell needs; a toy sets them on its own .rack */
+  --rack-dial:36px;--rack-dial-label:7.5ch;--rack-dial-val:6ch}
+.rrow{display:grid;grid-template-columns:subgrid;grid-column:1/-1;
+  column-gap:8px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.rrow.muted{opacity:.5}
+.rrow:focus-within{border-color:var(--line2)}
+.rrow > *{justify-self:start}
+.rname{display:flex;align-items:center;gap:5px;white-space:nowrap;
+  font-size:11.5px;font-weight:700;color:var(--ink)}
+.rsw{width:8px;height:8px;border-radius:2px;flex:0 0 auto;background:var(--line2)}
+/* One label box for the whole rack: this catches the labels Lab.ui.inline
+   produces AND the ones knobs produce, so a gate and a knob sharing a column
+   align on their FACES, not on their label text. Right-aligned so the name
+   stays tight against the control instead of stranded at the track's edge. */
+.rack[data-kl] .kl{width:var(--rack-kl);flex:0 0 var(--rack-kl);text-align:right}
+.rack .val{min-width:5ch}
+/* a mini-range is a grid ITEM here, so it fills its own track and lets the
+   slider inside it take the slack — left to its intrinsic width it would
+   overflow into the next column */
+.rack .km{width:100%;min-width:0}
+
+/* ---- A DIAL CELL LIES DOWN ----
+   Label · face · readout on ONE line, or eight rows become eight cards
+   (`DESIGN.md`, "Racks"). `dial-wrap` is a column everywhere else, which is
+   right on a strip and wrong in a row, so two toys wrote these same four rules
+   with different numbers before they lived here — and by the collection's own
+   charter an idiom hand-rolled twice is a library defect.
+
+   The label and the readout take FIXED widths and the face sits between them:
+   that is what aligns the faces down a column, which is the one property the
+   grid is for. Fixed rather than `auto` for a second reason — a readout growing
+   from `+0 st` to `+12 st` would widen its track and shift every column after
+   it, under the finger that was turning it. The three numbers are properties
+   because the right label width is the longest name in THIS rack. */
+.rack .dial-wrap{flex-direction:row;align-items:center;gap:9px;width:100%}
+.rack .dial{width:var(--rack-dial);height:var(--rack-dial)}
+.rack .dial-label{width:var(--rack-dial-label);flex:0 0 var(--rack-dial-label);
+  max-width:none;text-align:right;font-size:8.5px;letter-spacing:0}
+.rack .dial-val{width:var(--rack-dial-val);flex:0 0 var(--rack-dial-val);font-size:10.5px}
+
+/* The rack's caption row (Lab.ui.rack, a column carrying `caption`): what the
+   columns ARE, where no single cell can say it. It is a `.rrow` so it rides
+   the same subgrid, stripped of the row's panel so it reads as a heading and
+   not as a ninth voice. */
+.rcap{background:none;border-color:transparent;padding-top:0;padding-bottom:1px}
+/* a caption that opens a GROUP inside the rack is a heading with rows above it,
+   so it needs the air the first one gets from the panel edge */
+.rcap-group{margin-top:11px}
+/* a caption cell may hold a node — a swatch beside the name — so it lays its
+   contents out rather than assuming one string */
+.rcapl{display:flex;align-items:center;gap:4px;justify-content:center}
+.rcap .rcapl{font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--dim);font-weight:700;white-space:nowrap;justify-self:center}
+
+/* ---- a titled panel (Lab.ui.panel) ----
+   A box with a heading holding one thing. Two toys invented this
+   independently — virtualisation's `.panel-head`, markov's `.blkhead` — and
+   both keep their own name; this is the shape everything new takes. */
+.blk{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px}
+/* The gutter between two panels STACKED IN FLOW. Two panels side by side are
+   grid items whose gutter is the grid's own `gap`, and this margin then pushes
+   the second one down its own gutter — which is what every toy that has laid
+   two panels in a row has had to cancel by hand. CSS cannot ask what display
+   its parent has, so the row cancels it where the row knows: below. */
+.blk + .blk{margin-top:13px}
+.blk-head{margin:0 0 9px;font-size:10px;font-weight:400;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--faint);line-height:1.6}
+.blk-head b{color:var(--dim);font-weight:700}
+
+/* Bernoulli gate — the standard PROBABILITY control, 疎 sparse → 密 dense */
+.gate{position:relative;width:72px;flex:0 0 72px;height:20px;border:1px solid var(--line2);
+  border-radius:5px;background:#000;overflow:hidden;cursor:ew-resize;user-select:none;touch-action:none}
+.gate .gfill{position:absolute;left:0;top:0;bottom:0;background:#fff}
+/* white text + difference blend → black over the white fill, white over the black — reads on both */
+.gate .gk,.gate .gpct{position:absolute;top:50%;color:#fff;font-weight:700;pointer-events:none;mix-blend-mode:difference}
+.gate .gk{transform:translateY(-50%);font-size:10px}
+.gate .gk.l{left:5px} .gate .gk.r{right:5px}
+.gate .gpct{left:50%;transform:translate(-50%,-50%);font-size:9px}
+
+/* timeline canvas — the hero (toys override height per view) */
+canvas.tl{flex:1;min-width:0;width:100%;height:42px;display:block;background:#0d0f13;
+  border:1px solid var(--line2);border-radius:5px}
+
+/* ---- help ---- */
+.hint{color:var(--dim);font-size:11.5px;margin:16px 2px 0;line-height:1.7}
+.hint b{color:var(--ink);font-weight:700}
+kbd{background:#0a0b0f;border:1px solid var(--line2);border-radius:4px;padding:1px 5px;font-size:10.5px;color:var(--ink)}
+code{color:var(--duple);font-size:11px}
+
+/* ============================================================
+   THE SHELL (Lab.shell) — the frame a public page wears.
+   The bench above is a workshop; this is what a stranger meets.
+   ============================================================ */
+/* The NAMEPLATE has no shell rules at all, and that is the rule: `frame`
+   builds the reference page's own `h1` + `p.sub`, straight into `.wrap`,
+   under the two selectors at the top of this file. The spec link is the one
+   thing the shell adds, and it rides inside the h1's baseline flex row, so
+   the nameplate keeps the height it has when a toy hand-writes it. */
+.pp-spec{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--faint);
+  text-decoration:none;border-bottom:1px solid var(--line2);padding-bottom:1px}
+.pp-spec:hover{color:var(--ink);border-bottom-color:var(--accent)}
+/* The invitation is not an apology and not a promise. On a page with no
+   teaser it says the visitor gets the desktop page whole; on a page with one
+   it stands at the teaser's foot and invites them to the rest. Shown only
+   under --teaser (see the foot). */
+.pp-invite{display:none;color:var(--faint);font-size:11px;line-height:1.55;
+  margin:10px 0 0;border-left:2px solid var(--line2);padding-left:9px}
+/* The footer is one quiet line in the `.hint` register — the register the
+   reference page already ends on — with a rule above it to close the page. */
+.pp-foot{margin-top:30px;padding-top:11px;border-top:1px solid var(--line)}
+.pp-foot a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line2)}
+.pp-foot a:hover{color:var(--ink);border-bottom-color:var(--accent)}
+
+/* ============================================================
+   THE PAGE (Lab.page) — the composition the library lays out.
+   Order is the collection's: nameplate → master strip → start
+   line → instrument (stage and rack, either way round) →
+   session bar → standing text → keys → footer.
+   ============================================================ */
+/* The start line: a view of one computed state, sitting against the
+   instrument it names rather than up in the bar beside the master knobs,
+   which start nothing and are the nearest turnable thing to any sentence
+   placed up there. */
+/* ITS HEIGHT NEVER CHANGES, and that is not a tidiness rule. This line sits
+   directly above the instrument, and it swaps text under the hand: a press on a
+   declining control replaces the arrival sentence with the cold-hand answer. A
+   line-count difference between the two moves everything below it — measured at
+   18.84 px, most of a 22 px knob — BETWEEN pointerdown and click. The knob
+   leaves the finger, the click hit-tests onto the rack behind it, `declineArm`
+   never sees the gesture, and the level starts the audio it was declining.
+
+   So the box reserves the tallest text it may carry. `--start-lines` is the
+   design decision — two — and the height follows from the type rather than
+   from a number chosen by eye. Text that would exceed it is a wording problem,
+   and `Lab.page` says so at build. The box does not collapse when empty
+   either: a line that vanishes shifts the page exactly as one that grows. */
+.pp-start{--start-lines:2;--start-fs:11.5px;--start-lh:1.5;
+  display:block;font-size:var(--start-fs);line-height:var(--start-lh);
+  color:var(--faint);max-width:80ch;margin:0 0 11px;
+  min-height:calc(var(--start-lines) * var(--start-lh) * var(--start-fs))}
+.pp-start.no{color:var(--warn)}
+/* The armed region — the stage and the rack. It is a real element rather than
+   a wrapper of convenience: `arm` takes it as a root, and a sticky surface
+   inside it travels only as far as its own parent. */
+.pp-instrument{display:block}
+.pp-stage:not(:empty){margin-bottom:13px}
+/* The stage's gutter belongs to whatever is on it. `.blk + .blk` is the
+   collection's 13 px between two stacked PANELS, and a stage whose second
+   surface is a canvas or a bare div got nothing — so every toy with one wrote
+   the same number a second time. The stage gives it to any child; two panels
+   land on the same value from either rule. */
+.pp-stage > * + *{margin-top:13px}
+/* A ROW ON THE STAGE — an array inside the `stage` list. Its members sit side
+   by side wherever there is room for all of them at `--stage-min`, and stack,
+   still drawn alike, where there is not: `auto-fit` and `minmax`, so the
+   crossover is a width the toy states in its spec rather than a query it
+   writes. `min(…,100%)` keeps a narrow viewport from overflowing.
+
+   The two rules under it are the ones every toy laying panels in a row has
+   written for itself: a grid item's gutter is the grid's `gap`, and the
+   flow-stacking margin has to give way to it. */
+.pp-stagerow{display:grid;gap:10px;align-items:start;
+  grid-template-columns:repeat(auto-fit,minmax(min(var(--stage-min,420px),100%),1fr))}
+.pp-stagerow > .blk + .blk{margin-top:0}
+.pp-stagerow + .pp-stagerow{margin-top:13px}
+/* The toy-global buttons that ask voices for sound: in the master strip, and
+   the one thing in it that arms. Their own box so `arm` can take it. */
+/* Both master-strip slots WRAP, as `.bar` itself does. They did not, so four
+   controls sat on one unbreakable line and pushed the document past the
+   viewport — 10 px at 390, 20 px at 380, 80 px at 320 — on a page whose
+   controls had overflowed nothing at all when they sat straight in the bar.
+   A slot the composition provides must not be narrower than the row it
+   replaces. */
+.pp-globals{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* The toy's own master-strip controls that SHAPE rather than ask — a panel
+   toggle, a view switch. Outside the armed region with the master chain, and
+   like the master chain they answer a cold hand. */
+.pp-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* The instrument region is a tab stop on an arm page: it IS the keyboard start,
+   because `arm` already answers Enter. The ring only shows for a keyboard. */
+.pp-instrument:focus{outline:none}
+.pp-instrument:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:var(--r)}
+.pp-midi{display:flex;align-items:center;gap:8px}
+.pp-midistat{font-size:10px;color:var(--faint);letter-spacing:.06em}
+
+/* ---- THE TEASER (Lab.page's `teaser`) ----
+   The phone mode of the same page: one DOM, two readings, switched by the
+   media block at the foot of this file and by nothing else. Hidden here, at
+   every width, so the desktop page is exactly what it was without one.
+
+   Inside it the TOUCH FLOOR binds (DESIGN.md, "Panels, targets, gestures"):
+   44 px is the desktop's exception and the teaser's rule. Every factory a toy
+   might hand the slot gets its floor here rather than trusting the toy to ask
+   for it — a dial's face, a button's height, a gate's bar, a dot, a slider —
+   and a button is as wide as the column, because a thumb aims at a band, not
+   at a word. The gaps are a thumb's width apart for the same reason. */
+.pp-teaser,.pp-teaser-foot,.pp-teaser-text{display:none}
+.pp-teaser{flex-direction:column;gap:16px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r);padding:14px;margin-bottom:13px}
+.pp-teaser-head{display:flex;gap:12px;align-items:center;justify-content:flex-end}
+.pp-teaser-head:empty,.pp-teaser-controls:empty{display:none}
+.pp-teaser-play{flex:1 1 auto}
+.pp-teaser-controls{display:flex;flex-direction:column;align-items:stretch;gap:16px}
+.pp-teaser button:not(.pp-hintbtn),.pp-teaser-foot button{min-height:44px;font-size:13px}
+.pp-teaser-controls button:not(.dot),.pp-teaser-foot button{width:100%}
+.pp-teaser .pp-hintbtn{width:44px;height:44px}
+.pp-teaser .dial{min-width:44px;min-height:44px}
+.pp-teaser .knob{width:44px;height:44px}
+.pp-teaser .knob .ptr{height:19px}
+.pp-teaser .dot{width:44px;height:44px;font-size:13px}
+.pp-teaser .gate{height:44px;width:100%;flex:1 1 auto}
+.pp-teaser input[type=range]{height:44px;width:100%}
+.pp-teaser .ictl{width:100%;gap:10px}
+.pp-teaser .kl,.pp-teaser .dial-label{font-size:11px}
+/* the foot: the invitation, then "Send this to myself" */
+.pp-teaser-foot{margin:0 0 13px}
+.pp-teaser-foot .pp-invite{margin:0 0 12px}
+
+/* the "?" toggle and the bubble it reveals.
+   A tooltip renders on no touch device at all, so the hint has to become a
+   real, laid-out thing on demand — visible for everyone, not a reward for
+   owning a mouse. While the mode is on, every inspectable control wears a
+   dashed outline, because a documentation layer nobody can see the edges of
+   is a documentation layer nobody finds. */
+.pp-hintbtn{width:34px;height:34px;padding:0;border-radius:50%;font-size:14px;font-weight:700;
+  line-height:1;flex:0 0 auto}
+.pp-hintbtn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cursor:help}
+.pp-hintbub{position:fixed;z-index:80;max-width:min(38ch,78vw);background:var(--panel2);
+  color:var(--dim);border:1px solid var(--accent);border-radius:7px;padding:7px 10px;
+  font-size:11px;line-height:1.45;font-weight:400;letter-spacing:0;text-transform:none;
+  text-align:left;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.75)}
+.pp-hintbub[hidden]{display:none}
+
+/* ============================================================
+   DIAL (Lab.ui.dial) — the touch-first rotary.
+   Bigger face, name above, value below: on a page whose subject is
+   that the name of what a knob points at must reach the performer,
+   the readout is not decoration.
+   ============================================================ */
+.dial-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto}
+.dial-wrap.off{opacity:.45}
+/* READ-ONLY (`readOnly:true`) — a gauge, not a greyed-out control. Full ink,
+   because it is a live readout somebody has to read; a dashed ring and no
+   hover, because nothing here answers a hand. `.off` dims and announces
+   disabled, which is the wrong thing to say about a value that is changing. */
+.dial-wrap.ro .dial{background:none;border-style:dashed;border-color:var(--line);
+  cursor:default}
+.dial-wrap.ro .dial:hover{border-color:var(--line)}
+.dial-wrap.ro .dial-val{color:var(--dim)}
+.dial-label{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
+  white-space:nowrap;max-width:16ch;overflow:hidden;text-overflow:ellipsis}
+.dial{--dial-hue:var(--accent);width:56px;height:56px;flex:0 0 auto;
+  position:relative;touch-action:none;cursor:ns-resize;border-radius:50%;
+  background:radial-gradient(circle at 35% 28%,#23262e,#0d0f13 72%);
+  border:1px solid var(--line)}
+.dial-wrap.off .dial{cursor:default}
+.dial svg{width:100%;height:100%;display:block}
+.dial .dt{fill:none;stroke:var(--line);stroke-width:7;stroke-linecap:round}
+.dial .da{fill:none;stroke:var(--dial-hue);stroke-width:7;stroke-linecap:round}
+.dial .dp{stroke:var(--ink);stroke-width:6;stroke-linecap:round}
+.dial:hover{border-color:var(--line2)}
+.dial.grab{border-color:var(--accent)}
+.dial:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.dial-val{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap}
+
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+/* Where the pointer is a finger, the bench's mouse-precision sizes stop being
+   a style choice. The exceptions are shaped, not arbitrary: .dot is a 20 px
+   glyph inside a rack column whose track width it defines, and the hint
+   toggle is a circle that has to stay one. */
+@media (pointer:coarse){
+  .dial{width:64px;height:64px}
+  button:not(.dot):not(.pp-hintbtn){min-height:44px}
+  .pp-hintbtn{width:44px;height:44px}
+}
+/* THE TEASER WIDTH — the collection's one named breakpoint, declared as
+   `--teaser` at the top of this file. This block is the single copy of the
+   number that CSS cannot avoid (a media query cannot read a custom property);
+   it lives down here rather than beside the declaration because it overrides
+   rules stated in between. Change one, change the other.
+
+   It is also the ONLY width in this stylesheet. There used to be an unnamed
+   760 px block forty pixels above it, narrowing the fixed control cluster and
+   the blurb, sitting directly over the comment claiming 720 was the one
+   number. Its two rules are here now: a second breakpoint that nothing
+   declares, nothing names and no script can read is exactly what "one named
+   width" exists to forbid, and forty pixels is not worth the exception. */
+@media (max-width:720px){
+  .pp-invite{display:block}
+  .wrap{padding:14px 13px 48px}
+  .lc{width:200px;flex-basis:200px}
+  .sub{font-size:11.5px}
+  /* THE TEASER'S SIDE. A page declaring a teaser marks its desk regions
+     `pp-desk`, and they go; the teaser comes. A page declaring none marks
+     nothing, and below this width it is the desktop page, whole, as before.
+     `!important` because a desk region is often the toy's own element on the
+     stage, styled by id in the toy's own block (`#trail{display:grid}`), and an
+     id outranks this class — the mode would then depend on how each toy
+     happened to write its CSS. */
+  .pp-desk{display:none!important}
+  .pp-teaser{display:flex}
+  .pp-teaser-foot,.pp-teaser-text{display:block}
+  /* the stage's gutter goes between the members the phone KEEPS: a hidden
+     first member must not leave its successor a margin above nothing. Scoped
+     to a teaser page's stage, so no page without one changes here. */
+  .pp-stage.pp-teased > *{margin-top:0}
+  .pp-stage.pp-teased > :not(.pp-desk) ~ :not(.pp-desk){margin-top:13px}
+}

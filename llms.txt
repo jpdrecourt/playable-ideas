@@ -1,0 +1,13 @@
+# Playable Papers
+
+> A collection of browser audio toys, each built around one mechanism. Each
+> toy carries a markdown spec written so an agent can rebuild the mechanism
+> from it alone, in another language, another audio framework, or hardware.
+> Licence: CC0.
+
+## Specs
+
+- [motif-memory](toys/motif-memory/spec.md): Memory is a state of a voice, not a structure beside the ensemble.
+- [markov](toys/markov/spec.md): A first-order chain gives every state exactly one future — a local grammar, and no phrase.
+- [statistical-feedback](toys/statistical-feedback/spec.md): Dice have no memory, and the ear hears the difference.
+- [possibles](toys/possibles/spec.md): Existing and mattering are different questions, and an instrument can let you answer them one at a time.

@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>markov</title>
+<meta name="description" content="Two chains, four states each, thirty-two weights in all — and each chain remembers exactly one step. Build them by hand and hear what one step of memory can hold, and what it cannot.">
+<meta property="og:title" content="markov — Playable Papers">
+<meta property="og:description" content="Thirty-two numbers for two walkers, and each remembers one step. Build the chains by hand and listen for the figure coming apart.">
+<meta property="og:image" content="https://play.noisewrangler.art/markov/og.png">
+<meta property="og:url" content="https://play.noisewrangler.art/markov/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Noise Wrangler">
+<link rel="alternate" type="text/markdown" href="spec.md" title="markov — mechanism spec">
+<link rel="icon" href="../../lib/icon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../../lib/icon/favicon.ico" sizes="32x32">
+<link rel="icon" href="../../lib/icon/favicon-192.png" type="image/png" sizes="192x192">
+<link rel="icon" href="../../lib/icon/favicon-512.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="../../lib/icon/apple-touch-icon.png">
+<link rel="stylesheet" href="../../lib/lab.css">
+<script>
+/* ---- the stale-library guard, and why it is here rather than in the library ----
+   A browser holding a cached `lib/*.js` that no longer matches this file gets a
+   script that throws at its first statement and a `.wrap` that stays completely
+   empty: a blank black page, no message, nothing to act on.
+
+   `Lab.page` makes the same check for the pieces it calls — but it cannot run
+   at all if `page.js` is itself the stale file, which is why this one is inline,
+   in the head, ahead of every library script, and depends on nothing. */
+(function () {
+  var PARTS = ['audio', 'clock', 'voices', 'ui', 'shell', 'page', 'state'];
+
+  function gone() {
+    if (!window.Lab) return ['Lab'];
+    var out = PARTS.filter(function (n) { return !window.Lab[n]; }).map(function (n) {
+      return 'Lab.' + n;
+    });
+    if (!out.length && window.Lab.page && window.Lab.page.missing) {
+      try { out = window.Lab.page.missing(); } catch (e) {}
+    }
+    return out;
+  }
+
+  function report(e) {
+    var w = document.querySelector('.wrap');
+    if (!w || w.children.length) return;
+    var missing = gone();
+    var p = document.createElement('p');
+    p.className = 'hint';
+    if (missing.length) {
+      p.innerHTML = 'This page needs a hard reload ' +
+        '(<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>): the browser is holding a ' +
+        'cached copy of the library that no longer matches it. Missing: ';
+      p.appendChild(document.createTextNode(missing.join(', ')));
+    } else {
+      p.textContent = 'This page did not start. The library is all here, so this is ' +
+        'the page\'s own error: ';
+      var c = document.createElement('code');
+      c.textContent = (e && (e.message || (e.error && e.error.message))) || 'no message';
+      p.appendChild(c);
+    }
+    w.appendChild(p);
+  }
+
+  /* Three ways a page fails to start, and three listeners. A throw at the top
+     level is an 'error'. A throw inside `Lab.state.open(...).then` — where a
+     page that opens on its default.json builds — is an unhandled REJECTION,
+     which 'error' never hears. And a library piece that is simply absent is
+     named at load. An empty .wrap at load is NOT evidence by itself: a page
+     that opens asynchronously is legitimately empty while its default is
+     fetched, so the load check reports only when `gone()` names a piece. */
+  addEventListener('error', report);
+  addEventListener('unhandledrejection', function (e) { report(e.reason); });
+  addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { if (gone().length) report(); }, 0);
+  });
+})();
+</script>
+<style>
+/* Toy-specifics only — everything else is the lab bench (lab.css) and the
+   composition (Lab.page).
+
+   THE HUES ON THIS PAGE, and the rule they live under. Chrome is greyscale;
+   hue belongs to events. A weight cell wears the colour of the state it points
+   AT, because that is what the weight buys — so a column that is often set
+   shows as a stripe of one hue, and a trail mark wears the colour of the sound
+   that was drawn. The two WALKER hues are the third use and the one that needs
+   saying: a walker is a voice in the paper's sense — a chain is monophonic —
+   so its hue names a source of events, not a control. It appears on the
+   walker's caption row in the rack and on its lane in the trail, and nowhere
+   else. The rest is grey everywhere, because it is a state and not a sound. */
+
+/* ---- a weight cell ----
+   Wider than the 44 px target floor and shorter than it, which is what fits
+   eight strips of the standard shape on one screen (spec.md §8). A mis-tap is
+   reversible in one gesture: tapping again cycles the weight round to zero. */
+.wc{width:100%;height:30px;min-height:0;padding:0;border-radius:3px;
+  background:var(--cell);border:1px solid var(--line);
+  touch-action:pan-y;-webkit-touch-callout:none;user-select:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.wc:hover{border-color:var(--line2)}
+.wc:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.wc i{display:block;width:100%;height:100%;border-radius:2px;
+  transform:scale(0);transition:transform .09s ease-out}
+/* The rest COLUMN is a hole the matrix places, so it reads a shade apart from
+   the three that place a sound. The border above is what keeps it a target on
+   a LIT strip: its ground and the lit row's are within a value of each other,
+   so a cell distinguished by ground alone disappears on the one row a visitor
+   is most likely to be editing. */
+.wc.torest{background:#191b21}
+
+/* ---- the strip the walker is standing on ----
+   The lit strip is what makes a dead end visible as a light that has stopped
+   moving, and it has to survive being one row among eight dark ones: a lift of
+   the row's ground plus a mark against its name. */
+.rack .rrow.cur{background:#191c22;border-color:var(--line2)}
+.rack .rrow.cur .rname::before{content:'';width:2px;height:12px;border-radius:1px;
+  background:var(--ink);flex:0 0 auto}
+
+.rack .rrow .rname::before{content:'';width:2px;height:12px;border-radius:1px;
+  background:var(--cell);flex:0 0 auto}
+
+
+/* ---- the trail: the last two bars of each walk ----
+   In the DOM rather than on a canvas: thirty-two discrete slots per walker,
+   one per cell of the lattice, rather than a scrolling stretch of time — so a
+   grid of elements needs no device-pixel handling and no resize listener, and
+   it scales with the page. */
+.tlane{display:grid;grid-template-columns:var(--tlab,66px) repeat(32,minmax(0,1fr));
+  gap:2px;align-items:center}
+.tlane + .tlane{margin-top:5px}
+.tlab{display:flex;align-items:center;gap:5px;font-size:8.5px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden}
+.tlab i{width:7px;height:7px;border-radius:2px;flex:0 0 auto}
+.tsl{height:24px;border-radius:2px;background:#0c0d11;position:relative;overflow:hidden}
+/* The bar line. NOT `.bar`: that is the library's control-row class, and a
+   slot wearing it took `lab.css`'s panel background, border, padding and
+   13 px bottom margin — which in a centre-aligned grid lifted every
+   sixteenth slot off the line the other thirty-one sit on. A toy's own
+   decoration class is never a bare word `lab.css` already owns. */
+.tsl.blin{box-shadow:inset 1px 0 0 rgba(255,255,255,.22)}
+.tsl i{position:absolute;inset:2px;border-radius:1px;display:block}
+.tsl.hit i{background:var(--c)}
+/* A rest is a state and it is drawn as one: a low dash, not an empty slot, so
+   a silence the grammar placed is distinguishable from a walk that has not
+   reached this cell yet. */
+.tsl.rest i{inset:auto 2px 8px 2px;height:2px;background:var(--line2)}
+.tsl.stuck i{inset:6px 42% 6px 42%;background:var(--warn);opacity:.45}
+.tnote{margin:9px 2px 0;font-size:10.5px;color:var(--faint);line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- The page is a composition the library lays out: this toy declares its
+     master strip, its stage, its rack, its session controls, its text and its
+     keys, and `Lab.page` puts them in the collection's order. -->
+<div class="wrap"></div>
+
+<script src="../../lib/audio.js"></script>
+<script src="../../lib/clock.js"></script>
+<script src="../../lib/voices.js"></script>
+<script src="../../lib/ui.js"></script>
+<script src="../../lib/shell.js"></script>
+<script src="../../lib/page.js"></script>
+<script src="../../lib/state.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   markov — two first-order chains, four states each, and nothing
+   else. See spec.md; the claim is §1 and the step rule is §3.
+   ============================================================ */
+
+/* ---- the two walkers ----
+   Four states each: state 0 is the walker's REST and states 1..3 are its
+   sounds. The sounds are the library palette unchanged, so the kick here is
+   the kick in every other toy of the collection. None of the six has a long
+   tail or a pitch: a crash smears the cell it was drawn on and a plucked note
+   invites the ear to hear melody, and either blurs the figure this page wants
+   heard.
+
+   The walker's own hue is not a sound's. It names the lane and the group. */
+const WALKERS = [
+  { key: 'w1', name: 'walker 1', color: '#8f86d8', sounds: ['kick', 'snare', 'hat'] },
+  { key: 'w2', name: 'walker 2', color: '#d2789e', sounds: ['tom', 'rim', 'cowbell'] }
+];
+
+const NW = WALKERS.length;
+const S = 4;                                 // states per walker, rest included
+const CELLS = S * S;                         // 16 weights per walker
+const REST_HUE = '#6b7180';
+const MAXW = 4;                              // steps of weight a cell can hold
+
+const BPM = { min: 40, max: 200, def: 100 };
+const BAR_CELLS = 16;
+const TRAIL = BAR_CELLS * 2;                 // the last two bars
+
+const stName = (w, i) => (i === 0 ? 'rest' : WALKERS[w].sounds[i - 1]);
+function stColor(w, i) {
+  if (i === 0) return REST_HUE;
+  const v = Lab.voices.get(WALKERS[w].sounds[i - 1]);
+  return (v && v.color) || '#888';
+}
+
+/* ---- the caption a group is headed by ----
+   The four "next" columns mean different sounds in each group, so each group
+   carries its own heading: the walker's name over the name column, and over
+   each "next" column the state that column points at. A heading of bare names
+   would ask a visitor to match a hue against a row label eight times before
+   they could play, so every cell holds a swatch — the rack's own `.rsw`, the
+   same mark the strips wear.
+
+   They are FUNCTIONS rather than nodes because both groups want live cells: a
+   Node handed to a second caption row is cloned, which is right for a copy and
+   wrong for two headings that were never the same heading. */
+function capCell(text, hue) {
+  const f = document.createDocumentFragment();
+  const sw = document.createElement('i');
+  sw.className = 'rsw';
+  sw.style.background = hue;
+  f.append(sw, document.createTextNode(text));
+  return f;
+}
+
+function captionFor(wi) {
+  const out = { name: () => capCell(WALKERS[wi].name, WALKERS[wi].color) };
+  for (let c = 0; c < S; c++) out['n' + c] = () => capCell(stName(wi, c), stColor(wi, c));
+  return out;
+}
+
+function captionHintFor(wi) {
+  const out = {
+    name: WALKERS[wi].name + ' — four states, sixteen weights, and it shares ' +
+      'nothing with the other walker but the grid it steps on'
+  };
+  for (let c = 0; c < S; c++) {
+    out['n' + c] = 'the column of weights into ' + stName(wi, c) + ' — a cell here ' +
+      'is how often ' + stName(wi, c) + ' may follow that strip’s state';
+  }
+  return out;
+}
+
+/* ---- params: written by the controls, read live by the engine ----
+   RESTORE BEFORE BUILD. The snapshot lands here first and the controls take
+   their initial value from it, so no UI syncing exists anywhere.
+
+   Thirty-two numbers set one at a time is by far the most expensive thing on
+   this page to lose, so the matrices autosave with everything else. The
+   factory matrices here are EMPTY — that is the instrument `clear` returns to,
+   and what a page opened off a disk gets — while a stranger opens on the
+   example in default.json. Either way no line on the page may state what a
+   matrix holds as though it were a fact about the page: the lines that say so
+   are driven by the matrices. */
+const params = {
+  bpm: BPM.def,
+  seed: 0,
+  mx: [new Array(CELLS).fill(0), new Array(CELLS).fill(0)],
+  /* How closely the walk READS the matrices: 1 the matrices as written, 0 a
+     uniform draw. A lens on the draw, never a write — see drawNextState. */
+  structure: 1,
+  strips: {}
+};
+
+/* `params` is the schema the merge restores into — a key it does not hold is
+   dropped — so the strips are declared here, one per rack row, by the row's key. */
+WALKERS.forEach(function (wk) {
+  for (let r = 0; r < S; r++) params.strips[wk.key + 's' + r] = { gain: 1, mute: false, pan: 0 };
+});
+
+/* ---- what the page opens on ----
+   A returning visitor's session, else the example in default.json (JP's
+   matrices of 2026-10-05), else the bare factory parameters above — which is
+   the empty instrument, and what a page opened off a disk gets, saying so.
+
+   THE REST OF THIS SCRIPT IS THE CALLBACK'S BODY AND IS NOT RE-INDENTED: a
+   one-change re-indent of eight hundred lines destroys the history of every
+   line in it. The callback closes at the foot of the script. */
+Lab.state.open('markov').then(function (saved) {
+if (saved && saved.params) Lab.state.merge(params, saved.params);
+if (!params.seed) params.seed = Lab.prng.newSeed();
+
+/* A snapshot written by an earlier shape of this page can carry anything, and
+   the matrices are the one thing the engine indexes into blind. Normalise them
+   to exactly what the walkers expect rather than trusting storage. */
+params.mx = WALKERS.map(function (_, i) {
+  const src = (Array.isArray(params.mx) && Array.isArray(params.mx[i])) ? params.mx[i] : [];
+  const out = new Array(CELLS).fill(0);
+  for (let k = 0; k < CELLS; k++) {
+    const v = Math.round(Number(src[k])) || 0;
+    out[k] = v > 0 ? Math.min(v, MAXW) : 0;
+  }
+  return out;
+});
+
+// the dial's value, from anywhere: a number, clamped to its own range
+params.structure = (typeof params.structure === 'number' && isFinite(params.structure))
+  ? Math.max(0, Math.min(1, params.structure)) : 1;
+
+/* NOTHING HAS TO BE ZEROED ON LOAD. A page never reopens sounding, and here
+   that is the start gesture's doing rather than a parameter's: the audio
+   context is built inside the visitor's first press and never at load, so a
+   restored page is silent until a hand asks — and then it resumes the grammar
+   it was left with, which is what a restored matrix is for. A page whose gate
+   is a saved number has to force that number back to zero; this one has no
+   gate at all (spec.md §5). */
+
+/* ---- the walkers' state, and their randomness ----
+   Each walker owns its stream. Two walkers drawing from one generator would
+   make walker 1's sequence depend on how many draws walker 2 had made, so
+   adding a weight to walker 2 would change walker 1's walk — the opposite of
+   the claim. Both are derived from one seed, so a reseed moves the whole
+   performance and a saved seed replays it. */
+const walk = WALKERS.map(() => ({ state: 0, rng: null }));
+
+function seedWalkers() {
+  const root = Lab.prng.create(params.seed);
+  walk.forEach(w => { w.rng = Lab.prng.create(root.int(1, 2147483646)); });
+}
+seedWalkers();
+
+const cellSec = () => 60 / params.bpm / 4;
+
+const wAt = (i, r, c) => params.mx[i][r * S + c];
+
+function rowSum(i, r) {
+  const W = params.mx[i];
+  let s = 0;
+  for (let c = 0; c < S; c++) s += W[r * S + c];
+  return s;
+}
+
+function weightsSet() {
+  let n = 0;
+  for (let i = 0; i < NW; i++) for (let k = 0; k < CELLS; k++) if (params.mx[i][k] > 0) n++;
+  return n;
+}
+
+/* Below structure 1 every row has somewhere to go — the uniform share
+   reaches every state — so a walker can only stand still at 1. */
+const structured = () => params.structure >= 1;
+const walking = i => !structured() || rowSum(i, walk[i].state) > 0;
+
+/* MarkovStateMachine::drawNextState, line for line.
+   The two branches that look like defensive noise are the rule, and both say
+   the same thing: the chain STAYS. An all-zero row is idempotent, and so is the
+   floating-point tail where the accumulation lands a hair under the draw — the
+   source returns the current slot there, and reaching back for the last
+   non-zero column instead would advance the walk on an arithmetic accident.
+   Whole weights sum exactly and never reach it; fractional ones can, and that
+   is the port the agreement is written for. */
+function drawNextState(i, current) {
+  const W = params.mx[i];
+  const row = new Array(S);
+  let sum = 0;
+  for (let c = 0; c < S; c++) { row[c] = W[current * S + c]; sum += row[c]; }
+
+  if (!structured()) return drawBlended(i, current, row, sum);
+
+  if (sum <= 0) return current;              // empty row: the chain stays put
+
+  const r = walk[i].rng.float(0, sum);
+  let cum = 0;
+  for (let c = 0; c < S; c++) {
+    cum += row[c];
+    if (r <= cum) return c;
+  }
+  return current;                            // the accumulation fell short: stay
+}
+
+/* THE STRUCTURE DIAL'S LAW — a blend in PROBABILITY space, per row:
+
+     p_example = w / Σw              (Σw > 0)
+               = one-hot on itself   (Σw = 0: an empty row means stay)
+     p         = (1 − s)·¼ + s·p_example
+
+   Not a blend of the weights: the example's rows have different totals, so a
+   heavy row would keep its shape at mid-dial while a light one went flat
+   early, and the middle of the dial would mean something different on every
+   row. In probability space every row is the same distance from uniform at
+   the same `s`. At s = 1 the draw above runs instead, unchanged and drawing
+   the same one number per step, so the full dial is the plain chain exactly;
+   below 1 no row is a dead end. The matrices themselves are never touched. */
+function drawBlended(i, current, row, sum) {
+  const s = params.structure;
+  const r = walk[i].rng.float(0, 1);
+  let cum = 0;
+  for (let c = 0; c < S; c++) {
+    const pe = sum > 0 ? row[c] / sum : (c === current ? 1 : 0);
+    cum += (1 - s) / S + s * pe;
+    if (r <= cum) return c;
+  }
+  return current;                            // float dust at the top: stay
+}
+
+/* ============================================================
+   ONE CELL OF THE LATTICE, FOR ONE WALKER.
+
+   There is no gate and no rest length: what the walk draws is
+   what sounds, and a long silence is a heavy rest→rest weight.
+   ============================================================ */
+function step(i, t, late) {
+  const from = walk[i].state;
+
+  /* An empty current row is a DEAD END: no advance, no emission. The state
+     machine's own `advance()` would return `current` here and the sound would
+     re-fire on every cell; the trigger guards it instead. It is also where
+     `clear` leaves the page — an empty matrix is four dead ends and both
+     walkers stand on their rest — so this branch is a state a visitor meets
+     rather than an edge case, and the start line says so in words. Below
+     structure 1 there is no dead end: the uniform share always has a way on. */
+  if (structured() && rowSum(i, from) <= 0) return { kind: 'stuck' };
+
+  const next = drawNextState(i, from);
+  walk[i].state = next;
+
+  if (next === 0) return { kind: 'rest' };   // a hole the grammar placed
+
+  /* A cell whose timestamp is already past — the tab was hidden long enough to
+     outrun even the widened horizon — is WALKED and not sounded, or the whole
+     backlog arrives at once the moment the tab comes back. */
+  if (!late) Lab.voices.play(WALKERS[i].sounds[next - 1], t);
+  return { kind: 'hit', state: next };
+}
+
+/* ---- the scheduler ----
+   ONE ticker drives both walkers: they share the lattice and nothing else. The
+   cell duration is read live so a bpm change alters only cells not yet
+   scheduled, and every event lands on its cell's own absolute timestamp. */
+const pending = [];
+const ticker = Lab.clock.createTicker({
+  periodSec: cellSec,
+  onTick: (n, t) => {
+    const late = !Lab.audio.ctx || t < Lab.audio.ctx.currentTime - 0.005;
+    for (let i = 0; i < NW; i++) {
+      const ev = step(i, t, late);
+      ev.t = t; ev.n = n; ev.w = i;
+      pending.push(ev);
+    }
+    /* The release queue is drained on animation frames, and those do not run
+       in a hidden tab while the walks do — so the queue is bounded WHERE IT IS
+       FILLED. Older entries go rather than the newest, because what a
+       returning visitor wants to see is the walk they came back to. */
+    if (pending.length > 1024) pending.splice(0, pending.length - 1024);
+  }
+});
+
+/* ============================================================
+   THE TRAIL — time, which a strip cannot hold.
+   ============================================================ */
+
+/* Events are composed up to a horizon ahead of the sound, so the trail and the
+   lit strip are released against the AUDIO clock rather than drawn when they
+   are scheduled. Otherwise the walk is seen an eighth of a second before it is
+   heard.
+
+   This surface is on `requestAnimationFrame` and not on `page.onPaint`, which
+   is where a rack cell that is a VIEW belongs: at 100 bpm a cell is 150 ms and
+   the page's poll runs at 200, so the walk would be shown behind its own
+   sound. The reason the poll exists — that it stops in a hidden tab — is
+   satisfied here by bounding the queue at the ticker instead. */
+const trailBuf = WALKERS.map(() => []);
+const shown = WALKERS.map(() => 0);          // the state each lane is showing
+let raf = 0;
+
+const trailEl = document.createElement('div');
+const lanes = [];
+WALKERS.forEach(function (wk, i) {
+  const lane = document.createElement('div');
+  lane.className = 'tlane';
+  lane.setAttribute('role', 'img');
+  lane.setAttribute('aria-label', wk.name + ': the last two bars of its walk');
+  const lab = document.createElement('div');
+  lab.className = 'tlab';
+  const sw = document.createElement('i');
+  sw.style.background = wk.color;
+  lab.appendChild(sw);
+  lab.appendChild(document.createTextNode(wk.name));
+  lane.appendChild(lab);
+  const slots = [];
+  for (let k = 0; k < TRAIL; k++) {
+    const d = document.createElement('div');
+    d.className = 'tsl';
+    d.appendChild(document.createElement('i'));
+    lane.appendChild(d);
+    slots.push(d);
+  }
+  lanes.push(slots);
+  trailEl.appendChild(lane);
+});
+
+const trailBlk = Lab.ui.panel({
+  title: 'the trail',
+  note: 'the last two bars of each walk, as it was drawn',
+  label: 'the trail'
+});
+trailBlk.appendChild(trailEl);
+trailBlk.insertAdjacentHTML('beforeend',
+  '<p class="tnote">A block is a sound, a low dash is a rest the grammar placed, ' +
+  'and a small amber tick is a walker standing on a row with no weights. ' +
+  'The two lanes never line up for long: nothing is shared between them but the grid.</p>');
+
+function pushTrail(ev) {
+  const buf = trailBuf[ev.w];
+  buf.push(ev);
+  while (buf.length > TRAIL) buf.shift();
+}
+
+function paintTrail() {
+  for (let i = 0; i < NW; i++) {
+    const buf = trailBuf[i], slots = lanes[i], off = TRAIL - buf.length;
+    for (let k = 0; k < TRAIL; k++) {
+      const el = slots[k], fill = el.firstChild;
+      const ev = k >= off ? buf[k - off] : null;
+      let cls = 'tsl';
+      if (ev) {
+        if (ev.n % BAR_CELLS === 0) cls += ' blin';
+        if (ev.kind === 'hit') {
+          cls += ' hit';
+          fill.style.setProperty('--c', stColor(i, ev.state));
+        } else if (ev.kind === 'rest') cls += ' rest';
+        else if (ev.kind === 'stuck') cls += ' stuck';
+      }
+      el.className = cls;
+    }
+  }
+}
+
+function frame() {
+  const now = Lab.audio.ctx ? Lab.audio.ctx.currentTime : 0;
+  let dirty = false;
+  while (pending.length && pending[0].t <= now) {
+    const ev = pending.shift();
+    if (ev.kind === 'hit') shown[ev.w] = ev.state;
+    else if (ev.kind === 'rest') shown[ev.w] = 0;
+    pushTrail(ev);
+    dirty = true;
+  }
+  if (dirty) { paintTrail(); paintCurrent(); }
+  raf = requestAnimationFrame(frame);
+}
+
+/* ============================================================
+   THE RACK — the instrument, with both matrices in it.
+
+   A weight is a playable parameter, so it is a rack cell. Eight
+   strips in state order, each walker's group opened by its rest:
+   a rest is a strip in the standard shape with its mixer cells
+   empty, so the columns line up and anything a rest grows later
+   is one more column rather than a different kind of row.
+   ============================================================ */
+const ROWS = [];
+const ROWAT = {};
+WALKERS.forEach(function (wk, i) {
+  for (let r = 0; r < S; r++) {
+    const key = wk.key + 's' + r;
+    ROWAT[key] = { key: key, w: i, s: r };
+    const row = (r === 0)
+      ? { key: key, name: 'rest', color: REST_HUE }     // no voice: no level, no mute
+      : { key: key, voice: wk.sounds[r - 1], name: wk.sounds[r - 1] };
+    /* Every group after the first opens its own caption row, immediately above
+       the rest that opens the group. The first group's is the rack's own
+       caption, declared on the columns below. */
+    if (r === 0 && i > 0) row.group = { caption: captionFor(i), captionHint: captionHintFor(i) };
+    ROWS.push(row);
+  }
+});
+
+const NEXT_KEYS = ['n0', 'n1', 'n2', 'n3'];
+const cellsEl = WALKERS.map(() => new Array(CELLS).fill(null));
+
+/* Tap adds a step; a tap past full clears, so the whole range is reachable by
+   tapping alone — and a long press clears from anywhere, which is the shortcut
+   rather than the only way. A press that TRAVELS is a scroll and writes
+   nothing: the rack is most of a narrow screen, so the page has to remain
+   scrollable from on top of it. */
+const LONG_MS = 420, SLOP = 9;
+
+function wireCell(b, i, r, c) {
+  let px = 0, py = 0, timer = 0;
+  let done = false;   // the gesture has already been answered (a hold, a travel)
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = 0; } };
+
+  b.addEventListener('pointerdown', e => {
+    cancel();
+    if (e.button) { done = true; return; }            // primary button only
+    px = e.clientX; py = e.clientY; done = false;
+    timer = setTimeout(() => { timer = 0; done = true; setWeight(i, r, c, 0); }, LONG_MS);
+  });
+  b.addEventListener('pointermove', e => {
+    if (!timer && !done) return;
+    if (Math.abs(e.clientX - px) > SLOP || Math.abs(e.clientY - py) > SLOP) {
+      cancel(); done = true;
+    }
+  });
+  b.addEventListener('pointerup', e => {
+    cancel();
+    if (done) return;
+    if (Math.abs(e.clientX - px) > SLOP || Math.abs(e.clientY - py) > SLOP) return;
+    bump(i, r, c);
+  });
+  b.addEventListener('pointercancel', () => { cancel(); done = true; });
+  b.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    done = true;                   // the up that follows is not a tap either
+    setWeight(i, r, c, 0);
+  });
+  // Keyboard only: a pointer-driven click has already been answered above.
+  b.addEventListener('click', e => { if (e.detail === 0) bump(i, r, c); });
+}
+
+function bump(i, r, c) {
+  const v = wAt(i, r, c);
+  setWeight(i, r, c, v >= MAXW ? 0 : v + 1);
+}
+
+function setWeight(i, r, c, v) {
+  params.mx[i][r * S + c] = v > 0 ? v : 0;
+  paintCell(i, r, c);
+}
+
+function paintCell(i, r, c) {
+  const b = cellsEl[i][r * S + c];
+  if (!b) return;
+  const v = wAt(i, r, c);
+  const f = b.firstChild;
+  f.style.background = v > 0 ? stColor(i, c) : '';
+  f.style.transform = 'scale(' + (v > 0 ? 0.34 + 0.66 * (v / MAXW) : 0) + ')';
+  b.setAttribute('aria-label',
+    stName(i, r) + ' to ' + stName(i, c) + ', weight ' + v + ' of ' + MAXW);
+}
+
+function paintAll() {
+  for (let i = 0; i < NW; i++)
+    for (let r = 0; r < S; r++) for (let c = 0; c < S; c++) paintCell(i, r, c);
+  paintCurrent();
+}
+
+function paintCurrent() {
+  if (!page || !page.rack) return;
+  for (let i = 0; i < NW; i++) {
+    for (let r = 0; r < S; r++) {
+      const row = page.rack.row(WALKERS[i].key + 's' + r);
+      if (row) row.classList.toggle('cur', r === shown[i]);
+    }
+  }
+}
+
+function weightCell(ctx, c) {
+  const at = ROWAT[ctx.key];
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'wc' + (c === 0 ? ' torest' : '');
+  b.appendChild(document.createElement('i'));
+  b.dataset.hint = c === 0
+    ? 'how often a rest may follow ' + stName(at.w, at.s) +
+      ' — weight here asks for a hole, and a heavier one asks for a longer silence'
+    : 'how often ' + stName(at.w, c) + ' may follow ' + stName(at.w, at.s) +
+      '. Tap to add a step; tap past full, or hold, to clear it';
+  b.title = b.dataset.hint;
+  wireCell(b, at.w, at.s, c);
+  cellsEl[at.w][at.s * S + c] = b;
+  return b;
+}
+
+/* The rack's own caption row is the FIRST group's heading; every later group
+   carries its own on the row that opens it. */
+const CAP1 = captionFor(0), CAPHINT1 = captionHintFor(0);
+
+const nextColumns = NEXT_KEYS.map(function (k, c) {
+  return {
+    key: k,
+    width: '48px',
+    caption: CAP1[k],
+    captionHint: CAPHINT1[k],
+    /* A weight cell ASKS FOR SOUND — it is what starts a walker — so it is
+       marked rather than left to the region's blanket answer. */
+    asks: true,
+    cell: ctx => weightCell(ctx, c)
+  };
+});
+
+/* ============================================================
+   THE SESSION BAR — what you do TO the instrument.
+   ============================================================ */
+const clearBtn = Lab.ui.confirm({
+  text: 'clear',
+  armed: 'clear — sure?',
+  hint: 'empty every weight of both matrices and start again from nothing. It asks ' +
+        'twice, because there is no undo and the autosave means a reload will not ' +
+        'bring it back.',
+  onArm: () => {
+    if (weightsSet()) return true;
+    Lab.ui.status('there is nothing built yet');
+    return false;
+  },
+  onConfirm: () => {
+    for (let i = 0; i < NW; i++) {
+      params.mx[i].fill(0);
+      walk[i].state = 0;
+      shown[i] = 0;
+      trailBuf[i].length = 0;
+    }
+    pending.length = 0;
+    paintAll();
+    paintTrail();
+    Lab.ui.status('cleared — both walkers are back on their rest');
+  }
+});
+
+const seedEl = document.createElement('span');
+seedEl.className = 'val';
+function renderSeed() { seedEl.textContent = 'seed ' + params.seed; }
+renderSeed();
+
+const reseedBtn = document.createElement('button');
+reseedBtn.type = 'button';
+reseedBtn.textContent = 'reseed';
+reseedBtn.dataset.hint = 'a different roll of the same dice — every weight, both sounds ' +
+  'and the tempo are untouched, and the walks go somewhere else. What a matrix holds ' +
+  'is a grammar, not a pattern.';
+reseedBtn.title = reseedBtn.dataset.hint;
+reseedBtn.addEventListener('click', () => {
+  params.seed = Lab.prng.newSeed();
+  seedWalkers();
+  renderSeed();
+  Lab.ui.status('seed ' + params.seed);
+});
+
+/* ============================================================
+   THE STRUCTURE DIAL — one parameter, two dials.
+
+   The desktop's sits in the master strip's controls: it shapes the
+   walk and asks for nothing, so it declines and answers a cold hand.
+   The phone's is the teaser's one control, and like everything in
+   the teaser it arms. Each shows the other's writes; one parameter.
+   It is on the desktop too because the value persists and the mode
+   is CSS over one DOM: a desktop without it could play a blended
+   chain with nothing on screen saying so.
+   ============================================================ */
+const STRUCT_HINT = 'how closely the two walks read their matrices. At 1 they ' +
+  'follow the weights as written, and the walk has a style; at 0 every next ' +
+  'state is a quarter chance, a plain random draw. The weights themselves are ' +
+  'not changed.';
+const STRUCT_DEF = 1;
+let tStruct = null;
+const dStruct = Lab.ui.dial({
+  label: 'structure', min: 0, max: 1, step: 0.01, value: params.structure,
+  fmt: v => v.toFixed(2), hint: STRUCT_HINT,
+  onInput: v => { params.structure = v; if (tStruct) tStruct.show(v); },
+  onDefault: () => dStruct.set(STRUCT_DEF)
+});
+tStruct = Lab.ui.dial({
+  label: 'structure', min: 0, max: 1, step: 0.01, value: params.structure,
+  fmt: v => v.toFixed(2),
+  hint: 'turn it down and the grammar dissolves into a random draw, a quarter ' +
+        'chance for each state; turn it up and the example’s grammar comes back.',
+  onInput: v => { params.structure = v; dStruct.show(v); },
+  onDefault: () => dStruct.set(STRUCT_DEF)
+});
+
+/* ============================================================
+   THE PAGE
+   ============================================================ */
+function whoWalks() {
+  const on = [];
+  for (let i = 0; i < NW; i++) if (walking(i)) on.push(i);
+  return on;
+}
+
+function allMuted() {
+  return ROWS.every(function (r) {
+    if (!r.voice) return true;                       // a rest has nothing to mute
+    const s = params.strips[r.key];
+    return !!(s && s.mute);
+  });
+}
+
+const page = Lab.page.build({
+  title: 'markov',
+  shows: 'Two chains, four states each, and thirty-two weights between them. Each ' +
+         'chain remembers exactly one step: build one and hear what that can hold.',
+  spec: 'spec.md',
+  // repo: '…',            ← SET BEFORE PUBLISHING
+  site: 'https://noisewrangler.art',
+
+  /* ---- the master strip ----
+     The master chain, the tempo and the structure dial, and nothing else.
+     There is no per-walker control anywhere on the desktop page: everything
+     that is not the chain, or how it is read, is off it. No transport either — the walk has no beginning: it runs from the
+     first touch, and after `clear` a button reading "play" would start
+     nothing, which would be the page's first lie. */
+  bpm: {
+    min: BPM.min, max: BPM.max, def: BPM.def, value: params.bpm,
+    hint: 'the pulse both walkers step on — one cell is a sixteenth',
+    onChange: v => { params.bpm = v; }
+  },
+  master: saved && saved.fx ? saved.fx : {},
+  controls: [{ el: dStruct, says: 'that is structure — how closely the walks read ' +
+    'their matrices. It shapes the walk and does not start it' }],
+  hints: true,
+  midi: false,
+  status: () => {
+    const on = whoWalks();
+    const who = on.length === NW ? 'both walking'
+      : on.length === 0 ? 'nothing walking'
+      : WALKERS[on[0]].name + ' walking';
+    return weightsSet() + '/' + (NW * CELLS) + ' weights · ' + who;
+  },
+
+  start: {
+    gesture: 'Tap a cell in a rest row',      // the phrase for an empty or stuck chain
+    state: () => {
+      if (!weightsSet() && structured()) return 'nothing';
+      if (!whoWalks().length) return 'stuck';
+      const fx = Lab.audio.getState();
+      if (allMuted() || (fx && fx.master <= 0)) return 'shut';
+      return null;
+    },
+    words: {
+      notStarted: () => (weightsSet()
+        ? 'the matrices hold weights. Touch the rack or the trail and the walkers ' +
+          'start; a tap on a cell adds a step.'
+        : 'tap a cell in a rest row: that is the first weight, and it starts ' +
+          'the audio and the chain at once.'),
+      nothing: 'both chains are standing on their rest, and a rest with no weights ' +
+               'goes nowhere. Tap a cell in a rest row to say what may follow a silence.',
+      stuck: () => 'walker 1 is standing on ' + stName(0, walk[0].state) +
+             ' and walker 2 on ' + stName(1, walk[1].state) + ', and neither row ' +
+             'has a weight, so nothing can move. Give one of those rows a cell.',
+      shut: 'it is running and nothing reaches you: every sound is muted in the rack, ' +
+            'or the master level in the bar above is at zero.',
+      running: () => {
+        const on = whoWalks();
+        /* Not `=== NW`: the build-time sweep measures every one of these
+           sentences before a walker exists, and `running` with nothing walking
+           must return a sentence rather than reach past the end of a list. */
+        if (on.length !== 1) {
+          return 'both chains are walking. Add a weight to change what may follow a ' +
+                 'row, and press reseed to hear that a matrix holds a grammar.';
+        }
+        const off = WALKERS[on[0] === 0 ? 1 : 0];
+        return WALKERS[on[0]].name + ' is walking and ' + off.name + ' is standing ' +
+               'still. Tap a cell in its rest row to hear two chains that share nothing.';
+      }
+    }
+  },
+
+  /* What the hands play comes before what the eyes read: the matrices are in
+     the rack, so the rack IS the instrument and the trail follows it. */
+  instrument: 'rack',
+  stage: [trailBlk],
+
+  rack: {
+    rows: ROWS,
+    label: 'the two chains: a strip is a state, and the cells along it are what may follow it',
+    columns: [
+      /* `name` carries a caption because the caption row's first cell is what
+         names the GROUP the four next-columns belong to. */
+      { key: 'name', caption: CAP1.name, captionHint: CAPHINT1.name },
+      'mute', 'gain'
+    ].concat(nextColumns).concat([
+      { key: 'pad', width: 'minmax(0,1fr)' }
+    ]),
+    state: params.strips,
+    onStrip: (key, strip) => { params.strips[key] = strip; }
+  },
+
+  session: [clearBtn, reseedBtn, seedEl, Lab.state.buttons()],
+
+  text: [
+    { head: 'Start.', body: 'The page opens on an example: two matrices somebody ' +
+      'built. Touch the rack or the trail and both walkers start. <b>clear</b>, below, ' +
+      'empties both — then each walker stands on its rest, a rest with no weights ' +
+      'goes nowhere, and a tap on a cell in a rest strip (the first strip of either ' +
+      'group) starts that walker on the next beat.' },
+    { head: 'A strip is a state.', body: 'After its level and its mute come four ' +
+      'cells: what may follow this state, one per state of that walker, in the order ' +
+      'the group’s caption names. The fill is the weight, and a weight is a share of ' +
+      'its own row rather than a probability — raising one lowers every sibling’s ' +
+      'share without touching their numbers. Tap to add a step, tap past full or hold ' +
+      'to clear. The lit strip is where that walker is standing now.' },
+    { head: 'Thirty-two numbers, and each chain remembers one step.', body: 'That is ' +
+      'the whole model. Lean kick toward hat, hat toward snare, snare back toward ' +
+      'kick, and the walk acquires a local logic — every step answers the one before ' +
+      'it, so the output has a style and no two bars are the same bar.' },
+    { head: 'What it cannot hold.', body: 'A figure that uses a sound twice. Kick, ' +
+      'hat, kick, snare: the kick has to lead to the hat on its first appearance and ' +
+      'to the snare on its second, and there is nowhere to put that difference, ' +
+      'because the kick’s row is one set of odds. Give it both and the chain chooses ' +
+      'at random on every pass. No assignment of weights fixes it — it is the shape ' +
+      'of the model, not a shortage of numbers. And a chain is monophonic, so the ' +
+      'second walker is not a richer chain but another one, sharing no state, no ' +
+      'weight and no random stream: sixteen more numbers, and nothing across the two.' }
+  ],
+
+  keys: '<kbd>?</kbd> what does this do — then tap anything · ' +
+        '<kbd>Tab</kbd> to any cell, then <kbd>Enter</kbd> to add a step · ' +
+        'hold a cell to clear it',
+
+  /* THE TEASER. One dial from a uniform walk (0) to the matrices as written
+     (1), and the trail kept because it is passive time; the rack is the desk.
+     The phone's words name the dial, never a cell, since no cell is on the
+     phone — and below 1 nothing can be empty or stuck. */
+  teaser: {
+    controls: [tStruct],
+    stage: [trailBlk],
+    gesture: 'Turn the structure dial',
+    words: {
+      notStarted: 'turn structure: 1 is the example’s grammar, 0 a uniform draw.',
+      nothing: 'both matrices are empty, so at 1 nothing can move. Turn structure down.',
+      stuck: 'both walkers stand on rows with no weights, so at 1 nothing moves. ' +
+             'Turn structure down.',
+      shut: 'it is running and nothing reaches you: it is muted, or at zero, on the ' +
+            'desktop page.',
+      running: () => (params.structure >= 0.5
+        ? 'turn structure down and the grammar dissolves into a uniform draw.'
+        : 'turn structure up: a grammar arrives, but kick, hat, kick, snare never will.')
+    },
+    share: { text: 'Two chains of four states; each remembers exactly one step. ' +
+                   'Try the whole matrix on a desktop.' },
+    /* The phone's standing text: only what the phone shows — the dial and
+       the trail — and the claim in the visitor's words. */
+    text: [{ head: 'From a grammar to dice.', body: 'At 1 the two chains read the ' +
+      'example exactly: each sound leads to the next by the odds written for it, so ' +
+      'the walk has a style. At 0 every next state is a quarter chance, and it is ' +
+      'noise. In between the grammar loosens, but no setting holds a phrase: kick, ' +
+      'hat, kick, snare needs a memory of two steps, and each chain remembers one.' }]
+  },
+
+  onStart: () => {
+    Lab.audio.fadeIn(0.03);
+    ticker.start();
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+});
+
+paintAll();
+paintTrail();
+
+/* The autosave handle is KEPT rather than dropped: it is otherwise a permanent
+   background write loop with no way out, which is not a thing to leave running
+   on a public page. */
+const autosave = Lab.state.attach({
+  key: 'markov',
+  collect: () => ({ params: params, fx: Lab.audio.getState() })
+});
+
+});   // the end of `Lab.state.open('markov').then(function (saved) {`
+</script>
+</body>
+</html>

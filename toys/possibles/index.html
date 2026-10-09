@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>possibles</title>
+<meta name="description" content="Write the tree of what can follow what — branches and weights, five symbols, two verbs — and a machine walks it aloud without stopping. Nothing you do makes a sound.">
+<meta property="og:title" content="possibles — Playable Papers">
+<meta property="og:description" content="You write the field of possibles; the machine is the only speaker. Existing and mattering are two different verbs here.">
+<meta property="og:image" content="https://play.noisewrangler.art/possibles/og.png">
+<meta property="og:url" content="https://play.noisewrangler.art/possibles/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Noise Wrangler">
+<link rel="alternate" type="text/markdown" href="spec.md" title="possibles — mechanism spec">
+<link rel="icon" href="../../lib/icon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../../lib/icon/favicon.ico" sizes="32x32">
+<link rel="icon" href="../../lib/icon/favicon-192.png" type="image/png" sizes="192x192">
+<link rel="icon" href="../../lib/icon/favicon-512.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="../../lib/icon/apple-touch-icon.png">
+<link rel="stylesheet" href="../../lib/lab.css">
+<script>
+/* ---- the stale-library guard, and why it is here rather than in the library ----
+   A browser holding a cached `lib/*.js` that no longer matches this file gets a
+   script that throws at its first statement and a `.wrap` that stays completely
+   empty: a blank black page, no message, nothing to act on. That is exactly
+   what a returning visitor sees after a deploy, and it is the failure that
+   looks most like the site being gone.
+
+   `Lab.page` makes the same check for the pieces it calls — but it cannot run
+   at all if `page.js` is itself the stale file, which is why this one is inline,
+   in the head, ahead of every library script, and depends on nothing.
+
+   Serve the collection with `Cache-Control: no-store` while developing. A fresh
+   port does NOT clear it: Chrome's heuristic freshness holds a file that carries
+   `Last-Modified` and no `Cache-Control`, which is what python's http.server
+   sends. */
+(function () {
+  var PARTS = ['audio', 'clock', 'voices', 'ui', 'shell', 'page', 'state'];
+
+  // What is actually absent — nothing else may be called a cache problem.
+  function gone() {
+    if (!window.Lab) return ['Lab'];
+    var out = PARTS.filter(function (n) { return !window.Lab[n]; }).map(function (n) {
+      return 'Lab.' + n;
+    });
+    if (!out.length && window.Lab.page && window.Lab.page.missing) {
+      try { out = window.Lab.page.missing(); } catch (e) {}
+    }
+    return out;
+  }
+
+  function report(e) {
+    var w = document.querySelector('.wrap');
+    if (!w || w.children.length) return;
+    var missing = gone();
+    var p = document.createElement('p');
+    p.className = 'hint';
+    if (missing.length) {
+      /* Only a library global that is not there earns the cache line. Blaming
+         the cache for every early throw sends a builder who forgot a line of
+         `start.words` off to clear a cache that was never the problem. */
+      p.innerHTML = 'This page needs a hard reload ' +
+        '(<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>): the browser is holding a ' +
+        'cached copy of the library that no longer matches it. Missing: ';
+      p.appendChild(document.createTextNode(missing.join(', ')));
+    } else {
+      p.textContent = 'This page did not start. The library is all here, so this is ' +
+        'the page\'s own error: ';
+      var c = document.createElement('code');
+      c.textContent = (e && (e.message || (e.error && e.error.message))) || 'no message';
+      p.appendChild(c);
+    }
+    w.appendChild(p);
+  }
+
+  /* Three ways a page fails to start, and three listeners. A throw at the top
+     level is an 'error'. A throw inside `Lab.state.open(...).then` — where a
+     page that opens on its default.json builds — is an unhandled REJECTION,
+     which 'error' never hears. And a library piece that is simply absent is
+     named at load. An empty .wrap at load is NOT evidence by itself: a page
+     that opens asynchronously is legitimately empty while its default is
+     fetched, so the load check reports only when `gone()` names a piece. */
+  addEventListener('error', report);
+  addEventListener('unhandledrejection', function (e) { report(e.reason); });
+  addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { if (gone().length) report(); }, 0);
+  });
+})();
+</script>
+<style>
+/* Toy-specifics only — everything else is the lab bench (lab.css) and the
+   composition (Lab.page).
+
+   THE HUES ON THIS PAGE, and the rule they live under. Chrome is greyscale and
+   hue belongs to EVENTS. There are exactly two uses here. A node, an edge and a
+   trace mark wear the colour of the SYMBOL they carry — the library's own voice
+   colours, so the kick here is the kick in every other toy — with the rest in
+   grey, because it is a state and not a sound. And the finger wears the bench's
+   `--warn`, which is the collection's armed hue: the finger IS an armed state,
+   the place the next write will land. It is drawn as a DASHED outline standing
+   off the node rather than as a fill, both because the kick's amber is adjacent
+   to it and because a dashed ring is how this bench already draws a mark that
+   is not the thing itself.
+
+   The machine's ring is white, which is chrome: it is a readout of where the
+   walk has got to and not an event. */
+
+/* ---- the tree ----
+   The bench's own canvas (`canvas.tl`) at this view's height; the toy overrides
+   the height and nothing else, which is what that class is for. */
+#ptree{height:250px;margin-top:2px;touch-action:none;cursor:pointer}
+#ptree:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* The row under the tree: the two weight verbs, then a line naming the branch
+   they act on. The readout is LAST and takes the slack, so the button that
+   grows when it arms — `lighter`, which becomes `cut the branch?` — pushes only
+   text and never moves the other button under a hand. `nowrap` for the same
+   reason one level up: a wrap would grow the panel on a press. */
+.pctl{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:nowrap}
+.pfing{flex:1 1 8ch;min-width:0;font-size:10.5px;color:var(--faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pfing b{color:var(--dim);font-weight:600}
+
+/* ---- a strip's write button ----
+   The word and its keyboard twin, because the five keys are the same five
+   gestures and a visitor who learns one has learnt the other. */
+.wbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:7px 9px}
+.wkey{font-style:normal;font-size:9px;line-height:1;padding:3px 4px;border-radius:3px;
+  background:var(--panel);border:1px solid var(--line);color:var(--faint);
+  font-family:ui-monospace,Consolas,monospace}
+
+/* ---- the trace: the last four bars of what the machine said ----
+   Discrete slots in the DOM rather than a scrolling canvas, because the machine
+   speaks exactly one symbol per cell — a slot per cell IS the stream. No
+   device-pixel handling, no resize listener, and it scales with the page. */
+.ptrace{display:grid;grid-template-columns:repeat(32,minmax(0,1fr));gap:2px;
+  align-items:center;margin-top:2px}
+.pslot{height:26px;border-radius:2px;background:#0c0d11;position:relative;overflow:hidden}
+/* A phrase seam: the cell on which the walk went home to the root and started
+   again. It is the one thing about the walk that cannot be heard. */
+.pslot.seam{box-shadow:inset 2px 0 0 rgba(255,255,255,.35)}
+.pslot i{position:absolute;inset:3px;border-radius:1px;display:block}
+.pslot.hit i{background:var(--c)}
+/* A rest is a state and is drawn as one: a low dash, so a silence the tree
+   placed is distinguishable from a cell the walk has not reached. */
+.pslot.rest i{inset:auto 3px 9px 3px;height:2px;background:var(--line2)}
+.pnote{margin:9px 2px 0;font-size:10.5px;color:var(--faint);line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- The page is a composition the library lays out: this toy declares its
+     master strip, its stage, its rack, its session controls, its text and its
+     keys, and `Lab.page` puts them in the collection's order. -->
+<div class="wrap"></div>
+
+<script src="../../lib/audio.js"></script>
+<script src="../../lib/clock.js"></script>
+<script src="../../lib/voices.js"></script>
+<script src="../../lib/ui.js"></script>
+<script src="../../lib/shell.js"></script>
+<script src="../../lib/page.js"></script>
+<script src="../../lib/state.js"></script>
+<script src="ip.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   possibles — the toy side.
+
+   `ip.js` owns the tree and knows nothing about sound; the lab lib
+   owns sound, time, controls and state. What is left here is the
+   instrument: a finger in the tree, the grid the machine reads it
+   back on, and the trace of what came out. See spec.md — the claim
+   is §1, the two verbs are §3 and the bias law is §4.
+
+   NOTHING THE HAND DOES MAKES A SOUND. There is no way to strike a
+   drum here. The write buttons and their key twins put symbols into
+   the tree, silently; the machine is the only speaker, so everything
+   you hear is the field talking back.
+   ============================================================ */
+
+/* ---- the alphabet ----
+   The integers are the tree's own alphabet and are what persistence stores, so
+   they are fixed independently of the order the strips are drawn in: renumber
+   them and a saved tree becomes a different tree. The four sounds are the
+   library palette unchanged, with the library's own trims and colours. */
+const REST_SYM = 4;
+const REST_HUE = '#6b7180';
+const SYMBOLS = [
+  { sym: 0, id: 'kick',    key: 'KeyA' },
+  { sym: 1, id: 'snare',   key: 'KeyS' },
+  { sym: 2, id: 'cowbell', key: 'KeyD' },
+  { sym: 3, id: 'crash',   key: 'KeyF' },
+  { sym: 4, id: 'rest',    key: 'KeyG', silent: true, color: REST_HUE }
+];
+const BY_SYM = [];
+const BY_KEY = {};
+SYMBOLS.forEach(function (S) {
+  S.name = S.id;
+  S.kk = S.key.slice(3);                                  // 'KeyA' → 'A'
+  if (!S.color) S.color = Lab.voices.get(S.id).color;     // the rest has no voice
+  BY_SYM[S.sym] = S;
+  BY_KEY[S.id] = S;
+});
+const symOf = s => BY_SYM[s];
+
+const BPM = { min: 40, max: 240, def: 120 };
+const BAR_CELLS = 8;                       // one symbol per 8th note
+const TRACE = BAR_CELLS * 4;               // the last four bars
+
+/* ---- the tree's picture ---- */
+const TREE_XSTEP = 74;                     // px per depth level, before fit-to-width
+const TREE_PAD = 26;
+const TREE_HIT = 12;                       // px: how near a node a click has to land
+
+/* ---- params: written by the controls, read live by the engine ----
+   RESTORE BEFORE BUILD. The snapshot lands here first and the controls take
+   their initial value from it, so no UI syncing exists anywhere. A tree grown
+   by hand is a score, not a performance — a refresh must not cost one. */
+const params = {
+  bpm: BPM.def,
+  bias: 0,             // −1 sharpened · 0 faithful · +0.5 even · +1 contrary
+  strips: {}           // id -> { gain, mute, pan } — the rack writes here
+};
+
+/* `params` is the schema the merge restores into — a key it does not hold is
+   dropped — so the strips are declared here, one per rack row. */
+SYMBOLS.forEach(function (S) { params.strips[S.id] = { gain: 1, mute: false, pan: 0 }; });
+
+const ip = IP.create();
+
+/* What the page opens on: the session if there is one, else `default.json`
+   beside this file — the "groove and fill" tree — else null, the empty tree.
+   The tree is material and lives in the file only, so a page opened off a disk,
+   whose fetch is refused, opens bare and says so. Everything from here down is
+   built inside the callback, and the body is NOT re-indented under this wrap: a
+   one-change re-indent of a long script destroys the history of every line. */
+Lab.state.open('possibles').then(function (saved) {
+if (saved && saved.params) Lab.state.merge(params, saved.params);
+if (saved && saved.tree) ip.fromJSON(saved.tree);
+
+/* NOTHING HAS TO BE ZEROED ON LOAD. A page never reopens sounding, and here
+   that is the transport's doing rather than a parameter's: the audio context is
+   built inside the visitor's first press and never at load, so a restored page
+   is silent until a hand presses Play — and then it speaks the tree it was left
+   with, which is what a restored score is for (spec.md §5). */
+
+let finger = ip.root();      // where the hand writes — the dashed square
+let reader = ip.root();      // where the SCHEDULER has walked to
+let shownNode = ip.root();   // where the EAR is — the white ring
+let dirty = true;
+let speaking = false;        // the transport, read by the readout
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const kids = node => Array.from(node.children.values()).sort((a, b) => a.symbol - b.symbol);
+
+/* Is `node` inside `branch` — the branch itself, or anything under it? A pruned
+   branch keeps pointing up at where it hung, so the chain still leads there,
+   and that is what makes this question answerable at all.
+
+   It is also why the same walk CANNOT answer "is this node still in the tree":
+   an upward walk from a cut node still arrives at the live root, so it says yes
+   about everything the tree has ever held. Nothing here asks that question —
+   every node the page keeps is re-seated at the moment of the cut, below. */
+function inside(branch, node) {
+  for (let n = node; n; n = n.parent) if (n === branch) return true;
+  return false;
+}
+
+// Every node but the root is a motif; the root is the empty one.
+function motifCount() {
+  let n = 0;
+  (function walk(node) { node.children.forEach(function (c) { n++; walk(c); }); })(ip.root());
+  return n;
+}
+
+function pathOf(node) {
+  const out = [];
+  for (let n = node; n && n.parent; n = n.parent) out.unshift(symOf(n.symbol).name);
+  return out.join(' ');
+}
+
+/* ============================================================
+   THE TWO VERBS (spec.md §3)
+
+   Kept apart, and that is the claim. `plant` makes the branch exist
+   and otherwise just walks it — typing a path you already wrote must
+   not be a way of weighting it by accident. `bump` and `drop` are the
+   only things that move a weight.
+   ============================================================ */
+
+function writeSymbol(S) {
+  finger = ip.plant(finger, S.sym);
+  afterWrite();
+}
+
+function weighUp() {
+  if (!finger.parent) { Lab.ui.status('the root carries no weight — it is nobody’s continuation'); return; }
+  ip.bump(finger);
+  afterWrite();
+}
+
+// One step down. The press that would take a weight to ZERO is the one that
+// cuts, and it asks twice; every lighter press above zero acts at once. See
+// `lighterBtn` below, which is where the two are told apart.
+function weighDown() {
+  const r = ip.drop(finger);
+  finger = r.node;
+  afterWrite();
+}
+
+function cutBranch() {
+  const gone = finger;
+  const r = ip.drop(finger);
+  finger = r.node;
+  if (r.pruned) {
+    /* The machine may have been standing in what just fell off — and so may the
+       cells it has already composed. The scheduler's frontier and the ear's
+       node are re-seated here, and so is every node held in the release queue,
+       because a cell composed inside the cut branch is still drained onto the
+       ring a moment later and would leave the ear standing on a node the tree
+       no longer holds. This is the ONLY moment a node can leave the tree, so
+       re-seating here is what lets everything downstream trust what it holds.
+
+       The queue's ENTRIES stay: those cells are inside the audio lookahead and
+       will sound, so the trace draws them. It is where the walk is standing
+       that is corrected, not what it said. */
+    if (inside(r.pruned, reader)) reader = ip.root();
+    if (inside(r.pruned, shownNode)) shownNode = ip.root();
+    for (let i = 0; i < pending.length; i++) {
+      if (inside(r.pruned, pending[i].node)) pending[i].node = ip.root();
+    }
+    Lab.ui.status('cut ' + pathOf(gone) + ' and everything under it');
+  }
+  afterWrite();
+}
+
+/* Every write goes through here, and its whole job is to repaint. Disarming
+   the cut is the composition's: it watches every control carrying `.disarm()`
+   wherever it was laid out, this one on the stage included, and treats a press,
+   an operating key or an input anywhere in the armed region as a write. */
+function afterWrite() {
+  dirty = true;
+  paintFinger();
+}
+
+/* ============================================================
+   THE WALK (spec.md §4)
+
+   One symbol per 8th note. Reaching a leaf the machine goes home to
+   the root and descends again INSIDE THE SAME CELL, so the crossing
+   costs no time and the grid never gaps: one root-to-leaf walk is one
+   phrase, and the phrases run on end to end. The machine never stops
+   — if you want breath, write rests.
+   ============================================================ */
+const pending = [];                        // composed, not yet heard
+
+const ticker = Lab.clock.createTicker({
+  periodSec: () => 30 / params.bpm,        // one 8th note
+  onTick: function (n, t) {
+    if (!ip.root().children.size) return;  // an empty tree: the grid runs silent
+    const opts = { bias: params.bias, rng: Math.random };
+
+    let seam = (reader === ip.root());
+    let pick = ip.descend(reader, opts);
+    if (!pick) {
+      reader = ip.root();
+      seam = true;
+      pick = ip.descend(reader, opts);
+      if (!pick) return;                   // the tree is a single leaf
+    }
+
+    /* A cell whose timestamp is already past — the tab was hidden long enough
+       to outrun even the widened horizon — is WALKED and not sounded, or the
+       whole backlog arrives at once the moment the tab comes back. */
+    const late = !Lab.audio.ctx || t < Lab.audio.ctx.currentTime - 0.005;
+    const S = symOf(pick.symbol);
+    if (!late && !S.silent) {
+      // The crash steals its own voice: at this tempo a 0.9 s cymbal is still
+      // sounding when the next arrives, and a stack of them washes the tree's
+      // rhythm away. The old one gives up its place rather than piling on.
+      Lab.voices.play(S.id, t, S.id === 'crash' ? { steal: true } : null);
+    }
+    reader = pick.child;
+
+    /* The display is released against the AUDIO clock, so the queue is filled
+       here and drained on a frame — and it is BOUNDED HERE, because animation
+       frames do not run in a hidden tab while the walk does. The oldest go:
+       what a returning visitor wants is the walk they came back to. */
+    pending.push({ t: t, sym: pick.symbol, seam: seam, node: pick.child });
+    if (pending.length > TRACE * 4) pending.splice(0, pending.length - TRACE * 4);
+  }
+});
+
+function forget() {
+  ip.clear();
+  finger = reader = shownNode = ip.root();
+  pending.length = 0;
+  traceBuf.length = 0;
+  paintTrace();
+  afterWrite();
+  Lab.ui.status('forgotten — the machine is walking an empty tree');
+}
+
+/* ============================================================
+   THE TRACE — the last four bars of what the machine said.
+   ============================================================ */
+const traceBuf = [];
+const traceEl = document.createElement('div');
+traceEl.className = 'ptrace';
+traceEl.setAttribute('role', 'img');
+traceEl.setAttribute('aria-label', 'the trace: the last four bars of what the machine said');
+const slots = [];
+for (let k = 0; k < TRACE; k++) {
+  const d = document.createElement('div');
+  d.className = 'pslot';
+  d.appendChild(document.createElement('i'));
+  traceEl.appendChild(d);
+  slots.push(d);
+}
+
+function paintTrace() {
+  const off = TRACE - traceBuf.length;
+  for (let k = 0; k < TRACE; k++) {
+    const el = slots[k], fill = el.firstChild;
+    const ev = k >= off ? traceBuf[k - off] : null;
+    let cls = 'pslot';
+    if (ev) {
+      if (ev.seam) cls += ' seam';
+      if (ev.sym === REST_SYM) cls += ' rest';
+      else { cls += ' hit'; fill.style.setProperty('--c', symOf(ev.sym).color); }
+    }
+    el.className = cls;
+  }
+}
+
+const traceBlk = Lab.ui.panel({
+  title: 'the trace',
+  note: 'the last four bars of what the machine said',
+  label: 'the trace'
+});
+traceBlk.appendChild(traceEl);
+traceBlk.insertAdjacentHTML('beforeend',
+  '<p class="pnote">A block is a symbol in its own colour and a low dash is a rest — ' +
+  'silence the tree placed, not a gap in it. A brighter left edge is a phrase seam: ' +
+  'the cell on which the walk reached the end of a motif, went home to the root and ' +
+  'set off again without costing a beat. Off the left edge is gone for good — the ' +
+  'trace forgets and the tree does not.</p>');
+
+/* ============================================================
+   THE TREE — the toy's own surface, and the thing the hands play.
+
+   A relation ACROSS the five symbols: no strip can hold it, which is
+   what earns it a stage. Depth is x, so the tree grows rightward as
+   its motifs get longer. A square's size is the weight that was
+   written; an edge's weight is the odds the machine would give that
+   branch right now, under the live bias. Turning bias leaves every
+   square where it is and moves every edge — the whole difference
+   between what a tree contains and what it is likely to say.
+   ============================================================ */
+const treeC = document.createElement('canvas');
+treeC.id = 'ptree';
+treeC.className = 'tl';
+treeC.tabIndex = 0;
+treeC.setAttribute('role', 'application');
+treeC.setAttribute('aria-label',
+  'the tree of possibles. The arrows walk it: right into a branch, left to the ' +
+  'parent, up and down between branches, Escape to the root. The line below says ' +
+  'where the finger is standing.');
+treeC.dataset.hint = 'the tree of what can follow what. Click a node to put the finger ' +
+  'there and write from that motif; click empty space for the root. A square is the ' +
+  'weight you wrote; an edge is the odds the machine gives it now.';
+treeC.title = treeC.dataset.hint;
+const g3 = treeC.getContext('2d');
+
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+}
+
+function treeLayout(W, H) {
+  const pos = new Map();
+  let leaves = 0, maxDepth = 0;
+  (function visit(node) {
+    if (node.depth > maxDepth) maxDepth = node.depth;
+    const ks = kids(node);
+    if (!ks.length) { pos.set(node, leaves++); return; }
+    let sum = 0;
+    for (let i = 0; i < ks.length; i++) { visit(ks[i]); sum += pos.get(ks[i]); }
+    pos.set(node, sum / ks.length);                  // a parent sits across its children
+  })(ip.root());
+
+  const xStep = Math.min(TREE_XSTEP, (W - 2 * TREE_PAD) / Math.max(1, maxDepth));
+  const yStep = leaves > 1 ? (H - 2 * TREE_PAD) / (leaves - 1) : 0;
+  const y0 = leaves > 1 ? TREE_PAD : H / 2;
+  const at = node => ({ x: TREE_PAD + node.depth * xStep, y: y0 + pos.get(node) * yStep });
+  return {
+    has: node => pos.has(node),
+    xy: at,
+    nearest: function (x, y, r) {
+      let best = null, bd = r * r;
+      pos.forEach(function (v, node) {
+        const q = at(node);
+        const d = (q.x - x) * (q.x - x) + (q.y - y) * (q.y - y);
+        if (d <= bd) { bd = d; best = node; }
+      });
+      return best;
+    }
+  };
+}
+
+function drawTree() {
+  const dpr = window.devicePixelRatio || 1;
+  const W = treeC.clientWidth || 900, H = treeC.clientHeight || 250;
+  const bw = Math.max(1, Math.round(W * dpr)), bh = Math.max(1, Math.round(H * dpr));
+  if (treeC.width !== bw) treeC.width = bw;
+  if (treeC.height !== bh) treeC.height = bh;
+  g3.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g3.clearRect(0, 0, W, H);
+
+  const L = treeLayout(W, H);
+  const lit = new Set();                             // the menu the machine is looking at
+  if (shownNode && L.has(shownNode)) shownNode.children.forEach(c => lit.add(c));
+
+  // Edges first, so a node always sits on top of its own line.
+  (function edges(node) {
+    const a = L.xy(node);
+    const items = ip.menu(node, params.bias);
+    let total = 0;
+    for (let i = 0; i < items.length; i++) total += items[i].weight;
+    for (let i = 0; i < items.length; i++) {
+      const c = items[i].node, b = L.xy(c);
+      const p = (total > 0) ? items[i].weight / total : 1 / items.length;
+      g3.strokeStyle = hexA(symOf(c.symbol).color,
+        Math.min(1, 0.2 + 0.6 * p + (lit.has(c) ? 0.18 : 0)));
+      g3.lineWidth = 0.6 + 3.4 * p;
+      g3.beginPath(); g3.moveTo(a.x, a.y); g3.lineTo(b.x, b.y); g3.stroke();
+      edges(c);
+    }
+  })(ip.root());
+
+  (function nodes(node) {
+    const q = L.xy(node);
+    if (!node.parent) {
+      g3.fillStyle = 'rgba(255,255,255,0.26)';       // the root is the empty motif
+      g3.fillRect(q.x - 4, q.y - 4, 8, 8);
+    } else {
+      const s = clamp(4 + 2.4 * Math.sqrt(node.count), 4, 15);
+      const a = clamp(0.4 + 0.14 * Math.sqrt(node.count), 0.4, 0.95) * (lit.has(node) ? 1 : 0.78);
+      g3.fillStyle = hexA(symOf(node.symbol).color, Math.min(1, a));
+      g3.fillRect(q.x - s / 2, q.y - s / 2, s, s);
+    }
+    node.children.forEach(nodes);
+  })(ip.root());
+
+  // where the machine is reading — chrome, because it is a readout
+  if (shownNode && L.has(shownNode)) {
+    const q = L.xy(shownNode);
+    g3.strokeStyle = 'rgba(255,255,255,0.8)';
+    g3.lineWidth = 1.4;
+    g3.setLineDash([]);
+    g3.beginPath(); g3.arc(q.x, q.y, 8.5, 0, Math.PI * 2); g3.stroke();
+  }
+
+  // and where the hand is writing — the page's one armed state, dashed so it
+  // reads as a cursor standing off the node rather than as a node
+  if (finger && L.has(finger)) {
+    const q = L.xy(finger);
+    g3.strokeStyle = getComputedStyle(document.documentElement)
+      .getPropertyValue('--warn').trim() || '#ffbe3d';
+    g3.lineWidth = 1.6;
+    g3.setLineDash([4, 3]);
+    g3.strokeRect(q.x - 9.5, q.y - 9.5, 19, 19);
+    g3.setLineDash([]);
+  }
+}
+
+/* ---- pointing at the tree ----
+   The view is the way in. Land near a node and that node is where you write
+   from; land nowhere and you are back at the root. */
+treeC.addEventListener('pointerdown', function (e) {
+  if (e.button === 2) return;
+  e.preventDefault();
+  const r = treeC.getBoundingClientRect();
+  const L = treeLayout(treeC.clientWidth || 900, treeC.clientHeight || 250);
+  finger = L.nearest(e.clientX - r.left, e.clientY - r.top, TREE_HIT) || ip.root();
+  afterWrite();
+  treeC.focus();
+});
+treeC.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ---- walking the tree from the keyboard ----
+   A canvas has no children to focus, so the tree is ONE tab stop and the
+   arrows are how a keyboard reaches a node — the same grammar every dial on
+   this bench answers, applied to a graph. */
+function siblingStep(d) {
+  if (!finger.parent) return;
+  const sibs = kids(finger.parent);
+  const i = sibs.indexOf(finger);
+  if (i < 0) return;
+  finger = sibs[clamp(i + d, 0, sibs.length - 1)];
+}
+
+treeC.addEventListener('keydown', function (e) {
+  let took = true;
+  switch (e.key) {
+    case 'ArrowRight': { const ks = kids(finger); if (ks.length) finger = ks[0]; break; }
+    case 'ArrowLeft': if (finger.parent) finger = finger.parent; break;
+    case 'ArrowDown': siblingStep(1); break;
+    case 'ArrowUp': siblingStep(-1); break;
+    case 'Home': finger = ip.root(); break;
+    default: took = false;
+  }
+  if (!took) return;
+  e.preventDefault();
+  afterWrite();
+});
+
+/* ---- the two weight verbs, beside the tree ---- */
+const heavierBtn = document.createElement('button');
+heavierBtn.type = 'button';
+heavierBtn.textContent = 'heavier';
+heavierBtn.dataset.hint = 'raise the weight on the branch under the finger, so the ' +
+  'machine takes it more often — the same as pressing P. It changes how much the ' +
+  'branch matters, not whether it exists.';
+heavierBtn.title = heavierBtn.dataset.hint;
+heavierBtn.addEventListener('click', weighUp);
+
+/* THE ONE DESTRUCTIVE ACT ON THIS PAGE, and the only press that asks twice.
+   Lowering a weight above zero is ordinary and acts at once, so `onArm` does
+   the work and REFUSES the arming; only the press that would take a weight to
+   zero — and with it every motif underneath — arms and waits for a second.
+   Two presses for an ordinary lightening would teach pressing twice by reflex,
+   which is the thing that makes a confirmation stop working. */
+const lighterBtn = Lab.ui.confirm({
+  text: 'lighter',
+  armed: 'cut the branch?',
+  hint: 'lower the weight on the branch under the finger — the same as pressing O. ' +
+        'The press that would take it to zero cuts the branch away, with every motif ' +
+        'under it, and that one asks twice.',
+  onArm: function () {
+    if (!finger.parent) {
+      Lab.ui.status('the root carries no weight — it is nobody’s continuation');
+      return false;
+    }
+    if (finger.count > 1) { weighDown(); return false; }   // ordinary lightening
+    return true;                                            // the next press cuts
+  },
+  onConfirm: cutBranch
+});
+
+const fingerEl = document.createElement('span');
+fingerEl.className = 'pfing';
+fingerEl.setAttribute('role', 'status');
+let fingerShown = null;
+function paintFinger() {
+  let html;
+  if (!finger.parent) {
+    html = 'the finger is at <b>the root</b>, the empty motif — a write starts a new ' +
+           'motif here. It carries no weight.';
+  } else {
+    html = 'the finger is on <b>' + pathOf(finger) + '</b> · weight ' + finger.count +
+           ' · ' + finger.children.size + ' way' + (finger.children.size === 1 ? '' : 's') +
+           ' on from here';
+  }
+  if (html === fingerShown) return;
+  fingerShown = html;
+  fingerEl.innerHTML = html;
+}
+
+const ctlRow = document.createElement('div');
+ctlRow.className = 'pctl';
+ctlRow.append(heavierBtn, lighterBtn, fingerEl);
+
+const treeBlk = Lab.ui.panel({
+  title: 'the tree',
+  note: 'what can follow what — the field you write, and the machine’s only score',
+  label: 'the tree'
+});
+treeBlk.append(treeC, ctlRow);
+
+/* ============================================================
+   THE FRAME LOOP
+   Symbols are composed a horizon ahead of the sound, so the ring and
+   the trace are released against the audio clock. The tree redraws
+   only when something moved.
+   ============================================================ */
+function frame() {
+  requestAnimationFrame(frame);
+  const now = Lab.audio.ctx ? Lab.audio.ctx.currentTime : 0;
+  let moved = false;
+  while (pending.length && pending[0].t <= now) {
+    const ev = pending.shift();
+    shownNode = ev.node;
+    traceBuf.push(ev);
+    while (traceBuf.length > TRACE) traceBuf.shift();
+    moved = true;
+  }
+  if (moved) { paintTrace(); dirty = true; }
+  if (dirty) { dirty = false; drawTree(); }
+}
+requestAnimationFrame(frame);
+addEventListener('resize', function () { dirty = true; });
+
+/* ============================================================
+   THE SESSION BAR — what you do TO the instrument.
+   ============================================================ */
+const forgetBtn = Lab.ui.confirm({
+  text: 'forget',
+  armed: 'forget — sure?',
+  hint: 'empty the tree and start again from nothing. The machine keeps walking, with ' +
+        'nothing to walk. It asks twice, because there is no undo and the autosave ' +
+        'means a reload will not bring the tree back.',
+  onArm: function () {
+    if (ip.root().children.size) return true;
+    Lab.ui.status('there is nothing written yet');
+    return false;
+  },
+  onConfirm: forget
+});
+
+/* ============================================================
+   THE PAGE
+   ============================================================ */
+const biasDial = Lab.ui.dial({
+  label: 'bias', min: -1, max: 1, step: 0.01, value: params.bias,
+  fmt: v => (v > 0 ? '+' : '') + v.toFixed(2),
+  hint: 'how the machine leans among a node’s branches. Left it obeys the weights ' +
+        'harder; at the centre it takes them as written; right it evens them out and ' +
+        'then turns them over. It moves no weight — watch the edges, not the squares.',
+  onInput: function (v) { setBias(v, biasDial); },
+  /* The default belongs to the thing addressed, not to the control: bias is a
+     page parameter whose default is 0, so the double press puts the parameter
+     back and the dial is told to show it. */
+  onDefault: function () { setBias(0, null); }
+});
+
+/* The phone's one control: the same parameter on a second dial, built to the
+   touch floor by the teaser slot. Each dial shows the other's writes, so the
+   two never disagree whichever one the hand is on. */
+const teaserBias = Lab.ui.dial({
+  label: 'bias', min: -1, max: 1, step: 0.01, value: params.bias,
+  fmt: v => (v > 0 ? '+' : '') + v.toFixed(2),
+  hint: 'how the machine leans among a branch’s continuations. Left it obeys the ' +
+        'weights harder and the figure sharpens; right it evens them out, then turns ' +
+        'them over, and the figure dissolves.',
+  onInput: function (v) { setBias(v, teaserBias); },
+  onDefault: function () { setBias(0, null); }
+});
+
+// one writer for bias; `from` is the dial already showing the value
+function setBias(v, from) {
+  params.bias = v;
+  if (from !== biasDial) biasDial.show(v);
+  if (from !== teaserBias) teaserBias.show(v);
+  dirty = true;
+}
+
+function allMuted() {
+  return SYMBOLS.every(function (S) {
+    if (S.silent) return true;                       // the rest has nothing to mute
+    const s = params.strips[S.id];
+    return !!(s && s.mute);
+  });
+}
+
+/* The five write buttons are built HERE and not inside the rack's `cell()`,
+   because the page declares them to `writeKeys` in the same call that builds the
+   rack: a key that stands for a press has to name the element it stands for, and
+   an element the rack has not made yet cannot be named. The cell hands back the
+   button that already exists. */
+SYMBOLS.forEach(function (S) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'wbtn';
+  const w = document.createElement('span');
+  w.textContent = 'write';
+  const k = document.createElement('i');
+  k.className = 'wkey';
+  k.textContent = S.kk;
+  b.append(w, k);
+  b.setAttribute('aria-label', 'write ' + S.name + ' under the finger');
+  b.dataset.hint = 'make ' + S.name + ' a continuation of the motif under the finger and ' +
+    'step into it — the same as pressing ' + S.kk + '. It makes the branch exist; it ' +
+    'does not make a sound, and it says nothing about how likely the branch is.';
+  b.title = b.dataset.hint;
+  b.addEventListener('click', function () { writeSymbol(S); });
+  S.btn = b;                                  // the key's twin, and what the key stands for
+});
+
+const page = Lab.page.build({
+  title: 'possibles',
+  shows: 'You write the tree of what can follow what — branches and weights, two ' +
+         'separate verbs — and a machine walks it aloud without stopping. Nothing you ' +
+         'do makes a sound.',
+  spec: 'spec.md',
+  // repo: '…',            ← SET BEFORE PUBLISHING
+  site: 'https://noisewrangler.art',
+
+  /* ---- the master strip ----
+     A transport, because this piece has a beginning: the machine is the only
+     speaker and it starts when it is told to. The pulse is the machine's grid;
+     bias is a `control` rather than a `global`, because it shapes how the
+     machine leans and never asks it for sound. */
+  transport: {
+    hint: 'start and stop the machine. Writing works either way — only the speaking stops.',
+    onStart: function () {
+      speaking = true;
+      Lab.audio.fadeIn(0.03);
+      ticker.start();
+    },
+    onStop: function () {
+      speaking = false;
+      ticker.stop();
+      /* Cells already inside the lookahead are faded out rather than played, so
+         the trace must not claim them — and the walk must not stand further on
+         than what was heard. The frontier is rewound to where the ear got to,
+         which is a node the tree still holds: a cut re-seats every node the
+         page keeps, the queue's included, so there is nothing here to test. */
+      pending.length = 0;
+      reader = shownNode;
+      Lab.audio.fadeOut(0.05);
+    }
+  },
+  bpm: {
+    min: BPM.min, max: BPM.max, def: BPM.def, value: params.bpm,
+    hint: 'the machine’s grid — one symbol per 8th note',
+    onChange: function (v) { params.bpm = v; }
+  },
+  master: saved && saved.fx ? saved.fx : {},
+  controls: [{
+    el: biasDial,
+    says: 'that is bias — it leans the machine among a node’s branches and moves ' +
+          'no weight.'
+  }],
+  hints: true,
+  /* No MIDI badge: nothing here takes a continuous value except the pulse, the
+     bias and the levels, which are the master strip and the rack. A badge that
+     opens onto nothing to map is chrome. */
+  midi: false,
+  status: function () {
+    const n = motifCount();
+    const what = n ? (n + (n === 1 ? ' motif' : ' motifs')) : 'nothing written';
+    return what + ' · ' + (speaking ? 'speaking' : 'stopped');
+  },
+
+  /* ---- the start line ----
+     Three silences look alike from outside — a stopped machine, an empty tree
+     and a muted mixer — so the page says which. `stuck` is an empty string and
+     `state()` can never return it: a leaf is not a dead end here, it is the end
+     of a phrase, and the walk goes home to the root inside the same cell. */
+  start: {
+    gesture: 'Press ▶ Play',
+    state: function () {
+      if (!ip.root().children.size) return 'nothing';
+      const fx = Lab.audio.getState();
+      if (allMuted() || (fx && fx.master <= 0)) return 'shut';
+      return null;
+    },
+    words: {
+      notStarted: 'press ▶ Play to start the machine, then write branches with the ' +
+                  'strips’ write buttons.',
+      nothing: 'the tree is empty, so the machine is walking nothing. Press write on a ' +
+               'strip — kick, say — and that branch exists under the finger.',
+      stuck: '',
+      shut: 'it is running and nothing reaches you: every symbol is muted in the strips, ' +
+            'or the master level in the bar above is at zero.',
+      running: 'press a strip’s write to make that symbol follow the finger, then ' +
+               'heavier to have the machine take that branch more often.'
+    },
+    /* The reason, and the composition appends the remedy — the same split the
+       rack's cells, the pulse slot, the master chain and `controls` take, so
+       the gesture phrase has one reader. On this page the whole-instrument
+       answer is not a fallback: nothing in here asks for sound, so it is the
+       sentence a cold hand meets on the tree, on heavier, on lighter and on
+       every write button. */
+    instrumentSays: 'nothing in here sounds but the machine, and it is stopped'
+  },
+
+  /* What the hands play comes before what the eyes read. The tree is the thing
+     the hands play — the strips write into it — so the stage precedes the rack,
+     and the trace, which is a display of what the machine said, follows the
+     tree on the same stage. */
+  instrument: 'stage',
+  stage: [treeBlk, traceBlk],
+
+  /* ---- the rack ----
+     A strip per symbol: name, mute, level, and the write button, which is the
+     keyboard's gesture put on a strip. The rest's strip carries a real write
+     button and empty mixer cells — there is nothing to level about a silence —
+     so the columns line up down the page. */
+  rack: {
+    rows: SYMBOLS.map(S => (S.silent
+      ? { key: S.id, name: S.name, color: S.color }
+      : { key: S.id, voice: S.id, name: S.name })),
+    label: 'the five symbols: a strip is a symbol, and its write button puts that ' +
+           'symbol into the tree under the finger',
+    columns: [
+      'name', 'mute', 'gain',
+      { key: 'write', width: '104px', cell: ctx => BY_KEY[ctx.key].btn },
+      { key: 'pad', width: 'minmax(0,1fr)' }
+    ],
+    state: params.strips,
+    onStrip: function (id, strip) { params.strips[id] = strip; }
+  },
+
+  session: [forgetBtn, Lab.state.buttons()],
+
+  text: [
+    { head: 'Start.', body: 'Press <b>▶ Play</b> — the machine walks whatever the tree ' +
+      'holds, and on an empty tree that is silence. Then press <b>write</b> on a few ' +
+      'strips in a row: <i>kick, snare, kick, rest</i> writes that motif and every ' +
+      'prefix of it, and the machine has it on the next cell.' },
+    { head: 'Two verbs, and keeping them apart is the point.', body: 'A <b>write</b> ' +
+      'makes a branch <i>exist</i> under the finger and steps into it; walking a path ' +
+      'you already wrote only walks it, and says nothing about how likely it is. ' +
+      '<b>heavier</b> and <b>lighter</b> are the other verb — how much a branch ' +
+      '<i>matters</i>. Existing and mattering are different questions, and the tree ' +
+      'lets you answer them one at a time. At zero the branch is cut away, and ' +
+      'everything under it goes with it, which is why that press asks twice.' },
+    { head: 'Reading the tree.', body: 'The root is the empty motif at the left and ' +
+      'depth runs rightward, so the tree grows as its motifs get longer. A square’s ' +
+      'size is the weight <i>you wrote</i>; an edge’s thickness is the odds the machine ' +
+      'would give that branch <i>right now</i>. Turn <b>bias</b> and every square stays ' +
+      'put while every edge moves — that is the difference between what a tree contains ' +
+      'and what it is likely to say. The white ring is the machine, with its menu lit ' +
+      'around it; the dashed amber square is your finger.' },
+    { head: 'The machine is the only speaker.', body: 'There is no way to strike a drum ' +
+      'here. Placing sounds in time is first-order work and lives elsewhere; this is the ' +
+      'order above it, the field of possibles. So a figure you want at a particular ' +
+      'moment is exactly what you cannot have — and the <b>rest</b> is one of the five ' +
+      'symbols, so a silence is something the tree says rather than a gap between the ' +
+      'things it says.' }
+  ],
+
+  /* ---- which of this page's own keys are WRITES ----
+     The composition counts a press, an operating key or an input inside the
+     armed region, and a window-level letter is none of the three: a key that
+     writes by calling `.click()` on a button fires no `pointerdown`, and `A` is
+     not an arming key. Only the page knows, so the page says — and an entry
+     carrying `el` says which control the key STANDS FOR, so in hint mode the
+     key raises that button's own bubble instead of acting, which is what a
+     press on it would have done. `KeyO` is absent: it is the cut's own key,
+     exempt exactly as the cut's own press is. */
+  writeKeys: SYMBOLS.map(S => ({ key: S.key, el: S.btn }))
+    .concat([{ key: 'KeyP', el: heavierBtn }, 'Escape']),
+
+  keys: '<kbd>?</kbd> what does this do — then tap anything · ' +
+        '<kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd> write kick · ' +
+        'snare · cowbell · crash · rest · <kbd>P</kbd>/<kbd>O</kbd> heavier / lighter · ' +
+        '<kbd>Esc</kbd> back to the root · <kbd>Tab</kbd> to the tree, then arrows walk ' +
+        'it · <kbd>Space</kbd> play',
+
+  /* ---- the teaser: the phone mode of this same page ----
+     One control, the bias, alone: the tree is a hand's, and on the phone the
+     hand only leans the machine's reading of it. Play stays (the composition
+     builds it), and the trace, which is passive, is kept. The tree panel goes:
+     its finger, heavier and lighter are writes, and nothing on the phone
+     writes. */
+  teaser: {
+    controls: [teaserBias],
+    stage: [traceBlk],
+    gesture: 'Press ▶ Play',
+    words: {
+      notStarted: 'press ▶ Play and the machine starts walking the tree.',
+      nothing: 'the tree is empty, and the phone cannot write one — the desktop ' +
+               'page can.',
+      shut: 'running, but muted or the master is at zero — only the desktop ' +
+            'page can change that.',
+      running: 'turn bias and listen: left, the figure sharpens; right, it ' +
+               'dissolves.'
+    },
+    share: { text: 'A hand wrote this motif tree; the machine walks it. One knob ' +
+                   'leans it from faithful to contrary. Write your own on a desktop.' },
+    /* The phone's standing text: only what the phone shows — Play, bias and
+       the trace — and the claim in the visitor's words. */
+    text: [{ head: 'The machine is the only speaker.', body: 'A hand wrote a tree of ' +
+      'what may follow what — kick, snare, cowbell, crash and a rest — and pressing ' +
+      '<b>▶ Play</b> sets the machine walking it, one symbol per eighth note. Nothing ' +
+      'you touch makes a sound: <b>bias</b> only leans how it chooses, so turn it left ' +
+      'and the weights win and the figure sharpens, turn it right and the light branches ' +
+      'win and it dissolves. The trace above is the last four bars it said.' }]
+  }
+});
+
+/* ---- the keys, which are the buttons ----
+   Each key presses the control it is the twin of, rather than calling the same
+   function beside it: one gesture, one path, and the cut's two presses work
+   from the keyboard exactly as they do from the pointer. What those keys MEAN
+   to the composition — that they are writes, and which control each stands for
+   — is declared above in `writeKeys`, so nothing here has to remember it. */
+addEventListener('keydown', function (e) {
+  const t = e.target;
+  const tag = t && t.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (e.code === 'Escape') { finger = ip.root(); afterWrite(); return; }
+  if (e.repeat) return;
+  if (e.code === 'Space') {
+    // Every button on this page is one a keyboard visitor must be able to
+    // press, so Space belongs to the focused control wherever there is one.
+    if (tag === 'BUTTON' || tag === 'A') return;
+    e.preventDefault();
+    page.transport.press();
+    return;
+  }
+  if (e.code === 'KeyP') { e.preventDefault(); heavierBtn.click(); return; }
+  if (e.code === 'KeyO') { e.preventDefault(); lighterBtn.click(); return; }
+  const S = SYMBOLS.find(x => x.key === e.code);
+  if (!S || !S.btn) return;
+  e.preventDefault();
+  S.btn.click();
+});
+
+/* The finger line is a view of state living elsewhere, so it is repainted by
+   the page's own poll — which stops when the tab is hidden and restarts when it
+   is back — rather than by the frame loop beside the tree. */
+page.onPaint(paintFinger);
+paintFinger();
+paintTrace();
+
+/* The autosave handle is KEPT rather than dropped: it is otherwise a permanent
+   background write loop with no way out, which is not a thing to leave running
+   on a public page. */
+const autosave = Lab.state.attach({
+  key: 'possibles',
+  collect: () => ({ params: params, tree: ip.toJSON(), fx: Lab.audio.getState() })
+});
+});   // Lab.state.open
+</script>
+</body>
+</html>

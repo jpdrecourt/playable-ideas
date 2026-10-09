@@ -1,0 +1,93 @@
+{
+  "toy": "markov",
+  "params": {
+    "bpm": 86,
+    "seed": 1950012273,
+    "mx": [
+      [
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        1,
+        1,
+        0
+      ]
+    ],
+    "strips": {
+      "w1s0": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "w1s1": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "w1s2": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "w1s3": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "w2s0": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "w2s1": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "w2s2": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "w2s3": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      }
+    }
+  },
+  "fx": {
+    "master": 0.9,
+    "drive": 0,
+    "glue": 0.65,
+    "reverb": 0.15
+  }
+}

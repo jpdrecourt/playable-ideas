@@ -1,0 +1,65 @@
+{
+  "toy": "statistical-feedback",
+  "params": {
+    "bpm": 120,
+    "het": 0,
+    "silence": 0.3410491943359375,
+    "memory": true,
+    "weights": {
+      "hat": 3,
+      "clave": 2,
+      "tom": 1.5,
+      "pluck": 1,
+      "acid": 1.6,
+      "crash": 0.5
+    },
+    "strips": {
+      "hat": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "clave": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "tom": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "pluck": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "acid": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      },
+      "crash": {
+        "gain": 1,
+        "mute": false,
+        "pan": 0
+      }
+    },
+    "stress": [
+      1,
+      0.25,
+      0.5,
+      0.25,
+      0.7,
+      0.25,
+      0.5,
+      0.25
+    ]
+  },
+  "fx": {
+    "master": 0.9,
+    "drive": 0,
+    "glue": 0.65,
+    "reverb": 0.1
+  }
+}

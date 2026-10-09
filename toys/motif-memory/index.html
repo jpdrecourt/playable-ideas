@@ -1,0 +1,1289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>motif-memory</title>
+<meta name="description" content="Five stochastic voices on one pulse, each carrying a rolling record of the last two bars it played. Throw a voice's MEM switch and that record becomes its score; fidelity rides between the memory and pure generation.">
+<meta property="og:title" content="motif-memory — Playable Papers">
+<meta property="og:description" content="A voice remembers the last two bars it played. One knob rides between that memory and fresh invention, at the same density throughout — so the crossing can hide.">
+<meta property="og:image" content="https://play.noisewrangler.art/motif-memory/og.png">
+<meta property="og:url" content="https://play.noisewrangler.art/motif-memory/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Noise Wrangler">
+<link rel="alternate" type="text/markdown" href="spec.md" title="motif-memory — mechanism spec">
+<link rel="icon" href="../../lib/icon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../../lib/icon/favicon.ico" sizes="32x32">
+<link rel="icon" href="../../lib/icon/favicon-192.png" type="image/png" sizes="192x192">
+<link rel="icon" href="../../lib/icon/favicon-512.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="../../lib/icon/apple-touch-icon.png">
+<link rel="stylesheet" href="../../lib/lab.css">
+<script>
+/* ---- the stale-library guard, and why it is here rather than in the library ----
+   A browser holding a cached `lib/*.js` that no longer matches this file gets a
+   script that throws at its first statement and a `.wrap` that stays completely
+   empty: a blank black page, no message, nothing to act on. That is exactly
+   what a returning visitor sees after a deploy, and it is the failure that
+   looks most like the site being gone.
+
+   `Lab.page` makes the same check for the pieces it calls — but it cannot run
+   at all if `page.js` is itself the stale file, which is why this one is inline,
+   in the head, ahead of every library script, and depends on nothing.
+
+   Serve the collection with `Cache-Control: no-store` while developing. A fresh
+   port does NOT clear it: Chrome's heuristic freshness holds a file that carries
+   `Last-Modified` and no `Cache-Control`, which is what python's http.server
+   sends. */
+(function () {
+  var PARTS = ['audio', 'clock', 'voices', 'ui', 'shell', 'page', 'state'];
+
+  // What is actually absent — nothing else may be called a cache problem.
+  function gone() {
+    if (!window.Lab) return ['Lab'];
+    var out = PARTS.filter(function (n) { return !window.Lab[n]; }).map(function (n) {
+      return 'Lab.' + n;
+    });
+    if (!out.length && window.Lab.page && window.Lab.page.missing) {
+      try { out = window.Lab.page.missing(); } catch (e) {}
+    }
+    return out;
+  }
+
+  function report(e) {
+    var w = document.querySelector('.wrap');
+    if (!w || w.children.length) return;
+    var missing = gone();
+    var p = document.createElement('p');
+    p.className = 'hint';
+    if (missing.length) {
+      /* Only a library global that is not there earns the cache line. Blaming
+         the cache for every early throw sends a builder who forgot a line of
+         `start.words` off to clear a cache that was never the problem. */
+      p.innerHTML = 'This page needs a hard reload ' +
+        '(<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>): the browser is holding a ' +
+        'cached copy of the library that no longer matches it. Missing: ';
+      p.appendChild(document.createTextNode(missing.join(', ')));
+    } else {
+      p.textContent = 'This page did not start. The library is all here, so this is ' +
+        'the page\'s own error: ';
+      var c = document.createElement('code');
+      c.textContent = (e && (e.message || (e.error && e.error.message))) || 'no message';
+      p.appendChild(c);
+    }
+    w.appendChild(p);
+  }
+
+  /* Three ways a page fails to start, and three listeners. A throw at the top
+     level is an 'error'. A throw inside `Lab.state.open(...).then` — where a
+     page that opens on its default.json builds — is an unhandled REJECTION,
+     which 'error' never hears. And a library piece that is simply absent is
+     named at load. An empty .wrap at load is NOT evidence by itself: a page
+     that opens asynchronously is legitimately empty while its default is
+     fetched, so the load check reports only when `gone()` names a piece. */
+  addEventListener('error', report);
+  addEventListener('unhandledrejection', function (e) { report(e.reason); });
+  addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { if (gone().length) report(); }, 0);
+  });
+})();
+</script>
+<style>
+  /* Toy-specifics only — everything else is the lab bench (lab.css) and the
+     composition (Lab.page).
+
+     `--roll-h` is the ONE number for the roll and it is the DRAWING height:
+     the renderer reads this property rather than carrying a copy, and the box
+     is content-box so the bench's 1 px border is added to the element instead
+     of being taken out of the picture. Read back off `clientHeight` instead,
+     the drawing area came out 198 px or 199 depending on how a fractional
+     border rounded at the display's own ratio — a picture whose height
+     depended on the zoom. */
+  #timeline { --roll-h: 200px; box-sizing: content-box; height: var(--roll-h); margin-top: 13px; }
+
+  /* MEM is the toy's one hue: chrome stays greyscale, and a voice that has
+     claimed its own past is an event-level fact, not a chrome state.
+     Three looks, two meanings — off, ARMED (thrown, waiting for the bar
+     line, in either direction), on. The armed rule comes after the on rule
+     so both directions of a pending throw wear the same face. */
+  :root { --mem: #6fffb0; }
+  .dot.mem.on { background: var(--mem); border-color: var(--mem); color: #04180c; }
+  .dot.mem.armed {
+    background: #0a0b0f; color: var(--mem);
+    border-color: var(--mem); box-shadow: inset 0 0 0 1px var(--mem);
+    animation: memarm .34s steps(1) infinite alternate;
+  }
+  @keyframes memarm { from { opacity: 1 } to { opacity: .3 } }
+  @media (prefers-reduced-motion: reduce) {
+    .dot.mem.armed { animation: none; opacity: .75 }
+  }
+</style>
+</head>
+<body>
+
+<!-- The page is a composition the library lays out: this toy declares its
+     master strip, its stage, its rack, its session controls and its keys, and
+     `Lab.page` puts them in the collection's order. There is nothing to write
+     here but the mount. -->
+<div class="wrap"></div>
+
+<script src="../../lib/audio.js"></script>
+<script src="../../lib/clock.js"></script>
+<script src="../../lib/voices.js"></script>
+<script src="../../lib/ui.js"></script>
+<script src="../../lib/shell.js"></script>
+<script src="../../lib/page.js"></script>
+<script src="../../lib/midi.js"></script>
+<script src="../../lib/state.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   The orchestra: five voices, in the order they appear
+   everywhere — the rack rows, the timeline lanes. Each has its
+   own stochastic stream on the shared grid: `rate` is how many
+   grid cells lie between its opportunities, so the two-speeds
+   feel is the orchestra spread across speeds rather than two
+   lanes inside one voice. Long voices are given coarse rates and
+   low densities, or the texture turns to soup.
+
+   Rates are powers of two, so every one of them divides the bar:
+   a voice's opportunities land on the bar lines the memory
+   switches land on, and a claimed memory holds a whole number of
+   that voice's own chances.
+
+   Order is the kit read from its anchor down: the kick, then
+   knock where a snare would sit, then the two bright percussive
+   voices, then the sustain that lies under all of them. This
+   array is the single source of that order — the rack rows and
+   the timeline lanes both read it.
+
+   Colours and lengths come from the library. Four of these are
+   render voices, rendered once from their own id so a voice
+   always sounds like itself whatever the event stream's seed;
+   `kick` is a synth voice from the shared drum palette, built
+   per hit. `gain` is the voice's opening place in the mixer, not
+   a knob default — a 54 Hz sine at the same event gain as a
+   click would swallow the others, so the kick opens pulled back.
+   Real material would enter here: define these as kind:'sample'
+   voices and hand each a buffer with Lab.voices.setSample(id,
+   buffer), the files decoded by Lab.samples. Out of scope.
+
+   These are the values `default.json` opens on, and they have to
+   be: reset and the double press land here, and a page opened off
+   a disk, whose fetch of the default is refused, plays this table.
+   A change to the one is a change to the other.
+   ============================================================ */
+const VOICES = [
+  { id: 'kick',  density: 0.29, rate: 1, fidelity: 1, gain: 0.75 },
+  { id: 'knock', density: 0.45, rate: 2, fidelity: 1 },
+  { id: 'cowbell', density: 0.5, rate: 4, fidelity: 1 },
+  { id: 'click', density: 0.6,  rate: 1, fidelity: 1 },
+  { id: 'hum',   density: 0.14, rate: 8, fidelity: 1 }
+];
+const LANE_IDS = VOICES.map(v => v.id);
+const VOICE_DEF = {};                       // id -> its factory row, for `def:`
+VOICES.forEach(v => { VOICE_DEF[v.id] = v; });
+
+const colorOf = id => { const v = Lab.voices.get(id); return v ? v.color : '#ffffff'; };
+
+// How long a voice actually sounds — the timeline's bar width and the patience
+// rule both need it. A synth voice's length lives in its ENVELOPE, not in a
+// buffer: `duration` is the render/sample buffer length and carries no meaning
+// for a synth, so read the decay its envelope runs for instead.
+//
+// The result must ALWAYS be a positive number. A non-number reaching the
+// patience rule is invisible rather than noisy: every comparison against NaN is
+// false, so the voice would test free forever and its committed hits would never
+// prune — it would stack instead of waiting, and the bar would vanish from the
+// timeline rather than draw wrong. Hence the shape check on the way out.
+const durOf = id => {
+  const v = Lab.voices.get(id);
+  if (!v) return 0.05;
+  const raw = (v.kind === 'synth') ? (v.defaults || {}).decay : v.duration;
+  if (isFinite(raw) && raw > 0) return raw;
+  return (v.kind === 'synth') ? 0.2 : 0.05;   // 0.2 is play()'s own default decay
+};
+
+const DEFAULT_SEED = 1234567;
+const CELLS_PER_BAR = 8;    // 4/4 read on an 8th-note grid; no time-signature control
+const WINDOW_BARS = 2;      // how much past a voice carries — one size, every voice
+const BPM = { min: 40, max: 300, def: 150 };
+
+// The rate knob's whole vocabulary: every cell-spacing that divides the bar,
+// from an event per cell to one per two bars. The knob's own scale is the
+// EXPONENT, so its 270° sweep spends equal travel on each — a 1..16 continuum
+// would put half the throw between 8 and 16 and none of it anywhere useful.
+const RATE_STEPS = [1, 2, 4, 8, 16];
+const RATE_MAX = RATE_STEPS[RATE_STEPS.length - 1];
+
+// Nearest is measured in OCTAVES, not in cells: on a ratio scale 3 sits closer
+// to 4 than to 2 — a third of the way up rather than half — which is what a
+// player hears, and what lands a rate carried in from outside the vocabulary
+// on the speed it meant rather than one step under it.
+const rateIndex = r => {
+  const l = Math.log2(Math.max(1, r || 1));
+  let best = 0;
+  for (let i = 1; i < RATE_STEPS.length; i++) {
+    if (Math.abs(Math.log2(RATE_STEPS[i]) - l) < Math.abs(Math.log2(RATE_STEPS[best]) - l)) best = i;
+  }
+  return best;
+};
+
+/* ---------- params: written by the controls, read live by the engine ---------- */
+const params = {
+  bpm: BPM.def,             // one grid cell is an 8th note
+  voices: {},               // id -> { density, rate, fidelity }
+  strips: {},               // id -> { gain, mute, pan } — the mixer
+  seed: DEFAULT_SEED
+};
+VOICES.forEach(v => {
+  params.voices[v.id] = { density: v.density, rate: v.rate, fidelity: v.fidelity };
+  params.strips[v.id] = { gain: (v.gain == null) ? 1 : v.gain, mute: false, pan: 0 };
+});
+
+// Restore-before-build: the snapshot lands in params first, controls take their
+// initial value from params, so nothing ever needs syncing afterwards. Each
+// field is adopted by name AND shape rather than merged wholesale, because a
+// scalar landing where an object lives would break the engine on load.
+//
+// The key is the toy's name, so a session saved under the old one is not read:
+// this page was `memory-experiment` and the material a visitor left there does
+// not come back.
+//
+// What the page opens on is the session if there is one, else `default.json`
+// beside this file, else null — the factory table above. The default goes
+// through the same `num()` checks as a session; it is a file like any other.
+// Everything from here down is built inside the callback, and the body is NOT
+// re-indented under this wrap: a one-change re-indent of a long script destroys
+// the history of every line in it.
+Lab.state.open('motif-memory').then(function (saved) {
+if (saved && saved.params) {
+  const s = saved.params;
+  const num = (v, lo, hi) => (isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null);
+  if (num(s.bpm, BPM.min, BPM.max) !== null) params.bpm = num(s.bpm, BPM.min, BPM.max);
+  if (isFinite(s.seed)) params.seed = s.seed >>> 0;
+  if (s.voices && typeof s.voices === 'object') LANE_IDS.forEach(id => {
+    const sv = s.voices[id];
+    if (!sv || typeof sv !== 'object') return;
+    const d = num(sv.density, 0, 1), r = num(sv.rate, 1, RATE_MAX), f = num(sv.fidelity, 0, 1);
+    if (d !== null) params.voices[id].density = d;
+    // a snapshot may predate the rate vocabulary; snap rather than reject, or a
+    // saved 3 would silently become a 1 through the clamp
+    if (r !== null) params.voices[id].rate = RATE_STEPS[rateIndex(r)];
+    if (f !== null) params.voices[id].fidelity = f;
+  });
+  if (s.strips && typeof s.strips === 'object') LANE_IDS.forEach(id => {
+    const ss = s.strips[id];
+    if (!ss || typeof ss !== 'object') return;
+    const g = num(ss.gain, 0, 1.5), p = num(ss.pan, -1, 1);
+    if (g !== null) params.strips[id].gain = g;
+    if (p !== null) params.strips[id].pan = p;
+    params.strips[id].mute = !!ss.mute;
+  });
+}
+
+// ONE event stream drives every draw: the density gates, gain variation, and
+// the memory law's per-step rolls.
+// Timbre is not in it — reseeding changes the performance, never the palette.
+let prng = Lab.prng.create(params.seed);
+
+function dbToGain(db) { return Math.pow(10, db / 20); }
+function eventGain() { return 0.8 * dbToGain(prng.float(-3, 3)); }
+function gridSec() { return 60 / params.bpm / 2; }
+function barSec() { return CELLS_PER_BAR * gridSec(); }
+
+/* ============================================================
+   Where the grid IS at a given moment comes from the ticker's
+   most recent tick rather than from a start time held since the
+   transport began. The ticker advances by reading its period
+   live each tick, so after a tempo move its true positions no
+   longer equal `start + n * gridSec()`; re-anchoring on every
+   tick keeps the drawn bar lines on the grid the engine is
+   actually playing. (This is the anchor idiom lib/roll.js
+   documents for the same reason.)
+
+   Only the DRAWING needs seconds. The memory engine never leaves
+   the ticker's own integer tick-index space, which is why a
+   voice can cross into its own past with no timing slop at all.
+   ============================================================ */
+let gridTickTime = 0;    // absolute time of the most recent tick
+let gridTickIndex = 0;   // and its index, so we know where in the bar it fell
+
+// The first bar line at or after t.
+function barLineAtOrAfter(t) {
+  const cell = gridSec(), bar = CELLS_PER_BAR * cell;
+  const anchor = gridTickTime - (gridTickIndex % CELLS_PER_BAR) * cell;
+  return anchor + Math.ceil((t - anchor) / bar - 1e-9) * bar;
+}
+
+/* ============================================================
+   Patience: each voice is monophonic and no hit is ever stolen —
+   an event that would overlap one already committed to that
+   voice is dropped, and the earlier commitment stands. The check
+   is over scheduled intervals rather than sounding voices
+   because scheduling runs ahead of playback. Generated and
+   remembered events meet the same rule, and the bus strip
+   (M / gain / pan) is the final gate on both.
+
+   One condition drives every surprise here: a voice whose sound
+   outlasts the gap between its own opportunities (gridSec() *
+   rate) cannot play two of them running. The kick's 0.28 s
+   against a 0.2 s cell puts rate 1 at 150 bpm over that line,
+   and rate 1 at 150 bpm is where the kick opens; at rate 4 it
+   refuses nothing at any fidelity.
+
+   Within a window a memory cannot collide with itself — the
+   window records only what SOUNDED, so a segment a voice managed
+   once it can manage again. AT THE SEAM it can. The window is
+   collision-free as a stretch of time and not as a loop: cell 0
+   and the last cell were WINDOW_BARS * CELLS_PER_BAR - 1 cells
+   apart when recorded and are neighbours once it turns. A voice
+   over the line refuses that one event at fidelity 1 — where the
+   law does nothing — and refuses it on every pass while the
+   memory holds. 7.5% of kick memories at rate 1, density 0.38
+   carry that pair (measured over 200 000 captures; the
+   capture's own patience filtering keeps it that rare). It is
+   the one way a verbatim loop is not verbatim in the air.
+
+   Inventions have no protection anywhere: they are new events
+   landing beside remembered ones, so over the line they and
+   their neighbours refuse each other and the stream thins below
+   the density — at rate 1, 150 bpm, density 0.5, a quarter of
+   what the law wants to sound never does at f 0.5, and a third
+   at f 0. The spec's §3.5 carries the table.
+
+   None of this is the law drifting; the law is exact and every
+   event fires on its own cell. It is monophony meeting a grid
+   finer than the voice, and it is the one way the conservation
+   of amount fails to reach the ear.
+   ============================================================ */
+const scheduled = {};   // voice id -> [{ start, end }] hits already committed
+
+function freeAt(id, time, dur) {
+  const list = scheduled[id];
+  if (!list) return true;
+  const now = ctxNow();
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i].end < now) { list.splice(i, 1); continue; }
+    if (time < list[i].end && time + dur > list[i].start) return false;
+  }
+  return true;
+}
+
+function playEvent(id, time, gain) {
+  const dur = durOf(id);
+  if (!freeAt(id, time, dur)) return false;
+  if (!Lab.voices.play(id, time, { gain: gain })) return false;
+  (scheduled[id] || (scheduled[id] = [])).push({ start: time, end: time + dur });
+  return true;
+}
+
+/* The roll's queue is bounded WHERE IT IS FILLED, and that is the whole point:
+   the scheduler pushes here and rAF drains, and rAF stops in a hidden tab while
+   the scheduler widens its horizon and commits more. Draining on the frame
+   alone is a queue that grows all day in a background tab — measured at about
+   3.9 events a second, which is ninety thousand objects across a working day.
+   Events arrive in time order, so the trim is a walk from the front. */
+function pushViz(time, id, gain, mark) {
+  vizEvents.push({ time: time, id: id, gain: gain, mark: mark || null });
+  trimViz();
+}
+
+// A FILLED block on the timeline means it sounded — that is the one rule the
+// whole mark grammar rests on. `mark` is null for a generated event, 'score'
+// or 'extra' for one the law produced. Returns whether it sounded, because the
+// window records what sounded too.
+function scheduleAndRecord(time, id, gain, mark) {
+  if (!playEvent(id, time, gain)) return false;
+  pushViz(time, id, gain, mark);
+  return true;
+}
+
+// The unfilled mark: a memory event that stayed silent, drawn where
+// and how wide it would have been. Purely a drawing concern — a ghost never
+// touches the recording, the collision bookkeeping or the audio.
+function pushGhost(time, id, gain) {
+  pushViz(time, id, gain, 'ghost');
+}
+
+/* ============================================================
+   MEMORY — the window, the score, and the engaged voice.
+
+   Every voice carries a rolling record of its OWN generative
+   events: `current`, the bar being filled, and `window`, the
+   last two WHOLE bars, oldest first. Recording is continuous and
+   invisible — capture is not an action, and the performer never
+   takes a memory, only claims one.
+
+   MEM is not a mode the voice's sound switches into, it is a
+   memory the voice has at hand. Off: density rolls at every
+   opportunity of the voice's rate, what sounds is recorded, and
+   the window advances one bar at every bar line. On: the window
+   is frozen exactly as it stood and the voice's stream is
+   decided by the law below — which at fidelity 1 is the frozen
+   window verbatim and at fidelity 0 is generation again, with
+   the memory still held. Nothing is recorded while MEM is on, so
+   nothing unheard can enter the window.
+
+   The window's contents are held as CELLS, never seconds, and
+   playback is driven by the ticker's own tick index — so the
+   crossing has no clock of its own to disagree with the pulse.
+   Both crossings are bar-quantized: the switch is thrown
+   whenever the hand reaches it, and it lands on the bar line.
+   ============================================================ */
+const mem = {};    // id -> the voice's memory state
+
+function resetMemory() {
+  LANE_IDS.forEach(id => {
+    mem[id] = {
+      mode: 'gen',        // 'gen' | 'mem'
+      want: false,        // where the performer has put the switch
+      pending: null,      // 'mem' | 'gen' while the throw waits for the bar line
+      current: [],        // { cell 0..7, gain } — the bar being filled
+      window: [],         // up to WINDOW_BARS completed bars, oldest first
+      scoreAt: [],        // cell 0..15 -> gain; a hole is a cell the memory is silent on
+      scoreCells: 0,
+      loopStartTick: 0
+    };
+  });
+}
+resetMemory();
+
+// The switch. Throwing it back before the bar line simply cancels the throw —
+// the voice never left the mode it was in, so there is nothing to resolve.
+function setWant(id, want) {
+  const v = mem[id];
+  v.want = !!want;
+  const engaged = (v.mode === 'mem');
+  v.pending = (v.want === engaged) ? null : (v.want ? 'mem' : 'gen');
+  renderMem(id);
+}
+
+// Entry. The window already holds the last two WHOLE bars — the bar just
+// completed was pushed a moment ago, in this same tick — so the score is the
+// material the listener heard over the last two bars, at the gains it was
+// played at, and relative cell 0 falls on this very tick.
+//
+// The score is stored BY CELL rather than as a list: at most one event can
+// have been recorded on a cell (one density roll per opportunity), and the law
+// below asks a cell-shaped question at every step — is the memory silent here.
+function freezeScore(v, id, n0) {
+  const bars = v.window.length;
+  const cells = Math.max(1, bars) * CELLS_PER_BAR;
+  const scoreAt = new Array(cells);
+  for (let b = 0; b < bars; b++) {
+    const barEvents = v.window[b];
+    for (let i = 0; i < barEvents.length; i++) {
+      scoreAt[b * CELLS_PER_BAR + barEvents[i].cell] = barEvents[i].gain;
+    }
+  }
+  v.scoreAt = scoreAt;
+  v.scoreCells = cells;
+  v.mode = 'mem';
+  v.loopStartTick = n0;
+  v.pending = null;
+  // Fidelity snaps to 1 at entry: hitting MEM means THESE two bars are what
+  // the audience should remember, so the claim is verbatim by intent whatever
+  // the knob was left at. It goes through the CONTROL, so the knob, params and
+  // the engine cannot come out of it disagreeing.
+  const k = rack && rack.cell(id, 'fidelity');
+  if (k) k.set(1); else params.voices[id].fidelity = 1;
+}
+
+/* ============================================================
+   THE LAW — fidelity as a stochastic interpolation between the
+   voice's generative process and its memory.
+
+   While MEM is engaged the memory's temporal grid is fixed: the
+   pointer advances with the clock at every step, whatever the
+   fidelity, and every step is settled on its own fresh roll.
+   With d = density and f = fidelity:
+
+     memory silent here    → create an event, probability d(1 − f)
+     memory has an event   → remove it,   probability (1 − d)(1 − f)
+
+   Fidelity never MOVES an event; it only invents on silent steps
+   and removes existing ones. Three things fall out, and they are
+   the whole instrument:
+
+     f = 1  nothing invented, nothing removed — verbatim loop.
+     f = 0  both branches fire with probability d, so every step
+            the voice would have had anyway fires at exactly the
+            density: the memory is statistically invisible and
+            the stream IS generation.
+     between, one window's rate is f × (that window's own
+            density) + (1 − f) × d, and a frozen window is itself
+            a d-dense draw — so with density left where it was at
+            capture the expected rate is d at EVERY fidelity.
+            Fidelity redistributes PLACEMENT toward the remembered
+            pattern, never AMOUNT: density is the sole rate
+            control throughout. (One particular window is a coarse
+            draw — 16 cells — so a single memory can loop a little
+            thicker or thinner than the knob reads. That is the
+            memory being itself, not the law drifting.)
+
+   The rolls being fresh at every step is what lets a partly
+   remembered stream breathe rather than freeze into a second
+   pattern, and it is why a fidelity move bites at once.
+   ============================================================ */
+function memoryLaw(hasEvent, d, f, rnd) {
+  return hasEvent ? !(rnd() < (1 - d) * (1 - f))     // survived the removal roll
+                  : (rnd() < d * (1 - f));           // invented on a silent step
+}
+
+// One step of an engaged memory, at relative cell `rel`. Returns null for a
+// step that passes unheard and unseen, otherwise { gain, mark }:
+//
+//   'score' — remembered, and it sounds
+//   'ghost' — remembered, and the removal roll took it; it draws, never sounds
+//   'extra' — invented on a step the memory is silent on; it sounds
+//
+// A removed event is reported rather than dropped because fidelity has to be
+// VISIBLE: at f = 0 the memory draws as a full loop of ghosts under a stream of
+// inventions, and the frozen motif is plainly still at hand.
+//
+// A cell the memory occupies is ALWAYS visited, so the verbatim loop survives
+// a rate move. An empty cell is visited only where the voice HAD an
+// opportunity while it was recording — the memory carries its own temporal
+// grid, phase included, and an invention therefore lands exactly where
+// generation would have landed. That anchor is what makes f = 0 generation
+// EXACTLY rather than generation-like, and it holds for any rate against any
+// score length. Asking the LIVE tick instead would hold only while the rate
+// divides the score: whenever it does not, the opportunities walk off the
+// remembered cells pass by pass and the two sets add up to more chances per
+// bar than the generator ever had. RATE_STEPS makes that mostly true and a
+// one-bar score (a memory claimed at the very first bar line) makes it false
+// again — hence the anchor rather than the assumption.
+function memoryStep(v, rel, rate, d, f, rnd, gainFor) {
+  const remembered = v.scoreAt[rel];
+  if (remembered !== undefined) {
+    return { gain: remembered, mark: memoryLaw(true, d, f, rnd) ? 'score' : 'ghost' };
+  }
+  const capTick = v.loopStartTick - v.scoreCells + rel;   // where this cell was recorded
+  if (((capTick % rate) + rate) % rate !== 0) return null;
+  return memoryLaw(false, d, f, rnd) ? { gain: gainFor(), mark: 'extra' } : null;
+}
+
+/* ============================================================
+   The engine. One grid, one cell per 8th note, walked by the
+   shared ticker — and the whole memory system rides inside it,
+   which is what makes the crossing seamless: there is no second
+   scheduler that could be a tick early or a tick late.
+
+   Tick order, and it matters:
+     1. bar-line bookkeeping — advance the windows, land the
+        switches that were thrown during the bar;
+     2. per voice, play. An engaged voice puts the law to the
+        memory cell that has just arrived; a generative voice
+        rolls its density at its own opportunities.
+   A voice entering at tick n0 therefore plays relative cell 0 at
+   the same instant, on the same tick, at which its generator
+   would have had its say.
+   ============================================================ */
+function barLine(n) {
+  for (let i = 0; i < VOICES.length; i++) {
+    const v = mem[VOICES[i].id];
+    // Only a voice with MEM off advances its window. An engaged voice's window
+    // stays exactly as it was frozen and it records nothing, so on release it
+    // resumes rolling from where it stood — which is how a later re-entry can
+    // freeze a blend of pre-entry and post-release bars. Intended, not a bug.
+    if (v.mode === 'gen') {
+      v.window.push(v.current);
+      while (v.window.length > WINDOW_BARS) v.window.shift();
+      v.current = [];
+    }
+    if (v.pending === 'mem' && v.mode === 'gen') freezeScore(v, VOICES[i].id, n);
+    else if (v.pending === 'gen' && v.mode === 'mem') {
+      // Release. Nothing to land and nothing to fade: the law at f = 0 already
+      // IS pure generation, so the only thing that changes is that the window
+      // starts rolling again and the memory is gone.
+      v.mode = 'gen';
+      v.current = [];
+      v.pending = null;
+    }
+  }
+  /* The dots are painted here as well as on the frame, because this is where
+     the face changes. rAF stops in a hidden tab and the ticker does not, so a
+     dot left to the frame alone would sit wearing the pulsing ARMED face over
+     a voice that had already landed in memory — not a stale picture but a
+     wrong one. */
+  LANE_IDS.forEach(renderMem);
+}
+
+const ticker = Lab.clock.createTicker({
+  periodSec: gridSec,
+  onTick: function (n, t) {
+    gridTickTime = t;                 // where the grid actually is, re-anchored each tick
+    gridTickIndex = n;
+    if (n % CELLS_PER_BAR === 0) barLine(n);
+    /* A memory press from cold, held over until the run it started has a tick
+       behind it. Thrown on the bar line itself it would freeze the empty bar
+       before the first one; thrown here it lands where a dot pressed in the
+       first bar lands, on the next bar line, with that bar in it. */
+    if (memAllHeld && n > 0) { memAllHeld = false; throwAll(); }
+
+    for (let i = 0; i < VOICES.length; i++) {
+      const id = VOICES[i].id;
+      const v = mem[id], p = params.voices[id];
+
+      const rate = Math.max(1, Math.round(p.rate));
+
+      if (v.mode === 'mem') {
+        const cells = v.scoreCells;
+        if (!(cells > 0)) continue;
+        const rel = ((n - v.loopStartTick) % cells + cells) % cells;
+        const e = memoryStep(v, rel, rate, p.density, p.fidelity, prng.next, eventGain);
+        if (!e) continue;
+        // One honest rule: unfilled means silent, whatever silenced it. A
+        // removed event and one the patience rule refuses both draw as ghosts.
+        if (e.mark === 'ghost' || !scheduleAndRecord(t, id, e.gain, e.mark)) {
+          pushGhost(t, id, e.gain);
+        }
+        continue;
+      }
+
+      if (n % rate !== 0) continue;
+      if (prng.next() >= p.density) continue;
+      const gain = eventGain();
+      // a generated event the patience rule refuses draws NOTHING — the ghost
+      // grammar belongs to the memory, where the score says what was owed
+      if (scheduleAndRecord(t, id, gain, null)) {
+        v.current.push({ cell: n % CELLS_PER_BAR, gain: gain });
+      }
+    }
+  }
+});
+
+/* ============================================================
+   Viz — the scrolling piano roll. A renderer: it reads the
+   engine's event log and owns nothing.
+
+   Every length below is in CSS pixels. The backing store is in
+   DEVICE pixels and the one transform in sizeTimeline() is the
+   whole of the difference, so a 2× display draws the same
+   picture at twice the resolution and no other line in here
+   knows the ratio exists.
+   ============================================================ */
+const PX_PER_SEC = 90;
+const LANE_TOP_MARGIN = 8;
+const LANE_EDGE_PX = 3;              // colored voice edge at the left of each lane
+const ADDED_DASH = [4, 3];           // the dashed outline of an invented event
+const EMPTY_DASH = [];
+// the longest bar on the timeline: an event pruned the moment its onset
+// scrolls off would take its tail with it, mid-view
+const MAX_VOICE_DUR = LANE_IDS.reduce((m, id) => Math.max(m, durOf(id)), 0);
+
+let vizEvents = [];      // { time, id, gain, mark: null|'score'|'extra'|'ghost' }
+// mark: null generated · 'score' remembered · 'extra' invented · 'ghost' drawn, not sounded
+
+const timelineEl = document.createElement('canvas');
+timelineEl.id = 'timeline';
+timelineEl.className = 'tl';
+timelineEl.dataset.hint = 'the last few seconds, one lane per voice: filled means it ' +
+  'sounded, a white outline means that voice is playing its memory, a dashed one ' +
+  'means the law invented it, and an empty outline is an event that stayed silent.';
+timelineEl.title = timelineEl.dataset.hint;
+const timelineCtx = timelineEl.getContext('2d');
+
+// The canvas in CSS pixels, and the ratio its backing store is built at. The
+// height is the stylesheet's `--roll-h`, read rather than repeated: it is the
+// drawing height at every display ratio, where `clientHeight` was two pixels
+// short of it and not always the same two.
+let vizW = 900, vizH = 200, vizDpr = 1;
+
+function rollHeight() {
+  const v = parseFloat(getComputedStyle(timelineEl).getPropertyValue('--roll-h'));
+  return (isFinite(v) && v > 0) ? Math.round(v) : 200;
+}
+
+function sizeTimeline() {
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  vizW = Math.max(1, Math.round(timelineEl.clientWidth || 900));
+  vizH = rollHeight();
+  vizDpr = dpr;
+  timelineEl.width = Math.round(vizW * dpr);
+  timelineEl.height = Math.round(vizH * dpr);
+  // Setting either dimension resets the context, transform included, so this
+  // has to come after and not before.
+  timelineCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+/* devicePixelRatio changes with no resize event at all — a window dragged to a
+   display of another density, or a browser zoom. `matchMedia` on the ratio the
+   canvas was built at fires exactly then, and is re-armed against the new one
+   each time; without it the roll keeps a stale backing store and draws soft. */
+function watchDpr() {
+  if (!window.matchMedia) return;
+  const m = window.matchMedia('(resolution: ' + vizDpr + 'dppx)');
+  const again = () => { sizeTimeline(); watchDpr(); };
+  if (m.addEventListener) m.addEventListener('change', again, { once: true });
+  else m.addListener(again);
+}
+
+function ctxNow() { return Lab.audio.ctx ? Lab.audio.ctx.currentTime : 0; }
+
+// How much time the canvas actually shows — it follows the window width, so
+// nothing may be pruned against a fixed span.
+function visibleSec() { return vizW / PX_PER_SEC; }
+
+/* The bound. An event is kept while it can still be drawn: the window the roll
+   shows, plus the longest voice, because an event pruned the moment its onset
+   scrolls off would take its tail with it, mid-view. So the queue never holds
+   more than the picture does — a hard bound, held at the push site as well as
+   at the frame, so it holds while nothing is drawing at all. */
+function trimViz() {
+  const cutoff = ctxNow() - visibleSec() - MAX_VOICE_DUR;
+  let i = 0;
+  while (i < vizEvents.length && vizEvents[i].time < cutoff) i++;
+  if (i) vizEvents.splice(0, i);
+}
+
+function timeToX(t, now, width) { return width - (now - t) * PX_PER_SEC; }
+
+function gainToOpacity(gain) {
+  const norm = Math.max(0, Math.min(1, gain / 1.0));
+  return 0.35 + 0.65 * norm;
+}
+
+function roundedRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  if (ctx.roundRect) { ctx.roundRect(x, y, w, h, rr); return; }
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+// One lane per voice, in kit order, each with its own colored edge. An event
+// draws for as long as its voice sounds, so `hum` reads as a long sustain and
+// `click` as a sliver.
+//
+// THREE ORTHOGONAL MARKS, so a fidelity move is legible as it happens:
+//   fill            it sounded
+//   white outline   this voice has a memory engaged
+//   dashed          the law invented it; it is not in the frozen score
+// and their absence: a ghost — no fill, faint outline in the voice's own
+// colour — is a score event the law removed this pass. Fill and outline
+// are independent, so the four combinations read without a legend: filled
+// plain = generated, filled + solid = the memory sounding, filled + dashed =
+// an invention sounding, unfilled = the memory turning silently. Riding
+// fidelity down turns solids into ghosts and fills the gaps with dashes.
+function drawPianoRollLanes(ctx, w, h, laneIds, posEvents, topMargin) {
+  if (laneIds.length === 0) return;
+  const laneAreaH = h - topMargin;
+  const laneH = laneAreaH / laneIds.length;
+  const laneIndex = {};
+  laneIds.forEach((id, i) => { laneIndex[id] = i; });
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  laneIds.forEach((id, i) => {
+    const y = topMargin + i * laneH;
+    ctx.beginPath();
+    ctx.moveTo(0, y + 0.5);
+    ctx.lineTo(w, y + 0.5);
+    ctx.stroke();
+    ctx.fillStyle = colorOf(id);
+    ctx.fillRect(0, y, LANE_EDGE_PX, laneH);
+  });
+  ctx.beginPath();
+  ctx.moveTo(0, topMargin + laneAreaH + 0.5);
+  ctx.lineTo(w, topMargin + laneAreaH + 0.5);
+  ctx.stroke();
+
+  posEvents.forEach(e => {
+    const idx = laneIndex[e.id];
+    if (idx === undefined) return;
+    const laneY = topMargin + idx * laneH;
+    const pad = Math.min(4, laneH * 0.15);
+    const rectH = Math.max(2, laneH - pad * 2);
+    const rectY = laneY + pad;
+    const rectW = Math.max(2, e.width);
+    roundedRectPath(ctx, e.x, rectY, rectW, rectH, 3);
+    if (e.mark === 'ghost') {
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = colorOf(e.id);
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash(EMPTY_DASH);
+      ctx.stroke();
+      return;
+    }
+    ctx.globalAlpha = gainToOpacity(e.gain);
+    ctx.fillStyle = colorOf(e.id);
+    ctx.fill();
+    if (e.mark) {
+      // heavy and near-opaque: this has to read at a glance on a `click`
+      // sliver a few pixels wide as well as along a two-second `hum`
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.94)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash(e.mark === 'extra' ? ADDED_DASH : EMPTY_DASH);
+      ctx.stroke();
+    }
+  });
+  ctx.globalAlpha = 1;
+  ctx.setLineDash(EMPTY_DASH);   // the gridlines are drawn next
+}
+
+// The bar lines, drawn OVER the events for the same reason lib/roll.js draws
+// its gridlines over its blocks: a block sitting exactly on its line must not
+// hide the line, or perfect alignment reads as off-grid. They are also where
+// every memory switch lands, so they are the one grid worth drawing.
+function drawBarLines(ctx, w, h, now) {
+  const bar = barSec();
+  if (!(bar > 0.01)) return;
+  const tLeft = now - w / PX_PER_SEC;
+  ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+  ctx.lineWidth = 1;
+  let t = barLineAtOrAfter(tLeft);
+  let guard = 0;
+  while (t <= now + 1e-6 && guard++ < 512) {
+    const x = Math.round(timeToX(t, now, w)) + 0.5;
+    if (x >= 0 && x <= w) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    t += bar;
+  }
+}
+
+function drawTimeline() {
+  const w = vizW;
+  const h = vizH;
+  const now = ctxNow();
+  const ctx = timelineCtx;
+  ctx.fillStyle = '#0d0f13';
+  ctx.fillRect(0, 0, w, h);
+
+  const posEvents = [];
+  vizEvents.forEach(e => {
+    const x0 = timeToX(e.time, now, w);
+    const width = Math.max(2, durOf(e.id) * PX_PER_SEC);
+    if (x0 + width < -6 || x0 > w + 6) return;
+    posEvents.push({ id: e.id, x: x0, width: width, gain: e.gain, mark: e.mark });
+  });
+  drawPianoRollLanes(ctx, w, h, LANE_IDS, posEvents, LANE_TOP_MARGIN);
+  drawBarLines(ctx, w, h, now);
+}
+
+/* The MEM dots are repainted here rather than on a timer of their own: they
+   are a view of engine state exactly as the roll is, and the mode change
+   happens when the bar-line tick is SCHEDULED, a fraction of a second before
+   it sounds. Neither lead is visible at this size. */
+function frame() {
+  trimViz();
+  LANE_IDS.forEach(renderMem);
+  drawTimeline();
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================
+   The rack's own columns, and the session controls.
+   ============================================================ */
+const DENSITY_HINT = 'chance this voice sounds at each of its own opportunities — the sole rate control, live with MEM on or off';
+const FIDELITY_HINT = 'how remembered this voice is — 1 verbatim, 0 pure generation with the memory still held, between them a blend at the same density';
+const MEM_HINT = 'claim the last two bars this voice played — lands on the bar line and snaps fidelity to 1';
+
+const memDots = {};
+let rack = null;          // the composition builds it; freezeScore writes through it
+
+// Three looks, two meanings: solid = this voice has its own past at hand,
+// pulsing outline = the switch is thrown and the bar line has not arrived yet
+// (either direction), dark = no memory held.
+function renderMem(id) {
+  const d = memDots[id], v = mem[id];
+  if (!d || !v) return;
+  d.set(v.mode === 'mem');
+  d.classList.toggle('armed', v.pending !== null);
+  renderMemAll();
+}
+
+/* ============================================================
+   The teaser's two controls — the phone's whole hand.
+
+   MEMORY throws every voice's switch at once, through the same
+   setWant the five dots call, so each switch lands on the bar
+   line exactly as its own dot would have landed it. One press is
+   one direction for the whole set: it claims every voice unless
+   every voice already wants its memory, and then it lets them
+   all go. It wears the dot's three looks for the set — solid
+   when all five hold a memory, the pulsing outline while any
+   throw waits for the bar line, dark otherwise.
+
+   FIDELITY is one dial over the five: a move writes the same
+   value into all five through their rack knobs (the one owner,
+   as at entry), and the dial shows the five's mean on every
+   paint, which is the value itself whenever they agree.
+   ============================================================ */
+const MEMALL_HINT = 'claim the last two bars every voice played — lands on the bar line ' +
+  'and snaps fidelity to 1; press again to let every memory go';
+const FIDALL_HINT = 'how remembered all five voices are — 1 verbatim, 0 pure generation ' +
+  'with the memory still held';
+
+function throwAll() {
+  const claim = !LANE_IDS.every(id => mem[id].want);
+  LANE_IDS.forEach(id => setWant(id, claim));
+}
+
+/* A press from cold presses Play first, and Play lets go of every memory as
+   the run begins — so a throw made by the same press would be wiped by the
+   start it caused. The press that finds the arm still waiting is held over and
+   thrown once the run has begun (the transport's onStart). */
+let memAllCold = false, memAllHeld = false;
+function memAllDown(e) {
+  if (e.type === 'keydown' && !Lab.shell.isArmKey(e)) return;
+  memAllCold = !ticker.running && !!(page && page.arm && page.arm.armed);
+}
+const memAllDot = Lab.ui.dot({
+  text: 'all', title: MEMALL_HINT,
+  onToggle: () => {
+    if (memAllCold && !ticker.running) memAllHeld = true;
+    else throwAll();
+    memAllCold = false;
+    renderMemAll();
+  }
+});
+memAllDot.classList.add('mem');
+memAllDot.addEventListener('pointerdown', memAllDown);
+memAllDot.addEventListener('keydown', memAllDown);
+const memAllCtl = Lab.ui.inline('memory', memAllDot, MEMALL_HINT);
+
+function renderMemAll() {
+  memAllDot.set(LANE_IDS.every(id => mem[id].mode === 'mem'));
+  memAllDot.classList.toggle('armed', memAllHeld || LANE_IDS.some(id => mem[id].pending !== null));
+}
+
+const fidAllDial = Lab.ui.dial({
+  label: 'fidelity', min: 0, max: 1, step: 0.01,
+  value: LANE_IDS.reduce((s, id) => s + params.voices[id].fidelity, 0) / LANE_IDS.length,
+  fmt: x => x.toFixed(2), hint: FIDALL_HINT,
+  onInput: x => {
+    LANE_IDS.forEach(id => {
+      const k = rack && rack.cell(id, 'fidelity');
+      if (k) k.set(x); else params.voices[id].fidelity = x;
+    });
+  }
+});
+function showFidAll() {
+  fidAllDial.show(LANE_IDS.reduce((s, id) => s + params.voices[id].fidelity, 0) / LANE_IDS.length);
+}
+
+const seedEl = document.createElement('span');
+seedEl.className = 'val';
+function renderSeed() { seedEl.textContent = 'seed ' + params.seed; }
+renderSeed();
+
+/* ---- reset ----
+   Everything on this page survives a reload — every voice's density, rate,
+   fidelity, level, pan and mute — so there has to be a way back. Reset puts the
+   five voices where they opened and lets go of every memory. It keeps the seed,
+   because reseed is the control that owns the seed, and it keeps the tempo and
+   the master chain, because those are the session's settings and not the
+   instrument's state. */
+function voiceDefaults(id) {
+  const v = VOICE_DEF[id];
+  return { density: v.density, rate: v.rate, fidelity: v.fidelity,
+           gain: (v.gain == null) ? 1 : v.gain, mute: false, pan: 0 };
+}
+
+function atDefaults() {
+  return LANE_IDS.every(id => {
+    const d = voiceDefaults(id), p = params.voices[id], s = params.strips[id];
+    return p.density === d.density && p.rate === d.rate && p.fidelity === d.fidelity &&
+           s.gain === d.gain && !s.mute && s.pan === d.pan &&
+           mem[id].mode === 'gen' && !mem[id].want && mem[id].pending === null;
+  });
+}
+
+// Through the CONTROLS, so the knob, params and the engine cannot come out of
+// this disagreeing — the same route freezeScore takes to snap fidelity.
+function resetVoices() {
+  LANE_IDS.forEach(id => {
+    const d = voiceDefaults(id);
+    const dens = rack.cell(id, 'density'), rate = rack.cell(id, 'rate'),
+          fid = rack.cell(id, 'fidelity');
+    if (dens && dens.set) dens.set(d.density); else params.voices[id].density = d.density;
+    if (rate && rate.set) rate.set(rateIndex(d.rate)); else params.voices[id].rate = d.rate;
+    if (fid && fid.set) fid.set(d.fidelity); else params.voices[id].fidelity = d.fidelity;
+    rack.set(id, { gain: d.gain, mute: d.mute, pan: d.pan });
+  });
+  // Every memory let go, and the windows with them: after a reset a voice has
+  // no past at hand, exactly as it has none on arrival.
+  resetMemory();
+  LANE_IDS.forEach(renderMem);
+  autosave.save();               // so the reset survives the next reload
+  Lab.ui.status('the five voices are back where they opened');
+}
+
+const resetBtn = Lab.ui.confirm({
+  text: 'reset',
+  armed: 'reset — sure?',
+  hint: 'put the five voices back where they opened — density, rate, fidelity, ' +
+        'level, pan and mute — and let go of every memory. The seed, the tempo ' +
+        'and the master chain stay. It asks twice: there is no undo, and the ' +
+        'autosave means a reload will not bring your settings back.',
+  onArm: () => {
+    if (!atDefaults()) return true;
+    Lab.ui.status('the voices are already where they opened');
+    return false;
+  },
+  onConfirm: resetVoices
+});
+
+const RESEED_HINT = 'new event stream — the palette and the frozen memories are untouched';
+const reseedBtn = document.createElement('button');
+reseedBtn.type = 'button';
+reseedBtn.textContent = 'reseed';
+reseedBtn.dataset.hint = RESEED_HINT;
+reseedBtn.title = RESEED_HINT;
+
+// Reseed swaps the event stream mid-run: transport keeps going, a frozen score
+// stays frozen, and the timbres never move (a render voice is seeded from its
+// own id, not from here).
+reseedBtn.addEventListener('click', () => {
+  params.seed = Lab.prng.newSeed();
+  prng = Lab.prng.create(params.seed);
+  renderSeed();
+});
+
+/* The blurb, and the one word it leans on: `fidelity` is the name of the thing
+   this toy is about, so it is italic. `shows` takes a Node. */
+const shows = document.createDocumentFragment();
+const showsEm = document.createElement('em');
+showsEm.textContent = 'fidelity';
+shows.append(
+  'Five voices on one pulse — throw a voice’s MEM switch and the two bars it ' +
+  'just played become its score, then ride ',
+  showsEm,
+  ' between that memory and pure generation.');
+
+/* ============================================================
+   THE PAGE
+
+   A transport and not an arm: this piece has a beginning. The
+   grid starts at tick 0 and every memory is measured against it,
+   so there is a moment before the first bar and the play button
+   is the name of it.
+   ============================================================ */
+const page = Lab.page.build({
+  title: 'motif-memory',
+  shows: shows,
+  spec: 'spec.md',
+  // repo: '…',            ← SET BEFORE PUBLISHING (no remote configured yet)
+  site: 'https://noisewrangler.art',
+
+  transport: {
+    hint: 'start / stop the piece — Space does the same',
+    onStart: async function () {
+      await Lab.voices.ensureRendered();
+      Lab.audio.fadeIn(0.03);
+      for (const k in scheduled) delete scheduled[k];
+      // The tick index restarts at 0, so no memory can survive the transport: a
+      // claimed memory belongs to the run it was played in. Every voice comes
+      // back generative with an empty window, and the switches come back with it.
+      resetMemory();
+      LANE_IDS.forEach(renderMem);
+      const t0 = Lab.audio.ctx.currentTime + 0.05;
+      gridTickTime = t0;               // the grid's anchor until the first tick lands
+      gridTickIndex = 0;
+      ticker.start(t0);
+    },
+    onStop: function () {
+      ticker.stop();
+      Lab.audio.fadeOut(0.05);
+    }
+  },
+
+  // bpm is the shared pulse, not a per-voice parameter — it has no row to hang
+  // on, and it belongs with the other globals.
+  bpm: {
+    min: BPM.min, max: BPM.max, def: BPM.def, value: params.bpm,
+    hint: 'the shared pulse — one grid cell is an 8th note',
+    onChange: v => { params.bpm = v; }
+  },
+  master: saved && saved.fx ? saved.fx : {},
+  midi: { onEnable: () => Lab.ui.status('MIDI is on — this page binds nothing to it yet') },
+  hints: true,
+
+  status: () => {
+    let held = 0, armed = 0;
+    LANE_IDS.forEach(id => {
+      if (mem[id].mode === 'mem') held++;
+      if (mem[id].pending) armed++;
+    });
+    return (ticker.running ? 'running' : 'stopped') +
+      ' · ' + held + '/' + LANE_IDS.length + ' in memory' +
+      (armed ? ' · ' + armed + ' armed' : '');
+  },
+
+  /* ---- the start line ----
+     Five states. It is never STUCK — every voice has its next chance at its
+     next opportunity whatever it has just done — so that one is silent. The
+     other four all speak: the line sits directly above the instrument and its
+     height is reserved whether or not there is text in it, so a state with
+     nothing to say is a band of blank above the rack for as long as it lasts.
+     `running` therefore says what the hand can do next rather than nothing. */
+  start: {
+    gesture: 'Press ▶ Play',
+    state: () => {
+      if (LANE_IDS.every(id => params.voices[id].density <= 0)) return 'nothing';
+      const fx = Lab.audio.getState ? Lab.audio.getState() : null;
+      if (LANE_IDS.every(id => params.strips[id] && params.strips[id].mute) ||
+          (fx && fx.master <= 0)) return 'shut';
+      return null;
+    },
+    words: {
+      notStarted: 'press ▶ Play, or the Space bar, and the five voices start on one pulse.',
+      nothing: 'every voice’s density gate is shut, so the pulse is running with ' +
+               'nothing on it — open one and that voice takes its chances again.',
+      stuck: '',
+      shut: 'it is running and nothing reaches you: every voice is muted, or the ' +
+            'master level is at zero.',
+      running: 'throw a voice’s MEM switch and the two bars it has just played ' +
+               'become its score. Then turn that voice’s fidelity down.'
+    }
+  },
+
+  /* What the hands play comes before what the eyes read: the rack is the
+     instrument here, and the roll is a view of what it did. */
+  instrument: 'rack',
+  stage: [timelineEl],
+
+  /* ---- the orchestra rack: one row per voice ----
+     What a voice generates, what it remembers and how it sits in the mix are
+     the same voice, so they are the same row. The library owns
+     name/mute/gain/pan — those write to the voice's output bus, the final gate
+     on everything it sounds, generated or remembered alike; density, rate,
+     fidelity and mem are this toy's own columns and act on the voice's engine
+     instead. The trailing spacer holds the row's right edge: a grid with no
+     flexible track spreads its slack across the `auto` ones, which would
+     strand the dials halfway across the page. */
+  rack: {
+    rows: LANE_IDS,
+    columns: [
+      'name', 'mute', 'gain', 'pan',
+      { key: 'density', width: '150px', cell: c => {
+          const p = params.voices[c.key];
+          return Lab.ui.inline('density', Lab.ui.gate({
+            value: p.density, def: VOICE_DEF[c.key].density, hint: DENSITY_HINT,
+            onChange: x => { p.density = x; }
+          }), DENSITY_HINT);
+        } },
+      { key: 'rate', width: '112px', cell: c => {
+          const p = params.voices[c.key];
+          return Lab.ui.knob({
+            label: 'rate', min: 0, max: RATE_STEPS.length - 1, step: 1,
+            value: rateIndex(p.rate), def: rateIndex(VOICE_DEF[c.key].rate),
+            fmt: i => String(RATE_STEPS[Math.round(i)]),
+            hint: 'grid cells between this voice’s opportunities — 1, 2, 4, 8 or 16',
+            onChange: i => { p.rate = RATE_STEPS[Math.round(i)]; }
+          });
+        } },
+      { key: 'fidelity', width: '124px', cell: c => {
+          const p = params.voices[c.key];
+          return Lab.ui.knob({
+            label: 'fidelity', min: 0, max: 1, step: 0.01,
+            value: p.fidelity, def: VOICE_DEF[c.key].fidelity,
+            fmt: x => x.toFixed(2),
+            hint: FIDELITY_HINT,
+            onChange: x => { p.fidelity = x; }
+          });
+        } },
+      // the dot wears the digit of the key that throws it, so the keyboard and
+      // the rack say the same thing
+      { key: 'mem', width: 'auto', cell: c => {
+          const d = Lab.ui.dot({
+            text: String(c.index + 1), title: MEM_HINT,
+            onToggle: on => setWant(c.key, on)
+          });
+          d.classList.add('mem');
+          memDots[c.key] = d;
+          return Lab.ui.inline('mem', d, MEM_HINT);
+        } },
+      { key: 'pad', width: 'minmax(0,1fr)' }
+    ],
+    state: params.strips,
+    onStrip: (id, strip) => { params.strips[id] = strip; }
+  },
+
+  session: [resetBtn, reseedBtn, seedEl, Lab.state.buttons()],
+
+  // The few words this page has are its blurb; there is no standing text.
+  text: false,
+
+  keys: '<kbd>Space</kbd> play · <kbd>1</kbd>–<kbd>5</kbd> memory on that voice · ' +
+        'drag knobs vertically, gates along the bar, double-click resets',
+
+  // the teaser's fidelity dial is a view of five knobs as well as a control
+  paint: [showFidAll],
+
+  /* ---- the teaser: the phone mode of this same page ----
+     The smallest thing that is still this toy: Play (the composition builds
+     it — the piece has a beginning, and the random before the motif needs
+     it), one memory for every voice, and one fidelity to degrade it. The
+     timeline is passive time and stays; nothing else is editable. */
+  teaser: {
+    controls: [memAllCtl, fidAllDial],
+    stage: [timelineEl],
+    gesture: 'Press ▶ Play',
+    words: {
+      notStarted: 'press ▶ Play and the five voices start on one pulse.',
+      nothing: 'every density is at zero, so the pulse runs empty; the desktop ' +
+               'page can open them.',
+      shut: 'running, but muted or the master is at zero — only the desktop ' +
+            'page can change that.',
+      running: 'press memory and each voice keeps the two bars it has just ' +
+               'played. Then ride fidelity down.'
+    },
+    share: { text: 'Five random voices; one button makes each remember what it ' +
+                   'just played, one knob lets it forget. The whole rack wants a desktop.' }
+  }
+});
+
+rack = page.rack;
+
+/* ---- keys: physical positions, so the digits are where they look ---- */
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!e.repeat) page.transport.press();
+    return;
+  }
+  if (e.repeat) return;
+  for (let i = 0; i < LANE_IDS.length; i++) {
+    if (e.code !== 'Digit' + (i + 1)) continue;
+    const id = LANE_IDS[i];
+    setWant(id, !mem[id].want);
+    return;
+  }
+});
+
+/* ---- go ---- */
+sizeTimeline();
+watchDpr();
+window.addEventListener('resize', sizeTimeline);
+/* Coming back to the tab, paint the dots from state before the first frame
+   lands: everything the roll draws is gone from a hidden tab anyway, but a dot
+   is a claim about a voice and it should be true the moment it is looked at. */
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) LANE_IDS.forEach(renderMem);
+});
+LANE_IDS.forEach(renderMem);
+frame();
+
+/* The autosave handle is KEPT rather than dropped: the poll is otherwise a
+   permanent background write loop with no way out, which is not a thing to
+   leave running on a public page. */
+const autosave = Lab.state.attach({
+  key: 'motif-memory',
+  collect: () => ({ params: params, fx: Lab.audio.getState() })
+});
+});   // Lab.state.open
+</script>
+</body>
+</html>

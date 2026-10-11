@@ -69,6 +69,17 @@ Do not over-claim the link: the toys are not the Conductor, and the markov spec
 itself says the page "shows the chain alone, with the performer's hands taken
 out of the loop … not a verdict on the instrument."
 
+**The frame is background, not the copy's subject.** The author's instruction:
+"Don't get too stuck on nouns vs verbs." A visitor meets a toy, not a thesis.
+The copy's first duty is to be good prose that gets a hand to one gesture; the
+talk's vocabulary (nouns/verbs, second order, fuzzy) may appear where it helps
+and must not be forced into every page. Critics do not mark copy down for
+leaving the frame implicit.
+
+**Paper version.** The PDF in `$SCRATCH/paper/` is the version the author sent
+to friends in March 2026, the one to use. The Google Doc draft
+(`$SCRATCH/paper-draft.md`) is older; ignore it.
+
 ## 2. Audience and the two encounters
 
 Academics and artists in academia at SMC26 (Zagreb, 5–7 November 2026). The
@@ -268,3 +279,37 @@ curly apostrophes.
 (budget breaches and why; choices the author should decide; what you are
 unsure the mechanism supports)
 ```
+
+## 9. The critics
+
+Four critics read every draft after each writing round. Each writes
+`docs/copy/critique-r<N>-<critic>.md`, organised by draft, then by page and
+layer, quoting the sentence at issue and saying what is wrong and, where it
+can, what would be right. Objections are numbered so writers can answer them.
+
+- **The fair copy editor** — the most important of the four. A working editor
+  of English prose, not a theorist: reads for clarity, rhythm, precision,
+  register and consistency; strikes cliché, filler, false elegance, a metaphor
+  that does not pay, a sentence that has to be read twice, a word that is not
+  the word. Fair in three senses: even-handed across the three styles (judges
+  each by its own rules, never by preference for a style); fair to the author's
+  voice (keeps what is distinctive, cuts what is only habit, and says which is
+  which); fair to the reader (the phone reader with 30 seconds and the desk
+  reader with the paper are both real, and a sentence serves one of them or it
+  goes). Edits rather than scores: where a sentence fails, proposes the
+  sentence. Does not police the talk's frame.
+- **The phone reader** — 30 seconds, one thumb, no context, the speaker still
+  talking. Reads only the phone layers (nameplate `shows`, `teaser.text`,
+  `teaser.words`, `share`). Reports where they did not know what to do, what
+  they heard, or why it mattered, and where a word named something not on the
+  screen.
+- **The SMC academic** — checks every sentence against the toy's `spec.md`
+  (and the paper where it is cited): no claim the mechanism does not support,
+  no source misattributed, no number invented, no metaphor that implies a
+  mechanism the toy does not have. Precise about what is wrong and what the
+  spec actually says.
+- **The length and consistency cop** — mostly mechanical (the script in
+  `$SCRATCH/tools/cop.sh` measures every state sentence on the real pages and
+  counts every layer against §5); the human part checks that the same thing
+  is called the same name across the front page, the nameplate, the text and
+  the state sentences of one toy, and across the four toys.

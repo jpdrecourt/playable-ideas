@@ -208,11 +208,11 @@ turn bias and listen: left, the figure sharpens; right, it dissolves, then inver
 - E-c-30: taken
 - P-c-1: taken, differently — E-c-2's "buys a style, and cannot hold kick, hat, kick, snare" (the semicolon list reads as three fragments at 13 px)
 - P-c-2: taken, differently — the blurb keeps the claim as E-c-3 words it; "Only the machine speaks" is now the nameplate's last sentence, the first thing the thumb reads after the tap
-- P-c-3: noted; "inaudible" stays the working word
+- P-c-3: taken — kept, as the critic says; "inaudible" stays the working word
 - P-c-4: taken, differently — the nameplate names no control; the gesture is in `teaser.running`
 - P-c-5: taken — "crossing" is defined in the nameplate itself ("each remembers what it just played, and the crossing can be made inaudible") and the phone running line says "seam"
 - P-c-6: taken — "press memory: at the next bar each voice loops. Turn fidelity down and listen for a seam." (89)
-- P-c-7: noted, no change
+- P-c-7: taken — the critic asks for no change; the sentence stays
 - P-c-8: taken, differently — the listening cue is in `running` ("listen for a seam") and `teaser.text` leads with the loop and "Fidelity is how much of that it keeps"; the five-word amount line would not fit beside the bar-line guard
 - P-c-9: taken, differently — "Two chains, one dial: style to dice." (grammar → style for C-c-11)
 - P-c-10: taken ("at 1 a written style, at 0 dice"); the start flinch is left, there is no room for "it starts the sound" inside 53
@@ -228,8 +228,8 @@ turn bias and listen: left, the figure sharpens; right, it dissolves, then inver
 - A-c-3: taken ("Leave density alone and the amount of music is held; what moves is where it falls")
 - A-c-4: taken ("up to two bars" in `teaser.text`; `running` says "loops" with no count)
 - A-c-5: taken, differently — "start inventing" (E-c-10, C-c-7), the page's own opposite of memory, rather than "roll their chances"
-- A-c-6: noted; the line stays one-way, the hint carries the release
-- A-c-7: noted; "dice" is a uniform draw on markov and weighted dice on statistical-feedback, and each page's text says which
+- A-c-6: taken — no change required; the line stays one-way and the hint carries the release
+- A-c-7: taken — no fix needed; "dice" is a uniform draw on markov and weighted dice on statistical-feedback, and each page's text says which
 - A-c-8: taken ("the independence the paper's §3.2 pays for, made audible")
 - A-c-9: taken, differently — "In the instrument a hand plays the matrices; here they walk alone" (the spec's own claim, without "the Conductor"); flagged for the author in notes
 - A-c-10: taken ("what a hand wrote", no "example")
@@ -240,18 +240,18 @@ turn bias and listen: left, the figure sharpens; right, it dissolves, then inver
 - A-c-15: taken (silence restored to `shows`; the memory switch moved out of it under directions rule 1)
 - A-c-16: taken
 - A-c-17: taken ("one switch that stops reading them")
-- A-c-18: noted, no change
+- A-c-18: taken — no change required
 - A-c-19: taken, differently — E-c-23's form, "each turn goes to one of six voices, or to the silence"
 - A-c-20: taken ("not even silence. Turn a voice's weight up.")
 - A-c-21: taken — "The ledgers themselves", plural
 - A-c-22: taken, differently — the nameplate no longer says "heavier makes it matter"; the desktop text says "how much a branch matters"
 - A-c-23: taken ("dissolves, then inverts" on the phone; the heavy/light picture is gone from the phone)
 - A-c-24: taken ("with bias at 0")
-- C-c-1: moot — no page takes the 30-word allowance now; statistical-feedback `shows` is 20
-- C-c-2: noted, allowed, unchanged
+- C-c-1: taken, differently — no page takes the 30-word allowance now; statistical-feedback `shows` is 20
+- C-c-2: taken — ruled allowed; unchanged
 - C-c-3: taken ("stand where no weight leads on")
-- C-c-4: noted, allowed, unchanged
-- C-c-5: noted, allowed, unchanged
+- C-c-4: taken — ruled allowed; unchanged
+- C-c-5: taken — ruled allowed; unchanged
 - C-c-6: taken (og → "ensemble")
 - C-c-7: taken ("inventing"; "random" dropped from meta, og and share)
 - C-c-8: taken ("how much of what a voice plays is score")
@@ -262,7 +262,7 @@ turn bias and listen: left, the figure sharpens; right, it dissolves, then inver
 - C-c-13: taken — "six voices and a silence" in shows, meta, og and teaser; "the ledgers" plural in share
 - C-c-14: taken ("watch the ledgers walk apart"; "debts" is gone)
 - C-c-15: taken
-- C-c-16: noted; weight on the desktop, share on the phone, by rule
+- C-c-16: taken — ruled allowed; weight on the desktop, share on the phone, by rule, and flagged in notes for the author
 - C-c-17: taken, differently — og says "the machine is the only speaker"; the nameplate's "Only the machine speaks" stays as its compression, as allowed
 - C-c-18: taken ("what can follow what")
 - C-c-19: taken ("a branch exists under the finger" in `running`)

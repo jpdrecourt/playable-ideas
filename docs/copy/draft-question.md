@@ -2,7 +2,7 @@
 
 ## front
 ### sub
-Four browser toys, one question each, left open by a paper on an instrument with nouns but no verbs.
+Four browser audio toys, one question each, left open by a paper about an instrument with no memory.
 ### what-is
 A playable paper is a claim your thumb can test, and a spec an agent can rebuild it from.
 ### blurb motif-memory
@@ -12,164 +12,257 @@ Can one step of memory hold a phrase?
 ### blurb statistical-feedback
 Can the ear tell dice from a ledger?
 ### blurb possibles
-Does a motif that exists already matter?
+A motif exists. Does it matter yet?
 
 ## motif-memory
 ### shows
-Five voices, each keeping the two bars it just played. Can you hear one start to remember? Ride *fidelity*.
+Five voices keep their last two bars; *fidelity* is how much each replays. Can you hear one start to remember?
 ### meta.description
-Five random voices on one pulse, a memory switch on each, and a fidelity knob between remembering and inventing. Can you hear the crossing? A playable paper.
+Five voices on one pulse; each can be made to remember what it played, and fidelity rides it between remembering and inventing. Can you hear the crossing? A playable paper.
 ### og.description
-Can you hear a voice start to remember? Five voices on one pulse: press memory, ride fidelity, and decide where the memory ended. One of four playable papers.
+Can you hear a voice start to remember? Five voices on one pulse: press memory, ride fidelity, and decide where the memory stops being heard. One of four playable papers.
 ### text
-**Nobody is recording.** Every voice keeps the two bars it just played, without being asked. Throw MEM and that record becomes its score at the next bar line: you decided that a passage was worth keeping, never which window. Is that still capture?
+**Nobody pressed record.** Every voice keeps the two bars it just played, without being asked. Throw MEM and those two bars become its score at the next bar line: you decided that a passage was worth keeping, never which window to keep. Is that still capture?
 
-**Fidelity moves where, never how much.** Cell by cell, on a fresh roll, it trades remembered placement for invention while the amount of music holds. The paper's §5 called remembering a verb the instrument lacked; whether this verb is audible is for the ear. Ride the knob down. Where did the memory go, and did you hear it leave?
+**Fidelity moves where, never how much.** Cell by cell it trades remembered placement for invention while the law holds the amount of music. The paper's §5 called remembering a verb the instrument lacked; whether this verb is audible is the ear's to say. Ride the dial down. Where did the memory stop being heard, and did you hear it stop?
 ### teaser.text
-**Can you hear a voice start to remember?** Press memory and each of the five voices keeps the two bars it just played. Fidelity is how much of that it keeps: ride it down and the voice invents again, at the same amount of music. Where was the crossing?
+**Can you hear a voice start to remember?** Press memory and, at the next bar, each voice loops what it just played. Fidelity is how much of that it plays: ride it down and the voice invents again, with the amount of music held. Where was the crossing?
 ### share
-Can you hear a voice start to remember? One button, one knob. The rack wants a desktop.
+Can you hear a voice start to remember? One button, one dial. The whole instrument wants a desktop.
 ### start.notStarted
-press ▶ Play, or the Space bar: five voices invent on one pulse, and each quietly keeps what it plays. (102)
+press ▶ Play: five voices invent on one pulse, and each quietly keeps what it plays.
 ### start.nothing
-every density is at zero, so the pulse runs with nothing to remember. Open a gate and that voice invents again. (111)
+every density is at zero, so the pulse runs with nothing to remember. Open one and that voice invents again.
 ### start.stuck
 ""
 ### start.shut
-it is running and nothing reaches you: every voice is muted, or the master level is at zero. (92)
+it is running and nothing reaches you: every voice is muted, or the master level is at zero.
 ### start.running
-throw a voice's MEM switch: the two bars it just played become its score. Now turn its fidelity down — where does the memory end? (129)
+throw a voice's MEM switch: the two bars it just played become its score. Now ride its fidelity down: where does it stop being heard?
 ### teaser.notStarted
-press ▶ Play and five voices invent on one pulse. (49)
+press ▶ Play and five voices invent on one pulse.
 ### teaser.nothing
-every density is at zero, so the pulse runs empty; the desktop page can open them. (82)
+every density is at zero, so the pulse runs empty; the desktop page can open them.
 ### teaser.shut
-running, but muted or the master is at zero — only the desktop page can change that. (84)
+it is running but muted or at zero level; only the desktop page can change that.
 ### teaser.running
-press memory: each voice keeps the two bars it just played. Then ride fidelity down. (84)
+press memory: next bar, each voice loops what it played. Ride fidelity down: still a loop?
 
 ## markov
 ### shows
-Two chains, four states each, thirty-two weights, and one step of memory apiece. Can one step hold a phrase?
+Two chains, one step of memory apiece, and a dial from grammar to dice. Can one step hold a phrase?
 ### meta.description
-A first-order Markov chain: two walkers, four states each, thirty-two weights, one step of memory. Build a style, then ask it for a phrase. A playable paper.
+Two first-order Markov chains: four states each, thirty-two weights, one step of memory apiece. Build a grammar, then ask it for a phrase. A playable paper.
 ### og.description
-Can one step of memory hold a phrase? Two chains, four states, thirty-two weights. Build a grammar, then ask it for kick, hat, kick, snare. One of four playable papers.
+Can one step of memory hold a phrase? Two chains, four states each, thirty-two weights. Build a grammar, ask it for kick, hat, kick, snare. One of four playable papers.
 ### text
-**Thirty-two numbers.** A strip is a state; its four cells say what may follow it. Each chain remembers one step. The paper's §3.2 counted what more would cost; this page asks what one step buys.
+**Thirty-two numbers.** A strip is a state; its four cells say what may follow it. Each chain remembers one step. The paper's §3.2 counted what a second step would cost; this page asks what one step buys.
 
-**Build a style.** Lean kick toward hat, hat toward snare, snare back toward kick. Does the walk acquire a logic of its own?
+**Build a grammar.** Lean kick toward hat, hat toward snare, snare back toward kick. Does the walk acquire a logic of its own?
 
-**Then ask it for a phrase.** Kick, hat, kick, snare: the kick must lead one way the first time and another the second. Which cell holds that difference? Listen for whether the figure ever comes round. The second walker shares nothing with the first: not a state, not a weight, not a die. A richer chain, or just another one?
+**Then ask it for a phrase.** Kick, hat, kick, snare: the kick must lead one way the first time and another the second. Which cell holds that difference? Does the figure ever hold? The second chain shares nothing with the first: not a state, not a weight, not a random stream. A richer chain, or just another one?
 ### teaser.text
-**Can one step of memory hold a phrase?** Two chains of four states, and each remembers only the state it stands on. At 1 the dial reads the written grammar; at 0 every next state is a quarter chance. Turn it. Does kick, hat, kick, snare ever come round?
+**Can one step of memory hold a phrase?** Two chains of four states, and each remembers the state it stands on. At 1, structure reads the grammar as written; at 0 every next state is dice, a quarter chance each. Turn it. Does kick, hat, kick, snare ever come round?
 ### share
 Can one step of memory hold a phrase? Two chains, one dial. The matrices want a desktop.
 ### start.notStarted.weightsSet
-the matrices hold weights. Touch the rack or the trail and both walkers start. (78)
+the matrices hold weights. Touch the rack or the trail and the walkers start.
 ### start.notStarted.empty
-tap a cell in a rest row: the first weight starts the audio and the chain at once. (82)
+tap a cell in a rest strip: the first weight starts the chain, and the sound with it.
 ### start.nothing
-both chains stand on their rest, and a rest with no weights goes nowhere. Tap a cell in a rest row: what may follow a silence? (126)
+the matrices are empty, so neither walker can move. Tap a cell in a lit strip: what may follow the state it marks?
 ### start.stuck
-walker 1 stands on {A} and walker 2 on {B}, and neither row has a weight, so nothing can move. Give one of those rows a cell. (131)
+walker 1 stands on {A} and walker 2 on {B}, and neither strip has a weight, so nothing can move. Give one of those strips a cell.
 ### start.shut
-it is running and nothing reaches you: every sound is muted in the rack, or the master level is at zero. (104)
+it is running and nothing reaches you: every sound is muted in the rack, or the master level is at zero.
 ### start.running.both
-both chains are walking. Lean kick toward hat, hat toward snare, then ask for kick, hat, kick, snare. Does it ever come round? (126)
+both walkers walk. Lean kick toward hat, hat toward snare, then ask for kick, hat, kick, snare. Does it ever hold?
 ### start.running.one
-{ON} is walking and {OFF} is standing still. Tap a cell in its rest row: do two chains share anything? (109)
+{ON} is walking and {OFF} stands where no weight leads on. Give its lit strip a cell: do two chains share anything?
 ### teaser.notStarted
-turn structure: 1 is the written grammar, 0 is dice. (52)
+turn structure: 1 is the grammar as written, 0 is dice.
 ### teaser.nothing
-both matrices are empty, so at 1 nothing can move. Turn structure down. (71)
+both matrices are empty, so at 1 nothing can move. Turn structure down.
 ### teaser.stuck
-both walkers stand on rows with no weights, so at 1 nothing moves. Turn structure down. (87)
+both walkers stand where no weight leads on, so at 1 nothing moves. Turn structure down.
 ### teaser.shut
-it is running and nothing reaches you: it is muted, or at zero, on the desktop page. (84)
+it is running but muted or at zero level; only the desktop page can change that.
 ### teaser.running.high
-turn structure down. Where does the style go, and was there ever a phrase in it? (80)
+turn structure down: whatever grammar is written goes to dice. Was there a phrase in it?
 ### teaser.running.low
-turn structure up: a style arrives. Does kick, hat, kick, snare ever come round? (80)
+turn structure up: the weights are read. Does kick, hat, kick, snare ever come round?
 
 ## statistical-feedback
 ### shows
-Six voices and a silence share one pulse by keeping books. Can the ear tell dice from a ledger?
+Six voices and a silence keep books; a dial loosens the reading. Can the ear tell dice from a ledger?
 ### meta.description
-Charles Ames' statistical feedback: six voices and a silence share one pulse by keeping a ledger. One switch turns the ledger into dice. A playable paper.
+Charles Ames' statistical feedback: six voices and a silence share one pulse, each keeping a ledger. One switch stops the reading, and the same weights are dice. A playable paper.
 ### og.description
-Can the ear tell dice from a ledger? Six voices and a silence take turns by the books; one switch stops reading them. One of four playable papers.
+Can the ear tell dice from a ledger? Six voices and a silence take turns by the books; one switch stops the reading: dice. One of four playable papers.
 ### text
-**One pulse, seven claimants.** Six voices and a silence, one per turn. Every option keeps a ledger, the bar beside its name, and the turn goes to whoever is furthest behind. Playing charges you; the seven bars sum to zero. Charles Ames' fair share, one line of arithmetic.
+**One pulse, seven claimants.** Six voices and a silence, one per turn. Each keeps a ledger, the bar beside it, and the turn goes to whoever is furthest behind. Playing charges it; the seven bars sum to zero. Charles Ames' fair share, one line of arithmetic.
 
-**Turn memory off.** The books are still kept; selection stops reading them. The same weights are now dice: can the ear tell? Watch the bars walk apart, then turn it back on. Who gets paid?
+**Turn memory off.** The books are still kept; selection stops reading them. The same weights are dice: can the ear tell? Watch the bars walk apart, then turn it back on. Who gets paid?
 
-**Weight is share, stress is cost.** A weight at zero leaves the game, ledger frozen, and comes back owing. Drag the stress row: heavy steps charge more. Did you write the metre, or did the ledger?
+**Weight is share, stress is cost.** A voice at weight zero leaves the game, its ledger frozen, and comes back where it left. Drag the stress loop: heavy steps charge more. Did you write the metre, or did the ledger?
 ### teaser.text
-**Can the same shares sound like dice?** Six voices and a silence take turns by a ledger: whoever is furthest behind its fair share goes next. Heterogeneity loosens how closely the ledger is read, and the shares never move. Turn it up. When does it stop sounding like a machine?
+**Can the same shares sound like dice?** Six voices and a silence take turns by the books: whoever is furthest behind its fair share goes next. Heterogeneity loosens how closely the books are read, and the shares never move. Turn it up. When does it stop sounding regular?
 ### share
-Can the ear tell dice from a ledger? Six voices, one knob. The ledger itself wants a desktop.
+Can the ear tell dice from a ledger? Six voices, a silence, one dial. Ledgers want a desktop.
 ### start.notStarted
-press ▶ Play, or the Space bar, and one option is chosen on every turn: six voices and a silence. (97)
+press ▶ Play and every turn goes to one of six voices and a silence.
 ### start.nothing
-nothing carries any weight, so nobody can be chosen. Turn a voice's weight up, or open silence. (95)
+no voice carries any weight, so nobody can be chosen, silence included. Turn a voice's weight up.
 ### start.stuck
 ""
 ### start.shut
-it is running and nothing reaches you: every voice is muted, at weight zero, or the master level is at zero. (108)
+it is running and nothing reaches you: every voice is muted, at weight zero, or the master level is at zero.
 ### start.running
-turn memory off and the same weights become dice. Can you hear it? Watch the debts walk apart, then turn it back on. (116)
+turn memory off and the same weights become dice: can you hear it? Watch the bars walk apart, then turn it back on: who is paid?
 ### teaser.notStarted
-press ▶ Play: six voices and a silence take turns. (50)
+press ▶ Play: six voices and a silence take turns.
 ### teaser.nothing
-nothing carries any weight, so nobody can be chosen; the weights are on the desktop page. (89)
+no voice carries any weight, so nobody can be chosen; the desktop page can raise one.
 ### teaser.shut
-it is running and nothing reaches you: muted or at zero on the desktop page. (76)
+it is running but muted or at zero level; only the desktop page can change that.
 ### teaser.running
-turn heterogeneity up: the shares hold, the grain loosens. Does it sound like dice yet? (87)
+turn heterogeneity up: each plays as often, less predictably. Does it sound like dice yet?
 
 ## possibles
 ### shows
-You write what can follow what, and a machine walks it aloud. Does a motif that exists already matter?
+A hand writes what can follow what; a machine walks it aloud. A motif exists. Does it matter yet?
 ### meta.description
-You write a tree of what can follow what and how much it weighs; a machine walks it aloud, and nothing you do makes a sound. A playable paper.
+You write a tree of what can follow what and how much each branch weighs; a machine walks it aloud, and nothing you touch makes a sound. A playable paper.
 ### og.description
-Does a motif that exists already matter? Write a tree of what can follow what; a machine walks it aloud. Two verbs, kept apart. One of four playable papers.
+A motif exists. Does it matter yet? Write a tree of what can follow what; a machine walks it aloud. Two verbs, kept apart. One of four playable papers.
 ### text
-**Write, do not play.** Press ▶ Play and write on four strips in a row: kick, snare, kick, rest. That motif exists; the machine has it on the next cell. You struck nothing. Did you play it?
+**Writing is not playing.** Press ▶ Play, then press write on four strips in turn: kick, snare, kick, rest. That motif exists, in the machine's menu from the next cell. You struck nothing. Did you play it?
 
-**Existing, mattering.** A write makes a branch exist; heavier and lighter decide how much it matters. For Assayag and Dubnov those are one act: repetition creates a motif and raises its count. Take the performance away. Still one act? Write a branch, listen for it, press heavier. When did it start to count?
+**Existing and mattering.** A **write** makes a branch exist; **heavier** and **lighter** decide how much it matters. For Assayag and Dubnov those are one act: repetition creates a motif and raises its count. Write a branch, listen for it, press heavier. How much did it count before you pressed?
 
-**Squares and edges.** A square is the weight you wrote, an edge the odds now. Turn bias: only the edges move. Is what a tree holds what it says?
+**Squares and edges.** A square is the weight you wrote; an edge, the odds the machine gives it now. Turn bias: only the edges move. Is what a tree holds what it says?
 ### teaser.text
-**Does a motif that exists already matter?** A hand wrote a tree of motifs; the machine walks it aloud, and nothing you touch makes a sound. Bias leans the walk toward heavy branches or light ones, writing nothing. Turn it. Which motifs did you not know were there?
+**A motif exists. Does it matter yet?** A hand wrote a tree of what can follow what. You cannot strike a drum: only the machine plays. Bias leans the walk, left toward heavy branches, right toward the light. Turn it right: which motifs did you not know were there?
 ### share
-Does a motif that exists already matter? One tree, one knob. Write your own on a desktop.
+A motif exists. Does it matter yet? One tree, one dial. Write your own on a desktop.
 ### start.notStarted
-press ▶ Play to start the machine, then write a branch with a strip's write button. (83)
+press ▶ Play to start the machine, then press write on a strip.
 ### start.nothing
-the tree is empty, so the machine walks nothing. Press write on a strip — kick, say — and that branch exists under the finger. (126)
+the tree is empty, so the machine walks nothing. Press write on a strip — kick, say — and that branch exists under the finger.
 ### start.stuck
 ""
 ### start.shut
-it is running and nothing reaches you: every symbol is muted in the strips, or the master level is at zero. (107)
+it is running and nothing reaches you: every symbol is muted in the strips, or the master level is at zero.
 ### start.running
-press write on a strip and that branch exists. Is it heard yet? Press heavier and listen for when it starts to matter. (118)
+press write on a strip and that branch exists. Do you hear it yet? Press heavier and listen for it mattering more.
 ### teaser.notStarted
-press ▶ Play and the machine starts walking the tree. (53)
+press ▶ Play: the machine walks a tree of motifs aloud.
 ### teaser.nothing
-the tree is empty, and the phone cannot write one — the desktop page can. (73)
+the tree is empty, and the phone cannot write one — the desktop page can.
 ### teaser.shut
-running, but muted or the master is at zero — only the desktop page can change that. (84)
+it is running but muted or at zero level; only the desktop page can change that.
 ### teaser.running
-turn bias: the tree keeps every branch. Which ones do you hear now? (67)
+turn bias left: the figure sharpens. Right: it loosens, then inverts. Which motifs appear?
 
 ## notes
-- **motif-memory gets a desktop `text`** (two blocks, ~100 words) where today it has none. In this style the desktop's job is to say what the question is made of, and the spec's §1 names two things that "could be wrong" (capture is not an action; the crossing holds amount and moves placement). A desk reader with the paper needs both to know what a "no" would sound like. The phone keeps nothing beyond its teaser block. If the author prefers the page's current silence, drop both blocks: the question survives in `shows` and `running`.
-- **One source per toy, once:** the paper's §5 (motif-memory), the paper's §3.2 (markov), Charles Ames (statistical-feedback), Assayag and Dubnov (possibles). The front page names none. The meta descriptions end "A playable paper." and the og descriptions "One of four playable papers." so a share preview says what kind of thing the link is; swap for the author's preferred tag.
-- **The phone's question for statistical-feedback differs from the desktop's.** The desktop asks "can the ear tell dice from a ledger?" and has the memory switch to answer it. The phone has only heterogeneity, which the spec (§8.5) says sweeps the grain from clockwork to "most of the way to dice" while the ledger is still read, so the phone asks the narrower question it can actually test: "can the same shares sound like dice?" The share text and og keep the desktop's question because they are read elsewhere. Author to decide whether one question across all layers matters more than honesty on the phone.
-- **The front `.sub` names the paper's frame** ("nouns but no verbs") rather than the collection's mechanics; the `what-is` line carries "a spec an agent can rebuild it from". If the author wants no `what-is` line, that clause has to go back into the sub, which then runs to about 27 words, over budget.
-- **State sentences:** every count in parentheses excludes the keyboard clause and was measured by script, not by hand. Desktop `notStarted` bodies are 102 / 78 and 82 / 97 / 83, so with the clause 134 / 120 and 124 / 129 / 115, all ≤ 145. Phone `notStarted` bodies are 49 / 52 / 50 / 53, so with the clause 81 / 89 / 82 / 85, all ≤ 92. markov `stuck` is counted with the longest state names (`snare`, `cowbell`) in place of {A} {B}, and `running.one` with `walker 1` / `walker 2` for {ON} {OFF}; with shorter names they only get shorter. The longest sentence on any page is markov `stuck` at 131.
-- **No budget breached.** Desktop `text` 102 / 118 / 119 / 119 words in 2 / 3 / 3 / 3 blocks; every `shows` 19 words; `teaser.text` 49 / 49 / 50 / 48; `share` 16–18; meta 27–29; og 27–30. Word counts treat `▶` and a standalone em-dash as words, so the length cop's numbers can only come out lower.
-- **Where I am least sure the mechanism supports a line:** (1) possibles `text`, "That motif exists now; the machine has it on the next cell": today's copy says the same of a four-strip write, and the spec says a write steps the finger into the branch, so I believe it holds, but the author should confirm "next cell" is still true after the write buttons' timing. (2) markov keeps "kick, hat, kick, snare" as the figure although walker 1's sounds are listed kick, snare, hat; the figure only needs a state to recur, and the spec's own §1 uses it. (3) statistical-feedback "comes back owing": the spec says a returning option "re-enters carrying the debt it went away with"; "owing" is that in one word, but a frozen statistic can also be positive (ahead), so "comes back where it left" is the safer wording if the author objects.
-- **Questions with a possible "no":** each toy's question is phrased so the ear can answer against the claim (you may well hear the crossing; the figure may come round by chance; dice and a ledger may sound alike to you; a branch at weight one may be heard at once). The copy never answers; the `running` lines point the hand and stop. Roughly one line in three on each page is a question; the state sentences for `nothing`, `shut` and `notStarted` stay as plain instructions so the pages are not quizzes.
+- **Naming settled.** markov: a state's line is a **strip** in every layer (the page's label); the thing that moves is a **walker** in every state sentence, and **chain** is kept for the model where the model is meant ("do two chains share anything?", "each chain remembers one step"). statistical-feedback: the ledger is the thing, keeping books the activity, memory off stops the reading, "debts" is gone, and the count is always "six voices and a silence". motif-memory: the kept bars are the **score**; the phone button is **memory**, the desktop switch **MEM**, and the nameplate names neither. possibles: a write "exists under the finger" and nothing "follows the finger"; "a tree" on the phone. The dials are dials in every share line and in the motif-memory text; "grain" is off the phone.
+- **The phone `shut` sentence** is one sentence on all four pages: "it is running but muted or at zero level; only the desktop page can change that." (80). It names neither cause as the only one.
+- **statistical-feedback keeps two questions, by design.** The nameplate, blurb, og and share ask the desktop's question ("Can the ear tell dice from a ledger?"); the phone's standing text asks the one the phone can test ("Can the same shares sound like dice?"), per the academic and the directions. To give the top question a gesture on the phone, the nameplate now names the dial ("a dial loosens the reading").
+- **motif-memory keeps a desktop `text`** (two blocks, 106 words); the reasons from round 1 stand, and the academic found nothing wrong in it once "Nobody pressed record" replaced "Nobody is recording".
+- **One source per toy, once:** the paper's §5 (motif-memory), the paper's §3.2 (markov), Charles Ames (statistical-feedback), Assayag and Dubnov (possibles). The front page names none.
+- **The markov phone `notStarted`** ("turn structure: 1 is the grammar as written, 0 is dice.") is 55 characters, 92 with the clause: on the brief's working limit, ten under the measured one. Every shorter form either named "the example" (forbidden) or lost the two ends of the dial. Nothing in 55 characters also says that turning the dial starts the sound; that is `start.gesture`'s job, out of scope.
+- **Character counts**, measured by script with the keyboard clause added to `notStarted` and the longest names in the placeholders (`snare`, `cowbell`; `walker 1`, `walker 2`). motif-memory desktop: notStarted 84 + 32 = 116, nothing 108, shut 92, running 133; phone: notStarted 49 + 32 = 81, nothing 82, shut 80, running 90. markov desktop: weightsSet 77 + 42 = 119, empty 85 + 42 = 127, nothing 114, stuck 135, shut 104, running.both 114, running.one 122; phone: notStarted 55 + 37 = 92, nothing 71, stuck 88, shut 80, running.high 88, running.low 84. statistical-feedback desktop: notStarted 68 + 32 = 100, nothing 97, shut 108, running 128; phone: notStarted 50 + 32 = 82, nothing 85, shut 80, running 90. possibles desktop: notStarted 63 + 32 = 95, nothing 126, shut 107, running 114; phone: notStarted 55 + 32 = 87, nothing 73, shut 80, running 90.
+- **No budget breached.** sub 18, what-is 19, blurbs 7–8; shows 20 / 20 / 20 / 19; meta 30 / 26 / 30 / 30; og 30 / 30 / 29 / 28; text 106 / 118 / 120 / 119 in 2 / 3 / 3 / 3 blocks (statistical-feedback sits on the line); teaser.text 48 / 50 / 48 / 49; share 18 / 17 / 18 / 17. The counter treats "▶" and a standalone dash as words.
+- **For the author.** (1) The front `.sub` now says "an instrument with no memory" (the editor's plain form) instead of "nouns but no verbs"; the phrase is still the talk's, and if the author wants it on the front page the phone critic's 19-word form keeps it. (2) possibles `teaser.running` says what the right half of bias does ("it loosens, then inverts"), which is true across the range and less catchy than the baseline's "dissolves"; if "dissolves" is preferred, say "at the default" somewhere. (3) markov `running.both` and the text ask whether the figure "holds" (the academic's word, since hearing it once by chance refutes nothing); the phone keeps "come round", the ear's word.
+
+## answers
+- E-q-1: taken
+- E-q-2: taken
+- E-q-3: taken, differently — MEM may not go on a nameplate (directions, rule 1); the dial the phone shows is named and glossed instead, and the gesture lives in `running`
+- E-q-4: taken
+- E-q-5: taken
+- E-q-6: taken
+- E-q-7: taken, differently — one sentence on all four pages, with "level" after "zero" so the thumb has a noun
+- E-q-8: taken
+- E-q-9: taken
+- E-q-10: taken
+- E-q-11: taken, with "hold" for "come round" (A-q-14)
+- E-q-12: taken, with "dice, a quarter chance each" (C-q-12)
+- E-q-13: taken
+- E-q-14: taken, differently — the same single sentence as E-q-7
+- E-q-15: taken, differently — "stops the reading, and the same weights are dice", so the ledger is never the thing that changes
+- E-q-16: taken, differently — "one switch stops the reading: dice", which keeps the academic's point (the switch stops the reading) without a switch that reads
+- E-q-17: taken
+- E-q-18: taken
+- E-q-19: taken, differently — "every turn goes to one of six voices and a silence", and ", or the Space bar" dropped on all three transport pages (C-q-23)
+- E-q-20: taken, with "bars" for "debts" (C-q-16)
+- E-q-21: taken, differently — "each plays as often, less predictably", since "shares" was the phone critic's second opaque word (P-q-10)
+- E-q-22: taken, differently — "A hand writes" for "You write", because the phone cannot write (P-q-11)
+- E-q-23: taken
+- E-q-24: taken
+- E-q-25: taken, with "in turn" (C-q-21) and "in the machine's menu from the next cell" (A-q-20)
+- E-q-26: taken
+- E-q-27: taken
+- E-q-28: taken, differently — head as proposed; the body now gives left and right (P-q-13) and replaces "nothing you touch makes a sound" with "You cannot strike a drum: only the machine plays" (P-c-17), so the participle is gone with the sentence
+- E-q-29: taken, with "dial" for "knob" (directions)
+- E-q-30: taken
+- E-q-31: taken
+- P-q-1: taken, differently — "audio" restored; "nouns but no verbs" dropped for the editor's plain form (E-q-1), noted for the author
+- P-q-2: taken, differently — the editor's "A motif exists. Does it matter yet?" (E-q-2), which reads once
+- P-q-3: taken, differently — the nameplate glosses fidelity so the dial is not turned blind; the first gesture is in `teaser.running`, where the directions put gestures
+- P-q-4: taken — "press memory: next bar, each voice loops what it played. Ride fidelity down: still a loop?"
+- P-q-5: taken
+- P-q-6: taken
+- P-q-7: taken, differently — "the grammar as written": no "whom", and no claim about what the matrices hold
+- P-q-8: taken, differently — "whatever grammar is written goes to dice", since "the style goes to dice" assumes the example (directions)
+- P-q-9: taken, differently — the split stays (academic, directions); the nameplate now names the dial so the top question has a gesture on the phone
+- P-q-10: taken, differently — "each plays as often, less predictably. Does it sound like dice yet?"
+- P-q-11: taken, differently — "A hand writes", since the same string serves the desktop, where the hand is the visitor's
+- P-q-12: taken, differently — direction and a listening cue, with the right half said honestly ("loosens, then inverts") rather than "dissolves" (directions on bias-right)
+- P-q-13: taken
+- A-q-1: taken, differently — "A motif exists. Does it matter yet?" asks the ear, not the menu; the running line and text ask "more"
+- A-q-2: taken
+- A-q-3: taken
+- A-q-4: taken
+- A-q-5: taken
+- A-q-6: taken
+- A-q-7: taken, differently — "what it played" / "what it just played", no bar count on the phone
+- A-q-8: taken
+- A-q-9: taken
+- A-q-10: taken
+- A-q-11: taken, differently — "the matrices are empty, so neither walker can move. Tap a cell in a lit strip", with strip for row throughout
+- A-q-12: taken
+- A-q-13: taken — "the weights are read"
+- A-q-14: taken
+- A-q-15: taken, differently — "stops the reading, and the same weights are dice" (see E-q-15)
+- A-q-16: taken
+- A-q-17: taken — the critic asked for no change and the line stays as it was
+- A-q-18: taken
+- A-q-19: taken — "no voice carries any weight … silence included. Turn a voice's weight up."
+- A-q-20: taken
+- A-q-21: taken
+- A-q-22: taken, with the editor's "Do you hear it yet?" (E-q-31)
+- A-q-23: taken, differently — "matters" is the page's own word for the weight on a branch, which heavier raises at any bias; what the draw does with it is bias's business, and block 3 says bias moves only the edges
+- C-q-1: taken — budgets held again
+- C-q-2: taken — ruling accepted, line unchanged
+- C-q-3: taken — the sentence is rewritten (directions, rule 3) and "master" is gone
+- C-q-4: taken — C-c-3's zero-noun form, "stand where no weight leads on"
+- C-q-5: taken — ruling accepted; the line is reworded for A-q-19 and still names weight only to say the desktop can raise one
+- C-q-6: taken — ruling accepted, line unchanged
+- C-q-7: taken
+- C-q-8: taken
+- C-q-9: taken — strip, everywhere
+- C-q-10: taken
+- C-q-11: taken
+- C-q-12: taken
+- C-q-13: taken — "and the sound with it"
+- C-q-14: refused — the academic and the directions say the phone's narrower question is the honest one and the split stands; the nameplate now names the dial so the reader who arrives from the share meets a gesture, not a contradiction
+- C-q-15: taken
+- C-q-16: taken, differently — "bars" in running; the share says "Ledgers want a desktop" (plural, inside 18 words)
+- C-q-17: taken
+- C-q-18: taken, differently — "claimants" once as colour, "each" after (editor), and `notStarted` names neither "option" nor "voice" alone
+- C-q-19: taken
+- C-q-20: taken, differently — the meta takes "nothing you touch makes a sound"; the phone block drops the sentence for "You cannot strike a drum: only the machine plays" (P-c-17)
+- C-q-21: taken
+- C-q-22: taken — the counts are in `## notes`
+- C-q-23: taken

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>motif-memory</title>
-<meta name="description" content="Five stochastic voices on one pulse, each carrying a rolling record of the last two bars it played. Throw a voice's MEM switch and that record becomes its score; fidelity rides between the memory and pure generation.">
+<meta name="description" content="Five random voices on one pulse. A switch makes a voice loop the last two bars it played; a fidelity dial degrades the loop back into invention.">
 <meta property="og:title" content="motif-memory — Playable Papers">
-<meta property="og:description" content="A voice remembers the last two bars it played. One knob rides between that memory and fresh invention, at the same density throughout — so the crossing can hide.">
+<meta property="og:description" content="A voice loops the two bars it just played. One dial degrades the loop toward invention; try to hear where the memory ends.">
 <meta property="og:image" content="https://play.noisewrangler.art/motif-memory/og.png">
 <meta property="og:url" content="https://play.noisewrangler.art/motif-memory/">
 <meta property="og:type" content="website">
@@ -1051,16 +1051,9 @@ reseedBtn.addEventListener('click', () => {
   renderSeed();
 });
 
-/* The blurb, and the one word it leans on: `fidelity` is the name of the thing
-   this toy is about, so it is italic. `shows` takes a Node. */
-const shows = document.createDocumentFragment();
-const showsEm = document.createElement('em');
-showsEm.textContent = 'fidelity';
-shows.append(
-  'Five voices on one pulse — throw a voice’s MEM switch and the two bars it ' +
-  'just played become its score, then ride ',
-  showsEm,
-  ' between that memory and pure generation.');
+/* The blurb, in the nameplate. */
+const shows = 'Five random voices on one pulse. Choose to replay the last two bars, ' +
+  'and how far to degrade the loops.';
 
 /* ============================================================
    THE PAGE
@@ -1213,8 +1206,13 @@ const page = Lab.page.build({
 
   session: [resetBtn, reseedBtn, seedEl, Lab.state.buttons()],
 
-  // The few words this page has are its blurb; there is no standing text.
-  text: false,
+  text: [
+    { head: 'Replay.', body: 'Every voice memorises the last two bars it played. ' +
+      'Throw its MEM switch and it loops them indefinitely.' },
+    { head: 'Degrade.', body: 'Dial fidelity down and replay gives way to invention.' },
+    { head: 'The claim.', body: 'Memory is a state of a voice. Try to hear where it ' +
+      'ends as you degrade it.' }
+  ],
 
   keys: '<kbd>Space</kbd> play · <kbd>1</kbd>–<kbd>5</kbd> memory on that voice · ' +
         'drag knobs vertically, gates along the bar, double-click resets',
@@ -1240,8 +1238,12 @@ const page = Lab.page.build({
       running: 'press memory and each voice keeps the two bars it has just ' +
                'played. Then ride fidelity down.'
     },
-    share: { text: 'Five random voices; one button makes each remember what it ' +
-                   'just played, one knob lets it forget. The whole rack wants a desktop.' }
+    /* The phone's standing text: what the phone shows, and the claim. */
+    text: [{ head: 'Replay, then degrade.', body: 'Press memory: from the next bar ' +
+      'each voice loops the last two bars it played. Dial fidelity down and replay ' +
+      'gives way to invention. Try to hear where the memory ends.' }],
+    share: { text: 'Five random voices loop what they just played; one dial degrades ' +
+                   'the loops. The full rack wants a desktop.' }
   }
 });
 

@@ -4,12 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Playable Papers</title>
-<!-- A placeholder front page: the collection's nameplate and a plain list of
-     the toys. The copy is written elsewhere and replaces this. -->
-<meta name="description" content="Browser audio toys, each built around one mechanism, each with a spec an agent can rebuild it from.">
+<meta name="description" content="Small toys for trying out musical ideas by hand. Each is a web implementation of one idea, with a spec an AI agent can rebuild it from.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Playable Papers">
-<meta property="og:description" content="Browser audio toys, each built around one mechanism, each with a spec an agent can rebuild it from.">
+<meta property="og:description" content="Small toys for trying out musical ideas by hand. Each is a web implementation of one idea, with a spec an AI agent can rebuild it from.">
 <meta property="og:url" content="https://play.noisewrangler.art/">
 <meta property="og:site_name" content="Noise Wrangler">
 <link rel="alternate" type="text/plain" href="llms.txt" title="Playable Papers — spec index">
@@ -20,7 +18,8 @@
 <link rel="apple-touch-icon" href="lib/icon/apple-touch-icon.png">
 <link rel="stylesheet" href="lib/lab.css">
 <style>
-  /* the list is the page's only content: one toy per line, its name and claim */
+  /* a nameplate, a definition, then themed sections: each an h2, its gist, and a list of toys (name and claim) */
+  h2{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:26px 0 0}
   .toys{list-style:none;margin:8px 0 0;padding:0;max-width:96ch}
   .toys li{margin:0 0 14px;line-height:1.6;font-size:13px;color:var(--dim)}
   .toys a{color:var(--ink);font-weight:700;margin-right:.6ch}
@@ -29,12 +28,16 @@
 <body>
 <div class="wrap">
   <h1>Playable Papers</h1>
-  <p class="sub">Browser audio toys, each built around one mechanism, each with a spec an agent can rebuild it from.</p>
+  <p class="sub">Small toys for trying out musical ideas by hand.</p>
+  <p class="sub">Each playable paper is a web implementation of one idea, with a spec an AI agent can rebuild it from.<br>
+  The toys are built for a large screen. On a phone they offer a preview.</p>
+  <h2>Motif and memory</h2>
+  <p class="sub">Getting coherence and a sense of return out of random events.</p>
   <ul class="toys">
-    <li><a href="toys/motif-memory/">motif-memory</a> Memory is a state of a voice, not a structure beside the ensemble.</li>
-    <li><a href="toys/markov/">markov</a> A first-order chain gives every state exactly one future — a local grammar, and no phrase.</li>
-    <li><a href="toys/statistical-feedback/">statistical-feedback</a> Dice have no memory, and the ear hears the difference.</li>
-    <li><a href="toys/possibles/">possibles</a> Existing and mattering are different questions, and an instrument can let you answer them one at a time.</li>
+    <li><a href="toys/motif-memory/">motif-memory</a> Memorise the last two bars, replay them, and hear how far you can degrade them.</li>
+    <li><a href="toys/markov/">markov</a> Chain events by probability, with one step of memory.</li>
+    <li><a href="toys/statistical-feedback/">statistical-feedback</a> Dice with memories.</li>
+    <li><a href="toys/possibles/">possibles</a> Grow motifs as branches, then weigh them.</li>
   </ul>
   <p class="hint pp-foot"><a href="llms.txt">spec index</a> · <a href="https://noisewrangler.art">noisewrangler.art</a> · CC0 — copy it, port it, no attribution required.</p>
 </div>

@@ -126,10 +126,10 @@
    one per cell of the lattice, rather than a scrolling stretch of time — so a
    grid of elements needs no device-pixel handling and no resize listener, and
    it scales with the page. */
-.tlane{display:grid;grid-template-columns:var(--tlab,66px) repeat(32,minmax(0,1fr));
+.tlane{display:grid;grid-template-columns:var(--tlab,72px) repeat(32,minmax(0,1fr));
   gap:2px;align-items:center}
 .tlane + .tlane{margin-top:5px}
-.tlab{display:flex;align-items:center;gap:5px;font-size:8.5px;color:var(--dim);
+.tlab{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);
   text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden}
 .tlab i{width:7px;height:7px;border-radius:2px;flex:0 0 auto}
 .tsl{height:24px;border-radius:2px;background:#0c0d11;position:relative;overflow:hidden}
@@ -146,7 +146,7 @@
    reached this cell yet. */
 .tsl.rest i{inset:auto 2px 8px 2px;height:2px;background:var(--line2)}
 .tsl.stuck i{inset:6px 42% 6px 42%;background:var(--warn);opacity:.45}
-.tnote{margin:9px 2px 0;font-size:10.5px;color:var(--faint);line-height:1.6}
+.tnote{margin:9px 2px 0;font-size:13px;color:var(--faint);line-height:1.6}
 </style>
 </head>
 <body>
@@ -891,7 +891,7 @@ const page = Lab.page.build({
     stage: [trailBlk],
     gesture: 'Turn the structure dial',
     words: {
-      notStarted: 'turn structure: 1 is the example’s grammar, 0 a uniform draw.',
+      notStarted: 'turn structure: 1 follows the weights, 0 is random.',
       nothing: 'both matrices are empty, so at 1 nothing can move. Turn structure down.',
       stuck: 'both walkers stand on rows with no weights, so at 1 nothing moves. ' +
              'Turn structure down.',

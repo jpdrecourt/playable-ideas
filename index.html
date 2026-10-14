@@ -19,10 +19,11 @@
 <link rel="stylesheet" href="lib/lab.css">
 <style>
   /* a nameplate, a definition, then themed sections: each an h2, its gist, and a list of toys (name and claim) */
-  h2{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:26px 0 0}
+  h2{font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:26px 0 0}
   .toys{list-style:none;margin:8px 0 0;padding:0;max-width:96ch}
-  .toys li{margin:0 0 14px;line-height:1.6;font-size:13px;color:var(--dim)}
+  .toys li{margin:0 0 14px;line-height:1.6;font-size:15px;color:var(--dim)}
   .toys a{color:var(--ink);font-weight:700;margin-right:.6ch}
+  @media (max-width:720px){ h2{font-size:14px} .toys li{font-size:14px} }
 </style>
 </head>
 <body>

@@ -688,7 +688,7 @@ The head carries one obligation of the same kind: the collection's icon lives in
 so a toy never draws its own.
 
 - `Lab.shell.frame({title, shows, spec?, repo?, site?, licence?, invite?, mount?})`
-  → `{h1, sub, invite, footer}`. Inserts the nameplate at the top of the mount
+  → `{h1, sub, invite|null, footer}`. Inserts the nameplate at the top of the mount
   (default `.wrap`) and the footer at the end, and sets `document.title`.
 
   `shows` is a string **or a Node** — pass a fragment where the blurb leans on
@@ -703,13 +703,12 @@ so a toy never draws its own.
   the same pixels as the page itself.
 
   **The footer** is one quiet line in the `.hint` register the reference page
-  already ends on: spec · source · site · licence. The **invitation** shows
-  below the teaser width. On a page with no teaser it says what is true there
-  — that a small screen gets the desktop page whole. With `teaser: true` (which
-  `Lab.page` passes when a teaser is declared) its default says the phone has
-  the smallest part of the toy and the desktop has the rest, and the
-  composition moves it from the head to the teaser's foot. `invite:false`
-  drops it; a string replaces it.
+  already ends on: spec · source · site · licence. The **invitation** exists
+  only when the toy passes `invite:` a non-empty string, and `invite` is null
+  otherwise. The library has no invitation text of its own: the front page
+  tells a phone visitor once that the toys are built for a large screen. It
+  shows below the teaser width, and on a page with a teaser the composition
+  moves it from the head to the teaser's foot.
 - `Lab.shell.share({text, url?, label?, hint?})` → `{el}`. **"Send this to
   myself"**: a bench button that hands the page's link to the phone's share
   sheet (`navigator.share` with `document.title`, `text` and the url, where it
@@ -869,7 +868,7 @@ const page = Lab.page.build({
     stage: true | false | [Element, …],       // which stage members the phone keeps
     gesture: 'Press a walker',
     words: { notStarted?, nothing?, stuck?, shut?, running? },
-    invite: '…' | false,
+    invite: '…',
     share: { text: '…', url? } | false,
     text: false | '…' | [{ head, body }]      // the phone's standing text; default none
   }
@@ -1034,8 +1033,8 @@ same engine runs under both. A toy declares it; the composition does the rest.
   gate, a dot and a slider are at least 44 px, a button is as wide as the
   column, the gaps are a thumb apart, labels are visible. The region fits 390 px
   with no horizontal overflow.
-- **The invitation** is `teaser.invite`, else the page's `invite`, else the
-  shell's default for a toy with a teaser; `false` drops it. **The share
+- **The invitation** is `teaser.invite`, else the page's `invite`; with
+  neither there is none. **The share
   button** is `Lab.shell.share(teaser.share)`; `share: false` drops it.
 - **The phone's standing text** is `teaser.text`. The page's own standing
   text describes the desk — the rack, the strips, the session bar — so with a

@@ -114,11 +114,10 @@
 /* The row under the tree: the two weight verbs, then a line naming the branch
    they act on. The readout is LAST and takes the slack, so the button that
    grows when it arms — `lighter`, which becomes `cut the branch?` — pushes only
-   text and never moves the other button under a hand. `nowrap` for the same
-   reason one level up: a wrap would grow the panel on a press. */
+   text and never moves the other button under a hand. The row itself stays on
+   one line; the readout wraps inside its slack rather than clipping. */
 .pctl{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:nowrap}
-.pfing{flex:1 1 8ch;min-width:0;font-size:10.5px;color:var(--faint);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pfing{flex:1 1 8ch;min-width:0;font-size:13px;color:var(--faint)}
 .pfing b{color:var(--dim);font-weight:600}
 
 /* ---- a strip's write button ----
@@ -126,7 +125,7 @@
    gestures and a visitor who learns one has learnt the other. */
 .wbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
   padding:7px 9px}
-.wkey{font-style:normal;font-size:9px;line-height:1;padding:3px 4px;border-radius:3px;
+.wkey{font-style:normal;font-size:11px;line-height:1;padding:3px 4px;border-radius:3px;
   background:var(--panel);border:1px solid var(--line);color:var(--faint);
   font-family:ui-monospace,Consolas,monospace}
 
@@ -145,7 +144,7 @@
 /* A rest is a state and is drawn as one: a low dash, so a silence the tree
    placed is distinguishable from a cell the walk has not reached. */
 .pslot.rest i{inset:auto 3px 9px 3px;height:2px;background:var(--line2)}
-.pnote{margin:9px 2px 0;font-size:10.5px;color:var(--faint);line-height:1.6}
+.pnote{margin:9px 2px 0;font-size:13px;color:var(--faint);line-height:1.6}
 </style>
 </head>
 <body>

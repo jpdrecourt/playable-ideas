@@ -98,7 +98,7 @@
      the drawing area came out 198 px or 199 depending on how a fractional
      border rounded at the display's own ratio — a picture whose height
      depended on the zoom. */
-  #timeline { --roll-h: 200px; box-sizing: content-box; height: var(--roll-h); margin-top: 13px; }
+  #timeline { --roll-h: 200px; box-sizing: content-box; width: calc(100% - 2px); height: var(--roll-h); margin-top: 13px; }
 
   /* MEM is the toy's one hue: chrome stays greyscale, and a voice that has
      claimed its own past is an event-level fact, not a chrome state.
@@ -1167,7 +1167,7 @@ const page = Lab.page.build({
             onChange: x => { p.density = x; }
           }), DENSITY_HINT);
         } },
-      { key: 'rate', width: '112px', cell: c => {
+      { key: 'rate', width: '120px', cell: c => {
           const p = params.voices[c.key];
           return Lab.ui.knob({
             label: 'rate', min: 0, max: RATE_STEPS.length - 1, step: 1,

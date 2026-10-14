@@ -1160,14 +1160,14 @@ const page = Lab.page.build({
     rows: LANE_IDS,
     columns: [
       'name', 'mute', 'gain', 'pan',
-      { key: 'density', width: '150px', cell: c => {
+      { key: 'density', width: '137px', cell: c => {
           const p = params.voices[c.key];
           return Lab.ui.inline('density', Lab.ui.gate({
             value: p.density, def: VOICE_DEF[c.key].density, hint: DENSITY_HINT,
             onChange: x => { p.density = x; }
           }), DENSITY_HINT);
         } },
-      { key: 'rate', width: '120px', cell: c => {
+      { key: 'rate', width: '133px', cell: c => {
           const p = params.voices[c.key];
           return Lab.ui.knob({
             label: 'rate', min: 0, max: RATE_STEPS.length - 1, step: 1,
@@ -1177,7 +1177,7 @@ const page = Lab.page.build({
             onChange: i => { p.rate = RATE_STEPS[Math.round(i)]; }
           });
         } },
-      { key: 'fidelity', width: '124px', cell: c => {
+      { key: 'fidelity', width: '133px', cell: c => {
           const p = params.voices[c.key];
           return Lab.ui.knob({
             label: 'fidelity', min: 0, max: 1, step: 0.01,

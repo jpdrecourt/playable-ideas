@@ -71,6 +71,10 @@
   --warn:#ffbe3d;
 
   --f:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
+  /* Two voices. Monospace (--f) is the default and belongs to controls, readouts
+     and anything that is counted; prose (nameplate, standing text, hints, the
+     start line, the footer) opts into the site's sans (--fp) and its measure. */
+  --fp:system-ui,-apple-system,sans-serif;
   --r:8px;
 
   /* ---- THE ONE BREAKPOINT: the teaser width ----
@@ -92,28 +96,30 @@
   --teaser:720px;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);
-  font:15px/1.5 var(--f);font-variant-numeric:tabular-nums}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+/* The bench's default: 15 px mono, which every control inherits. Prose opts
+   into --fp with rem sizes, measured from the root, not from body. */
+body{font:15px/1.5 var(--f);font-variant-numeric:tabular-nums}
 .wrap{max-width:1320px;margin:0 auto;padding:18px 18px 64px}
 
 /* ---- nameplate ---- */
-h1{font-size:22px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin:0;
+h1{font-family:var(--fp);font-size:2rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0;
   display:flex;align-items:baseline;gap:12px}
-.sub{color:var(--dim);font-size:15px;margin:6px 0 16px;line-height:1.6;max-width:96ch}
+.sub{font-family:var(--fp);color:var(--dim);font-size:1.25rem;margin:6px 0 16px;line-height:1.6;max-width:900px}
 .sub b{color:var(--ink);font-weight:700}
 
 /* ---- transport bar ---- */
 .bar{display:flex;flex-wrap:wrap;gap:11px;align-items:center;background:var(--panel);
   border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;margin-bottom:13px}
 .ctl{display:flex;flex-direction:column;gap:3px;min-width:56px}
-.ctl label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.ctl label{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
 .ctl .v{color:var(--ink);font-weight:700}
 input[type=range]{width:100px;accent-color:var(--accent);vertical-align:middle}
 input[type=number],select,input[type=text]{background:#0a0b0f;color:var(--ink);border:1px solid var(--line2);
-  border-radius:6px;padding:5px 6px;font:inherit;font-size:14px}
+  border-radius:6px;padding:5px 6px;font:inherit;font-size:15px}
 input[type=number]{width:58px}
 button{background:var(--panel2);color:var(--ink);border:1px solid var(--line2);border-radius:7px;
-  padding:6px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .12s,background .12s}
+  padding:6px 12px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:border-color .12s,background .12s}
 button:hover{border-color:var(--accent)}
 button.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 button.pri.on{background:var(--panel2);border-color:var(--line2);color:var(--ink)}
@@ -127,13 +133,13 @@ button.armed:hover{border-color:var(--warn)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .sep{width:1px;align-self:stretch;background:var(--line2);margin:0 3px}
 .spacer{flex:1}
-.status{font-size:13px;color:var(--dim)}
+.status{font-size:14px;color:var(--dim)}
 .status .ok,#status .ok{color:var(--good);font-weight:700}
 .status .no,#status .no{color:var(--warn);font-weight:700}
 /* system messages: a fixed toast, out of page flow — never shifts the toolbar or page */
 #status{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;
   background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:8px 14px;
-  font-size:12px;box-shadow:0 8px 28px rgba(0,0,0,.55);pointer-events:none;max-width:82vw}
+  font-size:14px;box-shadow:0 8px 28px rgba(0,0,0,.55);pointer-events:none;max-width:82vw}
 #status:empty{display:none}
 
 /* ============================================================
@@ -148,13 +154,13 @@ button.armed:hover{border-color:var(--warn)}
 .lc{display:flex;flex-direction:column;justify-content:center;gap:3px;width:290px;flex:0 0 290px}
 .lc-r1,.lc-r2{display:flex;align-items:center;gap:5px}
 .vname{background:transparent;border:none;border-bottom:1px solid transparent;color:var(--ink);
-  font:inherit;font-weight:700;font-size:13.5px;flex:1;min-width:0;padding:2px 2px}
+  font:inherit;font-weight:700;font-size:15px;flex:1;min-width:0;padding:2px 2px}
 .vname:hover{border-bottom-color:var(--line2)}
 .vname:focus{border-bottom-color:var(--accent);outline:none}
 
 /* 20px square toggles: m = mute (amber), s = solo (green), neutral = grey */
 .dot{width:20px;height:20px;border-radius:5px;border:1px solid var(--line2);background:#0a0b0f;
-  cursor:pointer;font-size:11px;font-weight:700;color:var(--dim);display:flex;align-items:center;
+  cursor:pointer;font-size:12px;font-weight:700;color:var(--dim);display:flex;align-items:center;
   justify-content:center;padding:0;flex:0 0 auto}
 .dot:hover{border-color:var(--accent)}
 .dot.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -163,7 +169,7 @@ button.armed:hover{border-color:var(--warn)}
 
 /* mini-range "knob" cluster — tiny label + narrow range slider */
 .km{display:inline-flex;align-items:center;gap:3px;flex:1;min-width:0}
-.kl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.02em;flex:0 0 auto;line-height:1}
+.kl{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.02em;flex:0 0 auto;line-height:1}
 input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(--accent)}
 
 /* label-beside-control wrapper (Lab.ui.inline) — the row-wise sibling of .ctl,
@@ -171,7 +177,7 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
 .ictl{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
 
 /* bright numeric readout (knobs, mini-ranges) */
-.val{color:var(--ink);font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;
+.val{color:var(--ink);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;
   flex:0 0 auto;white-space:nowrap}
 
 /* rotary knob (somitsu-circles visuals) — Lab.ui.knob builds this.
@@ -200,7 +206,7 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
 .rrow:focus-within{border-color:var(--line2)}
 .rrow > *{justify-self:start}
 .rname{display:flex;align-items:center;gap:5px;white-space:nowrap;
-  font-size:13.5px;font-weight:700;color:var(--ink)}
+  font-size:15px;font-weight:700;color:var(--ink)}
 .rsw{width:8px;height:8px;border-radius:2px;flex:0 0 auto;background:var(--line2)}
 /* One label box for the whole rack: this catches the labels Lab.ui.inline
    produces AND the ones knobs produce, so a gate and a knob sharing a column
@@ -229,8 +235,8 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
 .rack .dial-wrap{flex-direction:row;align-items:center;gap:9px;width:100%}
 .rack .dial{width:var(--rack-dial);height:var(--rack-dial)}
 .rack .dial-label{width:var(--rack-dial-label);flex:0 0 var(--rack-dial-label);
-  max-width:none;text-align:right;font-size:11px;letter-spacing:0}
-.rack .dial-val{width:var(--rack-dial-val);flex:0 0 var(--rack-dial-val);font-size:12.5px}
+  max-width:none;text-align:right;font-size:12px;letter-spacing:0}
+.rack .dial-val{width:var(--rack-dial-val);flex:0 0 var(--rack-dial-val);font-size:13px}
 
 /* The rack's caption row (Lab.ui.rack, a column carrying `caption`): what the
    columns ARE, where no single cell can say it. It is a `.rrow` so it rides
@@ -243,7 +249,7 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
 /* a caption cell may hold a node — a swatch beside the name — so it lays its
    contents out rather than assuming one string */
 .rcapl{display:flex;align-items:center;gap:4px;justify-content:center}
-.rcap .rcapl{font-size:11px;letter-spacing:.13em;text-transform:uppercase;
+.rcap .rcapl{font-size:12px;letter-spacing:.13em;text-transform:uppercase;
   color:var(--dim);font-weight:700;white-space:nowrap;justify-self:center}
 
 /* ---- a titled panel (Lab.ui.panel) ----
@@ -257,7 +263,7 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
    two panels in a row has had to cancel by hand. CSS cannot ask what display
    its parent has, so the row cancels it where the row knows: below. */
 .blk + .blk{margin-top:13px}
-.blk-head{margin:0 0 9px;font-size:12px;font-weight:400;letter-spacing:.11em;
+.blk-head{margin:0 0 9px;font-size:13px;font-weight:400;letter-spacing:.11em;
   text-transform:uppercase;color:var(--faint);line-height:1.6}
 .blk-head b{color:var(--dim);font-weight:700}
 
@@ -267,21 +273,19 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
 .gate .gfill{position:absolute;left:0;top:0;bottom:0;background:#fff}
 /* white text + difference blend → black over the white fill, white over the black — reads on both */
 .gate .gk,.gate .gpct{position:absolute;top:50%;color:#fff;font-weight:700;pointer-events:none;mix-blend-mode:difference}
-.gate .gk{transform:translateY(-50%);font-size:11px}
+.gate .gk{transform:translateY(-50%);font-size:12px}
 .gate .gk.l{left:5px} .gate .gk.r{right:5px}
-.gate .gpct{left:50%;transform:translate(-50%,-50%);font-size:11px}
+.gate .gpct{left:50%;transform:translate(-50%,-50%);font-size:12px}
 
 /* timeline canvas — the hero (toys override height per view) */
 canvas.tl{flex:1;min-width:0;width:100%;height:42px;display:block;background:#0d0f13;
   border:1px solid var(--line2);border-radius:5px}
 
 /* ---- help ---- */
-.hint{color:var(--dim);font-size:15px;margin:16px 2px 0;line-height:1.6}
-/* the explanation blocks run on prose, so they take a measure */
-.pp-text{max-width:80ch}
+.hint{font-family:var(--fp);color:var(--dim);font-size:1.25rem;margin:16px 2px 0;line-height:1.6;max-width:900px}
 .hint b{color:var(--ink);font-weight:700}
-kbd{background:#0a0b0f;border:1px solid var(--line2);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--ink)}
-code{color:var(--duple);font-size:13px}
+kbd{background:#0a0b0f;border:1px solid var(--line2);border-radius:4px;padding:1px 5px;font-size:14px;color:var(--ink)}
+code{color:var(--duple);font-size:.9em}
 
 /* ============================================================
    THE SHELL (Lab.shell) — the frame a public page wears.
@@ -292,18 +296,18 @@ code{color:var(--duple);font-size:13px}
    under the two selectors at the top of this file. The spec link is the one
    thing the shell adds, and it rides inside the h1's baseline flex row, so
    the nameplate keeps the height it has when a toy hand-writes it. */
-.pp-spec{font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--faint);
+.pp-spec{font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--faint);
   text-decoration:none;border-bottom:1px solid var(--line2);padding-bottom:1px}
 .pp-spec:hover{color:var(--ink);border-bottom-color:var(--accent)}
 /* The invitation is not an apology and not a promise. On a page with no
    teaser it says the visitor gets the desktop page whole; on a page with one
    it stands at the teaser's foot and invites them to the rest. Shown only
    under --teaser (see the foot). */
-.pp-invite{display:none;color:var(--faint);font-size:13px;line-height:1.55;
+.pp-invite{display:none;font-family:var(--fp);color:var(--faint);font-size:1rem;line-height:1.55;
   margin:10px 0 0;border-left:2px solid var(--line2);padding-left:9px}
 /* The footer is one quiet line in the `.hint` register — the register the
    reference page already ends on — with a rule above it to close the page. */
-.pp-foot{margin-top:30px;padding-top:11px;border-top:1px solid var(--line)}
+.pp-foot{font-size:1rem;margin-top:30px;padding-top:11px;border-top:1px solid var(--line)}
 .pp-foot a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line2)}
 .pp-foot a:hover{color:var(--ink);border-bottom-color:var(--accent)}
 
@@ -330,13 +334,14 @@ code{color:var(--duple);font-size:13px}
    from a number chosen by eye. Text that would exceed it is a wording problem,
    and `Lab.page` says so at build. The box does not collapse when empty
    either: a line that vanishes shifts the page exactly as one that grows. */
-/* --start-fs is the desktop size; --start-fs-phone is the phone's, kept as a
+/* The start line is prose: the site's sans at the site's measure.
+   --start-fs is the desktop size; --start-fs-phone is the phone's, kept as a
    separate property because page.js's fit sweep has to measure the phone words
    at the phone size while the desktop page is open, and a media query's value
    cannot be read from a wider page. */
-.pp-start{--start-lines:2;--start-fs:14px;--start-fs-phone:13px;--start-lh:1.5;
-  display:block;font-size:var(--start-fs);line-height:var(--start-lh);
-  color:var(--faint);max-width:80ch;margin:0 0 11px;
+.pp-start{--start-lines:2;--start-fs:1.15rem;--start-fs-phone:1rem;--start-lh:1.5;
+  display:block;font-family:var(--fp);font-size:var(--start-fs);line-height:var(--start-lh);
+  color:var(--faint);max-width:900px;margin:0 0 11px;
   min-height:calc(var(--start-lines) * var(--start-lh) * var(--start-fs))}
 .pp-start.no{color:var(--warn)}
 /* The armed region — the stage and the rack. It is a real element rather than
@@ -381,7 +386,7 @@ code{color:var(--duple);font-size:13px}
 .pp-instrument:focus{outline:none}
 .pp-instrument:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:var(--r)}
 .pp-midi{display:flex;align-items:center;gap:8px}
-.pp-midistat{font-size:12px;color:var(--faint);letter-spacing:.06em}
+.pp-midistat{font-size:13px;color:var(--faint);letter-spacing:.06em}
 
 /* ---- THE TEASER (Lab.page's `teaser`) ----
    The phone mode of the same page: one DOM, two readings, switched by the
@@ -401,7 +406,7 @@ code{color:var(--duple);font-size:13px}
 .pp-teaser-head:empty,.pp-teaser-controls:empty{display:none}
 .pp-teaser-play{flex:1 1 auto}
 .pp-teaser-controls{display:flex;flex-direction:column;align-items:stretch;gap:16px}
-.pp-teaser button:not(.pp-hintbtn),.pp-teaser-foot button{min-height:44px;font-size:15px}
+.pp-teaser button:not(.pp-hintbtn),.pp-teaser-foot button{min-height:44px;font-size:16px}
 .pp-teaser-controls button:not(.dot),.pp-teaser-foot button{width:100%}
 .pp-teaser .pp-hintbtn{width:44px;height:44px}
 .pp-teaser .dial{min-width:44px;min-height:44px}
@@ -411,7 +416,7 @@ code{color:var(--duple);font-size:13px}
 .pp-teaser .gate{height:44px;width:100%;flex:1 1 auto}
 .pp-teaser input[type=range]{height:44px;width:100%}
 .pp-teaser .ictl{width:100%;gap:10px}
-.pp-teaser .kl,.pp-teaser .dial-label{font-size:12px}
+.pp-teaser .kl,.pp-teaser .dial-label{font-size:13px}
 /* the foot: the invitation, then "Send this to myself" */
 .pp-teaser-foot{margin:0 0 13px}
 .pp-teaser-foot .pp-invite{margin:0 0 12px}
@@ -428,7 +433,7 @@ code{color:var(--duple);font-size:13px}
 body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cursor:help}
 .pp-hintbub{position:fixed;z-index:80;max-width:min(38ch,78vw);background:var(--panel2);
   color:var(--dim);border:1px solid var(--accent);border-radius:7px;padding:7px 10px;
-  font-size:14px;line-height:1.45;font-weight:400;letter-spacing:0;text-transform:none;
+  font-family:var(--fp);font-size:1rem;line-height:1.45;font-weight:400;letter-spacing:0;text-transform:none;
   text-align:left;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.75)}
 .pp-hintbub[hidden]{display:none}
 
@@ -448,7 +453,7 @@ body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cur
   cursor:default}
 .dial-wrap.ro .dial:hover{border-color:var(--line)}
 .dial-wrap.ro .dial-val{color:var(--dim)}
-.dial-label{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
+.dial-label{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
   white-space:nowrap;max-width:16ch;overflow:hidden;text-overflow:ellipsis}
 .dial{--dial-hue:var(--accent);width:56px;height:56px;flex:0 0 auto;
   position:relative;touch-action:none;cursor:ns-resize;border-radius:50%;
@@ -462,7 +467,7 @@ body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cur
 .dial:hover{border-color:var(--line2)}
 .dial.grab{border-color:var(--accent)}
 .dial:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.dial-val{font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap}
+.dial-val{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap}
 
 @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
 /* Where the pointer is a finger, the bench's mouse-precision sizes stop being
@@ -490,8 +495,9 @@ body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cur
   .pp-invite{display:block}
   .wrap{padding:14px 13px 48px}
   .lc{width:200px;flex-basis:200px}
-  h1{font-size:19px}
-  .sub,.hint{font-size:14px}
+  h1{font-size:1.5rem}
+  .sub,.hint{font-size:1.1rem}
+  .pp-foot,.pp-invite{font-size:.95rem}
   .pp-start{--start-fs:var(--start-fs-phone)}
   /* THE TEASER'S SIDE. A page declaring a teaser marks its desk regions
      `pp-desk`, and they go; the teaser comes. A page declaring none marks

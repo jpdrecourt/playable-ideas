@@ -125,7 +125,7 @@
    gestures and a visitor who learns one has learnt the other. */
 .wbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
   padding:7px 9px}
-.wkey{font-style:normal;font-size:11px;line-height:1;padding:3px 4px;border-radius:3px;
+.wkey{font-style:normal;font-size:12px;line-height:1;padding:3px 4px;border-radius:3px;
   background:var(--panel);border:1px solid var(--line);color:var(--faint);
   font-family:ui-monospace,Consolas,monospace}
 
@@ -144,7 +144,8 @@
 /* A rest is a state and is drawn as one: a low dash, so a silence the tree
    placed is distinguishable from a cell the walk has not reached. */
 .pslot.rest i{inset:auto 3px 9px 3px;height:2px;background:var(--line2)}
-.pnote{margin:9px 2px 0;font-size:13px;color:var(--faint);line-height:1.6}
+.pnote{margin:9px 2px 0;font-family:var(--fp);font-size:1rem;color:var(--faint);line-height:1.6;max-width:900px}
+@media (max-width:720px){ .pnote{font-size:.95rem} }
 </style>
 </head>
 <body>

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>markov</title>
-<meta name="description" content="Two chains, four states each, thirty-two weights in all — and each chain remembers exactly one step. Build them by hand and hear what one step of memory can hold, and what it cannot.">
+<meta name="description" content="Two first-order Markov chains, four states each, thirty-two weights. Each voice looks one step ahead. Set the weights by hand and listen to what one step of memory gives you.">
 <meta property="og:title" content="markov — Playable Papers">
-<meta property="og:description" content="Thirty-two numbers for two walkers, and each remembers one step. Build the chains by hand and listen for the figure coming apart.">
+<meta property="og:description" content="Two voices that look one step ahead. Set what follows what, then turn the structure dial from strict to random.">
 <meta property="og:image" content="https://play.noisewrangler.art/markov/og.png">
 <meta property="og:url" content="https://play.noisewrangler.art/markov/">
 <meta property="og:type" content="website">
@@ -777,8 +777,8 @@ function allMuted() {
 
 const page = Lab.page.build({
   title: 'markov',
-  shows: 'Two chains, four states each, and thirty-two weights between them. Each ' +
-         'chain remembers exactly one step: build one and hear what that can hold.',
+  shows: 'Two voices, three sounds and a rest each. They look one step ahead: ' +
+         'choose what follows what, and how strictly it is followed.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING
   site: 'https://noisewrangler.art',
@@ -868,29 +868,14 @@ const page = Lab.page.build({
   session: [clearBtn, reseedBtn, seedEl, Lab.state.buttons()],
 
   text: [
-    { head: 'Start.', body: 'The page opens on an example: two matrices somebody ' +
-      'built. Touch the rack or the trail and both walkers start. <b>clear</b>, below, ' +
-      'empties both — then each walker stands on its rest, a rest with no weights ' +
-      'goes nowhere, and a tap on a cell in a rest strip (the first strip of either ' +
-      'group) starts that walker on the next beat.' },
-    { head: 'A strip is a state.', body: 'After its level and its mute come four ' +
-      'cells: what may follow this state, one per state of that walker, in the order ' +
-      'the group’s caption names. The fill is the weight, and a weight is a share of ' +
-      'its own row rather than a probability — raising one lowers every sibling’s ' +
-      'share without touching their numbers. Tap to add a step, tap past full or hold ' +
-      'to clear. The lit strip is where that walker is standing now.' },
-    { head: 'Thirty-two numbers, and each chain remembers one step.', body: 'That is ' +
-      'the whole model. Lean kick toward hat, hat toward snare, snare back toward ' +
-      'kick, and the walk acquires a local logic — every step answers the one before ' +
-      'it, so the output has a style and no two bars are the same bar.' },
-    { head: 'What it cannot hold.', body: 'A figure that uses a sound twice. Kick, ' +
-      'hat, kick, snare: the kick has to lead to the hat on its first appearance and ' +
-      'to the snare on its second, and there is nowhere to put that difference, ' +
-      'because the kick’s row is one set of odds. Give it both and the chain chooses ' +
-      'at random on every pass. No assignment of weights fixes it — it is the shape ' +
-      'of the model, not a shortage of numbers. And a chain is monophonic, so the ' +
-      'second walker is not a richer chain but another one, sharing no state, no ' +
-      'weight and no random stream: sixteen more numbers, and nothing across the two.' }
+    { head: 'Write.', body: 'A strip is a sound, or the rest. Its four cells set ' +
+      'what may follow it. Tap a cell to add weight, hold it to clear. Each voice ' +
+      'steps through the strips, one step per sixteenth.' },
+    { head: 'Listen.', body: 'Lean kick toward hat, hat toward snare, snare back ' +
+      'toward kick. Each step depends on the one before, so the result has a style ' +
+      'and it varies from bar to bar.' },
+    { head: 'Two steps.', body: 'Try to build a kick, hat, kick, snare pattern. ' +
+      'With one step of memory it is impossible to hold.' }
   ],
 
   keys: '<kbd>?</kbd> what does this do — then tap anything · ' +
@@ -916,15 +901,12 @@ const page = Lab.page.build({
         ? 'turn structure down and the grammar dissolves into a uniform draw.'
         : 'turn structure up: a grammar arrives, but kick, hat, kick, snare never will.')
     },
-    share: { text: 'Two chains of four states; each remembers exactly one step. ' +
-                   'Try the whole matrix on a desktop.' },
-    /* The phone's standing text: only what the phone shows — the dial and
-       the trail — and the claim in the visitor's words. */
-    text: [{ head: 'From a grammar to dice.', body: 'At 1 the two chains read the ' +
-      'example exactly: each sound leads to the next by the odds written for it, so ' +
-      'the walk has a style. At 0 every next state is a quarter chance, and it is ' +
-      'noise. In between the grammar loosens, but no setting holds a phrase: kick, ' +
-      'hat, kick, snare needs a memory of two steps, and each chain remembers one.' }]
+    share: { text: 'Two voices, one step of memory each. The phone has one dial; ' +
+                   'the matrices are on the desktop page.' },
+    /* The phone's standing text: only what the phone shows, the dial and the trail. */
+    text: [{ head: 'Strict or random.', body: 'Two voices walk the trail, each ' +
+      'looking one step ahead. At 1 they follow the weights; at 0 every step is a ' +
+      'quarter chance. Turn structure down and listen to the pattern loosen.' }]
   },
 
   onStart: () => {

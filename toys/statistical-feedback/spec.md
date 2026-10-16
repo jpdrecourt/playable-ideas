@@ -365,9 +365,9 @@ previous one's score, and this pool does not: it sits about 4 dB under it on
 the reading that counts, and the shortfall holds under every dB floor and slice
 boundary tried. `knock` is the bottleneck of every set built on motif-memory's
 voices, with `kick` on one side (10.0 dB) and `cowbell` on the other (12.1 dB),
-so changing the sixth cannot repair it; only pulling `knock` would. Keeping it
-is JP's ruling, by ear, for the shared palette, and `knock` against `kick` is
-the pair to listen for in a fast stream.
+so changing the sixth cannot repair it; only pulling `knock` would. JP kept it
+by ear on 2026-10-16, for the shared palette; `knock` against `kick` is the
+pair a port should listen for.
 `crash` does its job as the most distinctive voice: its nearest neighbour is
 20 dB away on both readings, and it is the rarest, so its drought is the one an
 ear notices when memory goes off.
@@ -395,9 +395,8 @@ envelope at its own event gain:
 At gain 1.0 `kick` and `knock` sat about 14 dB above the other four; 0.40
 brings the six within 10 dB. `crash` is the quietest, 3.8 dB below the median
 of the other five, and it carries a −12 dB trim inside the library's own voice
-underneath this toy's 0.85. Whether the spread is right is an ear's ruling and
-it has not been made; every gain in the table above is a guess until it is.
-This paragraph is here rather than in §8 because §5 is where a port reads the
+underneath this toy's 0.85. JP's ear ruled on this spread and on the pool on
+2026-10-16: it works as it is. This paragraph is here rather than in §8 because §5 is where a port reads the
 gains, and a port that took equal energy for the principle would equalise and
 believe it had.
 

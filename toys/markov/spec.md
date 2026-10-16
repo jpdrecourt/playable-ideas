@@ -1,587 +1,412 @@
 # markov — mechanism spec
 
-Two walkers step through four states each on a sixteenth-note lattice. Each
-walker owns sixteen weights saying how often each of its states may follow each
-other state; a rest is one of the four. Nothing else exists. The page opens
-on an example pair of matrices, and one control empties them for a visitor to
-build their own.
+Two walkers share one lattice and nothing else. Each walker holds four states,
+state 0 a rest and states 1 to 3 sounds, and a 4×4 matrix of non-negative
+weights: the row is the state now, the column the state that may follow. On
+every cell each walker draws its next state from its current row, normalised
+by the row's own sum, with its own random stream. A dial `s` blends every
+normalised row toward uniform in probability space; at `s = 1` the walk reads
+the matrices as written, and there an all-zero row is a dead end where the
+walker stands, draws nothing and emits nothing.
 
-This document is the toy's other medium. It carries the mechanism, its
-parameters, its audio graph and its timing, at the level a reader needs to
-rebuild the instrument somewhere else — another language, another audio
-framework, hardware. Where a choice is arbitrary this file says so.
+This document is the toy's logic in a medium an agent can port from: another
+language, another audio framework, hardware. It is written for an agent, not
+for a reader, so it is exact before it is readable. It carries the claim, the
+state, the rule, the parameters with their shipped values, the measurements a
+port is checked against, and the line between what must survive and what is
+incidental. Everything about how this page shows the mechanism, sounds it, or
+schedules it in a browser stays out: the code holds that, and an agent that
+needs it reads the code.
 
-The mechanism is the trigger of **Chaos Conductor**, ported:
-`src/lib/markov/MarkovStateMachine.{h,cpp}` (the state machine) and
-`src/plugins/markov_trigger/PluginProcessor.cpp` (the per-opportunity path that
-drives it). §3 states the step rule so that this page can be rebuilt without
-those files.
+The mechanism is the first-order chain that the Chaos Conductor paper names
+and declines (§1).
 
 **Licence: CC0.** Copy it, port it, sell it, no attribution required.
 Attribution is nonetheless welcome: this page lives in the Playable Papers
-repository — `REPOSITORY URL TO BE SET BEFORE PUBLISHING` — and its author at
+repository — <https://github.com/jpdrecourt/playable-papers> — and its author at
 [noisewrangler.art](https://noisewrangler.art).
 
 ---
 
 ## 1. The claim
 
-**A first-order chain gives every state exactly one future, and a chain is
-monophonic.**
+**A first-order chain gives each state one distribution over what follows, so
+no weighting holds a figure that uses a state twice: kick, hat, kick, snare
+repeats with probability at most one in four per pass under any matrix, and
+under the shipped matrices at `s = 1` it never occurs.**
 
-Those are the two halves, and everything on this page is a consequence of one
-or the other.
+The bound is the shape of the model, not a shortage of weights. One pass of
+the figure starting on a kick that follows a snare needs `P(kick→hat)` and
+`P(kick→snare)` from the same row, and `x·(1−x) ≤ 1/4`. A row with exactly one
+non-zero weight makes the walk deterministic, and the cycle it then plays
+visits each state at most once, so the figure stays out of reach even with the
+chance taken away. Polyphony is a second chain with its own sixteen weights:
+the parameters grow with the walkers and buy no structure across them.
 
-**One future.** The chain's memory is its current state, so what may follow is
-a function of that state alone: each state owns one distribution over
-successors, consulted afresh every time the walk arrives there. What that buys
-is real. Lean kick toward hat, hat toward snare, snare back toward kick, and
-the walk acquires a local logic — every step answers the one before it, so the
-output has a *style*. Two bars of it are unmistakably the same instrument
-playing, and no two bars are the same bar.
+Sources:
 
-What it cannot hold is a **figure that uses a state twice**. Take four steps
-anyone could hum — kick, hat, kick, snare, coming round again. The kick must
-lead to the hat on its first appearance and to the snare on its second, and
-there is nowhere to put that difference: the kick's row is one set of odds.
-Give it both weights and the chain chooses between them at random on every
-pass, so the figure dissolves the moment it is asked to repeat. No assignment
-of weights fixes this. It is not a shortage of weights, it is the shape of the
-model.
+- Jean-Philippe Drecourt, "Programming a music performance instrument for a
+  wandering mind and clumsy hands", 23rd Sound and Music Computing Conference
+  (SMC 2026), accepted, camera-ready version;
+  conference: <https://smc26.mbz.hr/>.
+  - §3.2 "The motif trade-off": each sampler of the Chaos Conductor fires
+    independently, with "no cross-correlation between sound events". "A model
+    encoding inter-event dependencies, such as a first-order Markov chain,
+    would require controlling a number of parameters that grows with the
+    square of the number of samplers", which the author has "not found a way
+    to make that controllable in live performance".
+  - §5.2 "What the current architecture cannot reach": density, frequency and
+    gain are nouns; "remembering a motif, developing a structure" are verbs
+    that "require the system to reference its own past".
+  - §5.5 "Conclusion": the architecture "offers nouns but no verbs: states
+    without memory".
 
-The escape is degenerate and worth naming: a matrix with exactly one non-zero
-weight per row does repeat, because each state then determines its successor —
-but the cycle can only be as long as the number of distinct states in it, and a
-state can appear at most once. Even with the chance taken all the way out,
-kick, hat, kick, snare is not expressible. The representation, not the
-randomness, is the limit.
+The toy builds the chain the paper declines and shows what it still cannot
+reach: a chain does reference its past, by one step, and one step is not a
+motif.
 
-**Monophonic.** A walker is in exactly one state at a time, so it sounds at
-most one thing per cell. Polyphony is therefore not a richer chain, it is
-*another chain*, and the two share nothing: not a state, not a weight, not a
-random stream. This page runs two of them. Sixteen weights each, thirty-two in
-all, and each remembers one step. The counting argument of the SMC26 paper
-(§3.2) is exactly this: the parameters grow with the voices and buy no
-structure across them. §5.5 of that paper puts the consequence as "nouns but no
-verbs" — material without temporal structure.
+## 2. The state
 
-**One honest qualification.** In the Conductor the matrix is played, live: a
-performer moves weights while the instrument sounds, and the phrase — where
-there is one — comes from their hands on the matrix, not from the chain. The
-chain supplies material that rewards being steered. This page shows the chain
-alone, with the performer's hands taken out of the loop, which is why the
-shortfall is so plain here and is not a verdict on the instrument.
+Walkers are indexed `i = 0, 1`; states `k = 0 … 3`, state 0 the rest.
 
-## 2. The state space
-
-Two walkers, four states each. State 0 of a walker is its **rest**; states 1–3
-are sounds.
-
-| walker | 0 | 1 | 2 | 3 |
+| quantity | type | range | initial | written by |
 |---|---|---|---|---|
-| 1 | rest | kick | snare | hat |
-| 2 | rest | tom | rim | cowbell |
+| `W[i][r][c]` | 2 × 4 × 4 | real ≥ 0; the page holds integers 0 – 4 | preset | the hand |
+| `s` | scalar | 0 – 1, step 0.01 | preset | the hand |
+| `bpm` | scalar | 40 – 200 | preset | the hand |
+| `seed` | uint32 | 1 – 2³²−1 | preset | the hand, by reseed |
+| `state[i]` | integer | 0 – 3 | 0 | the rule; clear sets 0 |
+| `rnd[i]` | uniform on [0,1) | | derived from `seed` | the rule |
 
-The rest is not a fourth sound and the surface never treats it as one: it wears
-a plain grey where the sounds have identity colours, and its strip has no level
-and no mute, because there is nothing to level. It is a state like any other to
-the chain, and that is the point — silence is composed by the same mechanism as
-sound.
+Every real quantity is float64. `state[i]` is not saved: every load starts
+both walkers on the rest and both streams at the head of `seed`, so a saved
+seed replays the same walk from the start. The matrices, `s`, `bpm` and
+`seed` are read live on every step; nothing is cached from them.
 
-The six sounds are the library palette used unchanged, with the library's own
-trims and colours, so a rhythm found here can be rebuilt in another toy of the
-collection: the kick here is the kick there. Nothing is recorded and the page
-carries no audio.
-
-**Why these six.** They are audibly unlike one another within a walker and
-across the pair, and none of them has a long tail or a pitch. A crash lasts
-most of a bar and smears the cell it was drawn on; a plucked note invites the
-ear to hear melody where the page is arguing about order. Both would blur the
-figure the toy wants heard.
-
-## 3. The step rule
-
-A walker's matrix `W` is 4×4 of non-negative weights: row = the state now,
-column = the state that may follow. On the surface a weight is a whole number
-0..4, because a finger sets it in steps; nothing in the rule requires that.
+**Two streams, one seed.** Each walker owns its stream; a draw by one never
+moves the other's. This implementation derives both from a root generator:
 
 ```
-DRAW-NEXT (W, current) -> state
-    sum = Σ_c W[current][c]
-    if sum <= 0:  return current          # empty row: the draw is idempotent
-    r   = uniform(0, sum)
-    cum = 0
-    for c in 0..3:
-        cum += W[current][c]
-        if r <= cum: return c
-    return current                        # cum fell short of r: stay
+root = G(seed)
+seed[0] = floor(1 + 2147483646 · root())      # walker 0 first
+seed[1] = floor(1 + 2147483646 · root())
+rnd[i]  = G(seed[i])
 ```
 
-Both tails matter to a port, and both say the same thing: **the chain stays
-where it is.** The empty-row branch is what makes the machine *idempotent* on a
-dead row instead of throwing or picking arbitrarily. The second is the
-floating-point case where the accumulated sum lands a hair under the draw, and
-it stays put for the same reason — reaching back for the last non-zero column
-would advance the walk on an arithmetic accident, and a walk that moves because
-of rounding is a walk two ports will not agree on. Whole weights sum exactly
-and never reach that branch; fractional weights, which nothing in this rule
-forbids, can. Neither is reachable often; both are what make two ports of this
-agree.
-
-**A weight is a relative frequency, not a probability.** A row is normalised by
-its own sum, so raising one weight lowers every sibling's share without
-touching their numbers. This is why the surface can be integer steps and still
-express any ratio a player wants.
-
-### 3.1 Structure: how closely the walk reads the matrices
-
-One dial, `structure` `s` in 0..1, decides how the draw reads a row. At
-**`s = 1` the draw is `DRAW-NEXT` above, exactly** — the plain chain. Below 1
-the row is read through a blend **in probability space**:
+`G` is mulberry32, the 32-bit state `a` initialised to the seed, all
+arithmetic modulo 2³²:
 
 ```
-DRAW-BLENDED (W, current, s) -> state
-    sum = Σ_c W[current][c]
-    for c in 0..3:
-        p_ex[c] = W[current][c] / sum           if sum > 0
-                = (c == current ? 1 : 0)        if sum = 0   # an empty row means stay
-        p[c]    = (1 - s) · 1/4  +  s · p_ex[c]
-    r = uniform(0, 1);  cum = 0
-    for c in 0..3:
-        cum += p[c]
-        if r <= cum: return c
-    return current                              # float dust at the top: stay
+a += 0x6D2B79F5;  t = imul(a ^ a>>>15, 1 | a);  t = (t + imul(t ^ t>>>7, 61 | t)) ^ t
+return (t ^ t>>>14) / 2^32                      # unsigned
 ```
 
-At `s = 0` every state follows every state with a quarter chance — a uniform,
-memoryless draw — and since the uniform share reaches every state, **below 1
-no row is a dead end** and no walker is ever stuck.
+The generator and the derivation matter only to reproduce §5.6's rows to the
+digit. A port with its own generator keys two independent streams from one
+seed however that generator does it best (two spawned children of one seed,
+two jump-ahead positions, two hashed sub-seeds), walker 0 on the first; any
+such pair satisfies the rule and every §5 band.
 
-Why probability space and not the weights: the example's rows carry different
-totals (one to five), so blending the weights would keep a heavy row's shape at
-mid-dial while flattening a light one early, and the middle of the dial would
-mean something different on every row. Normalised first, every row is the same
-distance from uniform at the same `s`.
-
-**The dial is a lens, not a write.** The matrices hold what the hand wrote and
-the rack shows exactly that; only the draw changes. Turning the dial back to 1
-gives back the plain chain on the same weights.
-
-## 4. The lattice
-
-The lattice is a sixteenth-note grid at a stated bpm, and every cell is a step
-for every walker.
+## 3. The rule
 
 ```
-cell = 60 / bpm / 4
+ROWSUM(i, r) = Σ_c W[i][r][c]
 
-ON-CELL (t, walker)                         # t = the cell's own timestamp
-    if s == 1 and rowSum(walker.state) <= 0:  # 1. a dead end: no advance,
-        return STUCK                          #    no emission (only at s = 1)
+DRAW(i, cur, s) -> next                       # one rnd[i]() per call, exactly
+    row = W[i][cur];  sum = ROWSUM(i, cur)
+    if s >= 1:                                # the plain chain
+        if sum <= 0: return cur               # unreachable from STEP; kept total
+        r = sum · rnd[i]();  cum = 0
+        for c = 0 … 3:
+            cum += row[c]
+            if r <= cum: return c
+        return cur                            # float shortfall: stay
+    else:                                     # the blend, in probability space
+        r = rnd[i]();  cum = 0
+        for c = 0 … 3:
+            pe  = row[c]/sum if sum > 0 else (1 if c == cur else 0)
+            cum += (1 - s)/4 + s·pe
+            if r <= cum: return c
+        return cur                            # float shortfall: stay
 
-    next = (s == 1) ? DRAW-NEXT(walker.W, walker.state)            # 2. one step
-                    : DRAW-BLENDED(walker.W, walker.state, s)
-    walker.state = next
+STEP(i) -> STUCK | REST | HIT(k)              # every lattice cell, each walker
+    if s >= 1 and ROWSUM(i, state[i]) <= 0:
+        return STUCK                          # no draw, no move, no emission
+    state[i] = DRAW(i, state[i], s)
+    if state[i] == 0: return REST
+    return HIT(state[i])                      # the walker's sound for that state
 
-    if next == 0:                           # 3. a rest was drawn
-        return REST
+CELL(n)                                       # one per sixteenth: 60/bpm/4 s
+    for i = 0, 1: STEP(i)                     # order irrelevant: streams are separate
 
-    play(walker.sound[next], t)             # 4. what the walk draws, sounds
-    return HIT(next)
+RESEED(newSeed)
+    seed = newSeed;  re-derive rnd[0], rnd[1] # state[i] and W untouched
+
+CLEAR
+    W = all zeros;  state[i] = 0              # streams continue; s untouched
 ```
 
-Three things in that order are load-bearing.
+**Invariants.**
+- Every emitted state is a draw. No gate, density or probability sits between
+  STEP and the sound: what the walk draws, sounds, and a rest is silence
+  placed by the matrix.
+- Exactly one `rnd[i]()` per non-STUCK step, none per STUCK step, for any `s`.
+  Walker `i`'s sequence is a function of `W[i]`, `s`, its stream and nothing
+  of the other walker.
+- For `s < 1` every row of the blended matrix sums to 1 and every entry is at
+  least `(1−s)/4 > 0`: no dead end, and the chain is irreducible and
+  aperiodic.
+- For every row with `sum > 0`, the total-variation distance of the blended
+  row from uniform is exactly `s` times that of the normalised row. The dial
+  is the same distance on every row.
+- The matrices are never written by the rule. `s` is a lens on the draw; back
+  at 1 the walk reads exactly what the hand wrote.
 
-**A dead end is silent, not repeated.** The state machine's own `advance()`
-returns the current state on an empty row — it stays put. A caller that then
-sounded the returned state would fire the same sound on every cell for as long
-as the row stayed empty. The trigger guards instead: empty row, nothing happens
-at all.
+**Edge cases.**
+- **The dead end at `s = 1`.** An all-zero current row: STEP returns STUCK on
+  every cell, consumes no draw, leaves `state[i]`, and emits nothing. It does
+  not re-fire the current sound. The walker moves again on the first cell
+  after a weight enters that row or `s` drops below 1.
+- **The empty instrument.** All weights 0 and both walkers on the rest: both
+  STUCK at `s = 1`, which is how the instrument stops. The first weight in a
+  rest row starts that walker. A rest row emptied while running stops the
+  walker the next time it lands on the rest.
+- **An empty row below `s = 1` reads as "stay".** Its blended row is
+  `(1−s)/4` everywhere plus `s` on the current state, so the walker dwells
+  there a geometric number of cells with mean `4 / (3(1−s))`: 13.3 cells at
+  `s = 0.9`, 1.33 at 0.
+- **The two thresholds are one.** STEP's dead-end test and DRAW's branch both
+  use `s >= 1`. At `s = 1` the weights are compared unnormalised against
+  `sum·rnd`; the blended branch at `s = 1` would give the same probabilities
+  but is not the path taken, and a port that unifies the two must keep the
+  STUCK branch at 1.
+- **Both "stay" returns are the rule.** Integer weights accumulate exactly and
+  never reach the shortfall; fractional weights and the blend can, by one
+  ulp. Returning `cur` there, rather than the last non-zero column, keeps two
+  ports from disagreeing on rounding.
+- **A draw of exactly 0** returns column 0 even at weight 0 under `r <= cum`.
+  This implementation does so; the probability is 2⁻³² per draw and no
+  tolerance below sees it. A port may skip zero-weight columns.
+- **A weight is a relative frequency.** Raising one weight lowers every
+  sibling's share without touching its number.
+- **Rest length is geometric** with ratio `q = P(rest→rest)`: mean `1/(1−q)`,
+  `P(L ≥ k) = q^(k−1)`. There is no rest-length parameter. Rest 3 against
+  kick 1 gives a mean of four cells and a run of twenty with probability
+  0.4%.
 
-This is not an edge case, it is how a walker **stops and starts**. An empty
-matrix is four dead ends: both walkers stand on their rest, and the first
-weight in a rest row is what starts that walker. Empty a walker's rest row and
-it stops the next time it lands there. It follows that the surface owes a
-sentence naming where a walk is standing and what to do about it (§8): a
-stopped chain and a running chain nobody can hear are indistinguishable from
-outside.
+**The wrong variant: blending the weights.** This looks like the same dial
+and passes every check at `s = 0` and `s = 1`:
 
-**A rest is a state and nothing more.** The cell on which state 0 is drawn is
-silent, and the next cell draws from the rest's own row. A long silence is
-therefore a heavy rest→rest weight, and its length is geometric: weight 3 on
-rest→rest against weight 1 on rest→kick gives silences averaging about four
-cells and occasionally reaching twenty. There is no rest-length parameter,
-because the chain already has one and it is called a weight.
+```
+w'[c] = (1 - s)·1 + s·row[c]              # WRONG: a floor of one step per cell
+p[c]  = w'[c] / Σ w'
+```
 
-**What sounds is what the walk draws.** There is no gate at the voice's door
-and no per-walker probability. A composed event is a sounded event, which is
-why the trail below can be read as the walk itself rather than as a sample of
-it.
+The floor is a fixed number of steps, so its pull on a row depends on that
+row's total. At `s = 0.5` on the shipped matrices the ratio of each row's
+distance from uniform to its written distance is 0.5 on every row under the
+rule; under this variant it is 0.33 on walker 0's rest row (total 2), 0.64 on
+its kick row (total 7), and 0.20 on walker 1's rest and tom rows (total 1). A
+heavy row keeps its shape while a light row goes flat, and the middle of the
+dial means something different on every row. Any floor constant fails the
+same way. §5.2 catches it. **Normalise each row first, then mix.**
 
-**Each walker owns its random stream.** Two walkers drawing from one generator
-would make walker 1's sequence depend on how many draws walker 2 had made, so
-adding a weight to walker 2 would change walker 1's walk — the opposite of the
-claim. Both streams are derived from one seed, so a reseed moves the whole
-performance and a saved seed replays it.
+**A second wrong variant: empty reads as uniform.** Setting `pe = 1/4` on an
+empty row below 1 makes a dead end vanish at `s = 0.99` into a plain random
+step. The rule reads an empty row as "stay", so the dial approaches the dead
+end continuously.
 
-## 5. Parameters
+## 4. Parameters and the shipped preset
 
-| control | range | default | notes |
+| symbol | meaning | range | taper | shipped value |
+|---|---|---|---|---|
+| `W[0]` | walker 0: rest, kick, snare, hat | 0 – 4 per cell, integer | linear | below |
+| `W[1]` | walker 1: rest, tom, rim, cowbell | 0 – 4 per cell, integer | linear | below |
+| `s` | structure | 0 – 1, step 0.01 | linear | 1 |
+| `bpm` | one cell per sixteenth | 40 – 200 | linear | 86 |
+| seed | root of both streams | uint32 | | 1950012273 |
+
+```
+W[0]      → rest kick snare hat        W[1]      → rest tom rim cowbell
+rest        1    1    0     0          rest        0    0   1   0
+kick        1    1    4     1          tom         1    0   0   0
+snare       1    1    1     1          rim         1    0   1   1
+hat         3    0    0     1          cowbell     0    1   1   0
+```
+
+Rows sum to 2, 7, 4, 4 and 1, 1, 3, 2. Walker 0 holds twelve non-zero
+weights, walker 1 seven. `hat→kick` is 0, which is why the figure of §1 cannot
+occur at `s = 1`.
+
+The matrices and 86 BPM are the author's, set by ear. The weight cap of 4,
+the integer step, `s = 1` at open and its 0.01 step were chosen by reasoning.
+Without the preset file the page opens on empty matrices at 100 BPM with a
+fresh random seed. A loaded weight is rounded to an integer and clamped to
+0 – 4; the rule itself takes any non-negative real.
+
+## 5. What the rule does, measured
+
+The core of §3 run alone, on the shipped matrices unless stated.
+
+**Conventions.**
+- A **run** is `N = 100 000` steps per walker from `state = 0`, `s` fixed, the
+  run's seed replacing the shipped one. STUCK steps count toward `N` and draw
+  nothing; the shipped matrices have no dead end, so no §5.1 – 5.4 run meets
+  one.
+- **Frequency** of state `k`: the number of steps whose draw is `k`, over `N`.
+- **π** is the exact stationary distribution of the blended matrix
+  `P_s[r][c] = (1−s)/4 + s·pe[r][c]`, computed, not measured.
+- **The figure** is a window of four consecutive draws of walker 0 equal to
+  kick, hat, kick, snare; windows slide by one step. **Continuation** is, over
+  figure windows starting at `n` with `n + 7 < N`, the share whose next four
+  draws are the figure again.
+- A **rest run** is a maximal stretch of consecutive rest draws with a sound
+  draw on each side; the open stretches at the start and end of the run are
+  excluded.
+- **TV** of a row is half the sum of `|p[c] − 1/4|`.
+
+**The printed rows** are this implementation under mulberry32 with the §2
+derivation. **The bands** are generator-independent: set over seeds 1 to 30
+under two generators, mulberry32 and splitmix64 with each walker's stream
+keyed separately, 60 runs per condition, at about twice the half-range those
+runs gave. Any pair of independent uniform streams must land inside them.
+
+### 5.1 Frequencies against the stationary distribution
+
+| condition | walker | π: rest, 1, 2, 3 |
+|---|---|---|
+| `s = 1` | 0 | 0.3767, 0.2825, 0.2152, 0.1256 |
+| `s = 1` | 1 | 0.2500, 0.0833, 0.5000, 0.1667 |
+| `s = 0.5` | 0 | 0.3262, 0.2528, 0.2254, 0.1957 |
+| `s = 0.5` | 1 | 0.2724, 0.1716, 0.3694, 0.1866 |
+| `s = 0` | both | 0.2500 each |
+
+Band: every frequency within 0.008 of π in every run. The 60 runs per row
+deviate by at most 0.0040, and the two generators' means agree to 0.001.
+
+Walker 0's rest share falls from 0.38 to 0.25 as `s` goes from 1 to 0;
+walker 1's sits at 0.25, 0.27, 0.25. The walkers meet the uniform draw from
+opposite sides.
+
+### 5.2 The dial is the same distance on every row
+
+Exact, from the matrices: at `s = 0.5` the TV of every non-uniform blended row
+is half its written TV, on the seven non-uniform rows. Walker 0's snare row
+is already uniform and stays so. The identity is exact by construction for
+every `s` in 0 – 1, since the blend is affine in `s` about the uniform row;
+this implementation checked it at `s` = 0, 0.25, 0.5, 0.75 and 1, and the
+blind port at 0.3, 0.5 and 0.77. Band: equal to `s` × written TV to 1e-12.
+The weight-blend variant of §3 gives 0.20 to 0.64 here.
+
+### 5.3 The figure
+
+Count of the figure in walker 0's run:
+
+| `s` | expected, `N·π_kick·P(k→h)·P(h→k)·P(k→s)` | 60 runs | band |
 |---|---|---|---|
-| walker 1's matrix | 16 cells, 0..4 steps each | the example: rest → rest 1, rest → kick 1; eleven more weights (`default.json`) | tap adds a step, a tap past full clears, a long press (420 ms) clears from any level |
-| walker 2's matrix | 16 cells, 0..4 steps each | the example: rest → rim 1; seven more weights (`default.json`) | the same |
-| bpm | 40..200 | 86, the example's (factory 100) | one cell is a sixteenth |
-| structure | 0..1, step 0.01 | 1 | how closely the walk reads the matrices: 0 a uniform draw, 1 the matrices as written (§3.1). A lens on the draw; the matrices are not touched |
-| seed | — | random per session | drives both walkers' streams; `reseed` swaps the walks and leaves the matrices |
-| level, mute | per sound | unity, open | the library rack, writing the voice's own bus |
+| 1 | 0 | 0 in every run | exactly 0 |
+| 0.5 | 254.9 | 219 – 295 | 180 – 330 |
+| 0 | 390.6 | 349 – 428 | 310 – 470 |
 
-There is **no parameter beyond the matrices and how they are read**. No
-density, no rest length, no rest variance, no rate, no per-walker anything.
-The master strip carries the master chain, the tempo and the structure dial,
-and nothing else. Whatever is not the chain is not on this page, and §9 says
-what went and why.
+The figure back to back is a window of eight draws, `n` to `n + 7`, holding
+the figure twice; windows slide by one. Its count is 0 at `s = 1`. At
+`s = 0.5` and 0 the expectation is 0.6 and 1.5 per run, the 60 runs give at
+most 3 and 4, and the band is at most 10.
 
-**Why the page opens on an example.** A Markov matrix is daunting to someone
-who has never met one: sixteen empty cells per walker say nothing about what
-they are for. The page therefore opens on a pair somebody built — `default.json`
-beside the page, JP's matrices of 2026-10-05 — so the first touch is followed
-by a walk worth hearing, and the visitor learns what a matrix *does* before
-being asked to write one. The argument still lands from the inside, and the way
-there is one control: **`clear`** empties both matrices, both walkers stand on
-their rest, and the first weight in a rest row starts that walker. That empty
-start is where the discovery lives — a figure you are trying to write will not
-go in.
+**The bound.** Walker 0 on the matrix built to hold the figure as well as one
+step can: rest row `0 1 0 0`, kick `0 0 1 1`, snare `0 1 0 0`, hat `0 1 0 0`,
+`s = 1`. Every figure window is a kick followed by hat or snare at one half
+each, so continuation is exactly `1/4`. Measured: 0.240 – 0.256 over the 60
+runs. A **back-to-back chain** is a maximal run of figures at `n`, `n + 4`,
+`n + 8`, …, counted in figures; the longest per run is 6 to 10.
+Band: continuation within 0.02 of 0.25; longest chain at most 14. No matrix
+exceeds 1/4.
 
-The opening material is resolved in a fixed order: a returning visitor's own
-session, else the example, else the factory parameters, which are the empty
-matrices at 100 bpm. A page opened straight off a disk cannot fetch the
-example, so it opens empty and says so once on the status line. The tempo is
-material here, so the example's 86 bpm travels with the matrices and the
-factory tempo is not rewritten to it.
+### 5.4 Rest lengths
 
-**Why the weight cap is 4.** A cell is set by touch, so the weight is a count
-of taps and the count has to stay short enough that a visitor will make it.
-Four steps against a row of a dozen or so total weight is enough ratio to
-express "usually this, sometimes that, rarely the other". A port with a drag
-gesture could use a continuous weight and change nothing in §3.
+| condition | walker | `q = P(rest→rest)` | mean, exact | 60 runs | band |
+|---|---|---|---|---|---|
+| `s = 1` | 0 | 0.5 | 2.000 | 1.979 – 2.020 | ± 0.04 |
+| `s = 1` | 1 | 0 | 1 | 1 in every run | exactly 1 |
+| `s = 0.5` | 0 | 0.375 | 1.600 | 1.587 – 1.611 | ± 0.025 |
+| `s = 0.5` | 1 | 0.125 | 1.143 | 1.137 – 1.153 | ± 0.016 |
+| `s = 0` | both | 0.25 | 1.333 | 1.321 – 1.348 | ± 0.03 |
 
-**State persists.** Both matrices, the tempo, the seed, the mixer strips and
-the master chain autosave to the browser and come back on reload; Save and Load
-write the same snapshot as a file. Thirty-two numbers set one at a time is the
-most expensive thing on the page to lose.
+Share of rest runs of length 1 equals `1 − q`: walker 0 at `s = 1` gives
+0.493 – 0.509, band ± 0.016. Longest rest run at `s = 1`, walker 0: 13 to 21
+over the 60 runs, band 10 to 30; a maximum of a geometric sample is too noisy
+for a tighter one. Walker 0 with its rest row set to `3 1 0 0`, the other rows
+as shipped, `s = 1`: mean 3.937 – 4.060 against an exact 4, band ± 0.12.
 
-**Nothing reopens sounding, and nothing has to be zeroed to keep that true.**
-The audio context is constructed inside the visitor's first press and never at
-load, so a restored page is silent until a hand asks for sound — and then it
-resumes the grammar it was left with, which is what a restored matrix is for.
-A page whose gate is a saved parameter has to force that parameter back to
-zero; a page whose gate is the start gesture does not.
+### 5.5 Dead ends and independence
 
-Two consequences the surface carries. The page opens on the example only
-**once**, so no standing line may state what a matrix holds as though it were
-a fact about the page — the lines that say so are driven by the matrices. And
-the instrument needs a way back to nothing, which is what `clear` is for;
-clearing is the single irreversible act here, so it asks twice.
+Exact, and the same at every seed and generator; this implementation ran
+them at seed 7 and the blind port at seed 5:
 
-## 6. Audio graph
+- All matrices zero, `s = 1`, 1 000 cells: STUCK on every cell for both
+  walkers, zero draws consumed.
+- Walker 0's rest row emptied: walker 0 is STUCK on its first cell, standing
+  on the rest, and draws nothing.
+- Walker 1's rest→rest set to 4: walker 0's first 5 000 draws at seed 7 are
+  identical to the unmodified run.
+- Same seed, same two sequences.
+- Reseed after any number of steps, at any `s`, leaves `state[i]` as it was:
+  the next step draws from that state's row with the new stream. The blind
+  port checked it after 37 cells at `s = 1`.
 
-Every sounding event is one call into the shared voice library, which owns the
-whole chain: `synth → 3 ms attack / exponential decay → the voice's pan → the
-voice's bus (level, mute) → master`, and the master is the standard one
-(gain → waveshaper drive → glue compressor → dry + small room → limiter).
+Measured: all matrices zero, `s = 0.99`, a full run per walker, seeds 1 to 30
+under both generators. Every cell draws. The quantity is the conditional
+stay rate on the rest: among steps that start on the rest, the share whose
+draw is the rest again, exactly `(1−s)/4 + s = 0.9925`. It is not the share
+of rest draws, which tends to 1/4 since the walker dwells on every empty row
+the same way. The 120 walker-runs give 0.9913 – 0.9936; band ± 0.0025.
 
-There is nothing between the chain and the voice. This toy shapes no timbre and
-adds no effect: the mechanism under study is *when and what*, and a page that
-also invented a synthesis layer would put two unfamiliar things in front of a
-visitor at once.
+### 5.6 Per-seed rows
 
-**No pan column.** One walker plays three sounds and the two walkers are
-already separated by their timbres, so spreading them across the image would
-decorate a distinction the ear has. The rack's columns are the level, the mute
-and the sixteen weights, which is what this instrument is.
+Mulberry32, §2 derivation, shipped matrices, first 32 draws, digits are
+states:
 
-**Polyphony is capped by the model, not by a limiter.** Each walker fires at
-most one sound per cell, so no voice is re-struck faster than one cell — 150 ms
-at the default tempo, 75 ms at the top of the range — and two walkers can
-collide on a cell, which is the sound of two chains sharing a lattice. Where a
-port offers several sounds per cell, or a much longer voice, a per-voice cap
-becomes necessary.
+| seed | `s` | walker 0 | walker 1 |
+|---|---|---|---|
+| 1950012273 | 1 | `00000121121230001230123300121301` | `22322020202022322202022231020202` |
+| 7 | 1 | `12200121200000000133001300112001` | `22020202202323102223102202020223` |
+| 7 | 0.5 | `33200221200112100133001321202001` | `22010201013232022222020202002211` |
 
-**The voice mode is Cloud** — hits layer freely, except where the library's own
-voice defaults ask for stealing (the kick does). The instrument offers two
-others and this page has neither; see §9, because a port that has them will
-hear the same walk phrased differently, and that is a genuine difference rather
-than an implementation detail.
+## 6. What must survive, and what is incidental
 
-## 7. Timing
+The mechanism. A port that changes any item has built a different instrument:
 
-The house lookahead scheduler: a coarse 25 ms timer schedules every cell inside
-a horizon of `now + 0.15 s` at absolute audio-clock timestamps, and the cell
-duration is read live at each tick so a tempo change alters only cells not yet
-scheduled. Timer jitter never reaches the audio. **One ticker drives both
-walkers**: they share the lattice and nothing else.
+1. **First order over a flat state space.** One step of memory, no history,
+   no counter: each state owns exactly one distribution over successors.
+2. **The rest is a state** in the same matrix as the sounds, with no length of
+   its own. A long silence is a heavy rest→rest weight, geometric in length.
+3. **A weight is a relative frequency**, normalised by its own row's sum.
+4. **An all-zero row at `s = 1` is a dead end**: no draw, no move, no
+   emission. Not a re-fire, not a uniform draw, not an error. The empty
+   instrument is stopped, and the first weight in a rest row starts that
+   walker.
+5. **What the walk draws is what sounds.** No gate or probability between the
+   chain and the output.
+6. **Two walkers share the lattice and nothing else**: no state, no weight, no
+   stream. A weight in one never moves the other's walk.
+7. **The structure blend is in probability space**: normalise, then mix with
+   uniform; an empty row reads as "stay"; `s = 1` is the plain chain exactly,
+   STUCK included. Not the weight blend.
+8. **The dial and the reseed never write the matrices.** Every weight stays
+   editable while the walk runs, with no mode boundary.
+9. **One draw per walker per moving step**, and the walker's state persists
+   across reseed and across edits to its matrix.
 
-Three behaviours a port must keep:
+Incidental. A port that reproduces these has misread the spec:
 
-- **Widen the horizon when the page is hidden** (to ~1.6 s) and narrow it on
-  return. Background timer throttling is around a second and starves a 150 ms
-  horizon, which is heard as the audio stopping on a tab switch.
-- **Walk a cell already in the past, and sound none of it.** If the page was
-  hidden long enough to outrun even the widened horizon, a backlog scheduled at
-  past timestamps sounds the instant it is scheduled — one clump on return. The
-  chains still step through those cells, because the walk not stopping is the
-  claim; only the audio is dropped.
-- **Release the display against the audio clock, not the scheduler.** Events
-  are composed up to a horizon ahead of the sound, so the trail and the lit
-  strip are queued with their timestamps and shown when the audio clock reaches
-  them. Drawn at scheduling time, the walk is seen an eighth of a second before
-  it is heard.
-
-That release queue needs a bottom. It is drained on animation frames, which do
-not run in a hidden tab while the walks do, so a page left open in a background
-tab would otherwise grow one entry per cell for as long as it is there. Oldest
-entries are dropped, because what a returning visitor wants is the walk they
-came back to.
-
-## 8. The surface
-
-The layout is incidental; these properties are not.
-
-**The rack is the instrument, and the matrices are in it.** A weight is a
-playable parameter, so it is a rack cell. There are eight strips, in state
-order, each walker's group opened by its rest:
-
-```
-rest · kick · snare · hat        rest · tom · rim · cowbell
-```
-
-Every strip reads the same way: name, then mute and level, then four cells
-saying what may follow this state — next is the rest, next is the group's first
-sound, next its second, next its third. A rest's strip is the standard shape
-with its mixer cells empty, so the columns line up and anything a rest grows
-later is one more column rather than a different kind of row.
-
-**The four "next" columns mean different sounds in each group**, so each group
-is headed by its own caption row of swatches. Without it the columns would be
-four anonymous positions, and matching a column against a row label eight times
-is asking a visitor to learn a palette before they can play.
-
-**A cell is a weight, and its fill is the value.** Tap adds a step; a tap past
-full clears, so the whole range is reachable by tapping alone; a long press
-clears from any level, which is the shortcut rather than the only way. A press
-that travels is a scroll and writes nothing. A cell wears the colour of the
-state it points **at**, because that is what the weight buys, so a column that
-is often set shows as a stripe of one hue.
-
-**Targets.** A weight cell is wider than the 44 px floor and shorter than it,
-which is what fits eight strips of the standard shape on one screen. A mis-tap
-is reversible in one gesture: tapping again cycles the weight round to zero.
-
-**The current state of each walker is lit on its own strip.** That is what
-makes a dead end visible as a light that has stopped moving, and it is where a
-visitor looks to see which row they are editing.
-
-**The trail is time, which a strip cannot hold.** Two lanes, one per walker,
-the last two bars of that walker's states as thirty-two discrete slots. A hit
-is a block in the drawn sound's colour, a rest is a low dash, a dead end is a
-warn tick. Repetition, or its absence, is a property of a span rather than of a
-moment, and the trail is where the visitor sees a cycle hold and then dissolve.
-Since there is no gate, what the trail draws is both what was composed and what
-was heard.
-
-**The lane wears its walker's colour and the marks wear their sound's.** The
-walker hue names the lane and ties it to its group in the rack; the marks have
-to keep the sounds' own colours or the cycle the toy exists to show cannot be
-read off the strip.
-
-**A dead end is reported in words, and every line about silence agrees.** A
-chain standing on an empty row and a chain nobody can hear look and sound
-exactly alike — nothing. The one thing a visitor cannot deduce from silence is
-which of the two they have, so the surface says it, naming what the walkers are
-standing on and what to do about it. After `clear` that same line is the
-instruction for the empty start. A mechanism with a silent absorbing state owes
-its user this sentence.
-
-It owes something further, which is easy to miss because each line is correct
-on its own: **the surface has one account of the silence and gives it
-everywhere**. A page whose status line reads "stuck on rest" while its
-instruction reads "raise the level to hear it" has told the visitor two
-different things about the same moment, and the one it put at the top is the
-one they will act on. So the state is computed once and every line is a view of
-it, in a strict order of urgency: not started, then nothing built, then stuck,
-then shut, then running.
-
-**Reseed is an argument, not a utility.** One press gives the same matrices
-different walks, with the sounds, the tempo and every weight untouched. For a
-visitor who believes they have written a figure it is the fastest available
-disproof, and it states the general fact — what a matrix holds is a grammar,
-and a grammar is not a pattern.
-
-**The start gesture.** No modal "click to begin" and no transport button: the
-first press anywhere on the instrument unlocks the audio and is the same press
-that lands on the cell it was aimed at. There is no play button because a walk
-has no beginning: it runs from the first touch, and after `clear` the matrices
-are silent, so a control reading "play" would start nothing. The unlock checks: a rejected or
-still-suspended context is indistinguishable from playback with the volume
-down, and the gesture stays armed for a second press. Every control is reachable
-by Tab, the instrument is itself a tab stop that answers Enter, and the start
-line names that route.
-
-The master chain and the tempo sit outside the armed region on purpose —
-setting an output level is not asking for sound — and so do the level and the
-mute inside the rack. A hand that lands on one of those is answered by name
-rather than ignored, and the answer names a control that does start the
-instrument.
-
-**Say it in the visitor's language.** "A first-order transition matrix over a
-four-state alphabet" is four unexplained terms; "a row is the state playing
-now, and the cells along it are what may follow" is the same fact. The thesis
-leads — thirty-two numbers for two walkers, and each remembers one step — and
-the conclusion waits until the end of the page, where a visitor arrives having
-already tried to write a figure and failed.
-
-**Widths.** Desktop first: one column throughout, and the rack scrolls
-horizontally rather than reflowing, because the columns lining up down the page
-is what the rack is. Below the collection's teaser width the page is the
-teaser.
-
-**The structure dial on the desktop.** It sits in the master strip beside the
-tempo. It shapes the walk and does not ask for sound, so it declines the start
-gesture and answers a cold hand by name. It is on the desktop as well as the
-phone because its value persists: a desktop page without it could play a
-blended chain with nothing on screen saying so.
-
-**The teaser.** A phone shows one dial, `structure`, and the trail; the rack,
-the tempo, the master chain and the session bar are the desktop's. The dial is
-a twin of the desktop one — two controls writing one parameter, each showing
-the other's writes — and touched from cold it starts the audio and the walk.
-The phone opens at 1, the example as JP wrote it.
-
-Why one dial from a uniform walk to the example is the smallest thing that is
-still this toy: the collection's phone pages each run between randomness and
-the structure their mechanism affords, and this mechanism's structure is a
-grammar. At 0 there is none — every state a quarter chance. At 1 there is the
-example's, and the walk has a style. Between them the grammar loosens
-continuously, and at no setting does a phrase appear: kick, hat, kick, snare
-needs two steps of memory and each chain has one, which is §1's claim heard
-from the other side. The dial is a **lens and not a write**, so the example
-survives every turn of it and the desktop's rack keeps showing what the hand
-wrote. The trail is kept because it is passive and it is where the grammar is
-seen dissolving. The phone's start line names the dial, never a cell, since no
-cell is on the phone; below 1 nothing can be empty or stuck, so the phone's
-`nothing` and `stuck` lines exist only at 1 and say to turn the dial down.
-
-**What the middle of the dial does to the rests**, measured on the example
-(exact stationary shares of the blended chain): walker 1's rest→rest odds fall
-from ½ at 1 to ¼ at 0, so its silences shorten from two cells on average to
-1.33, and its share of rests falls from 0.38 to 0.25. Walker 2's rest row
-holds only rest → rim, so its rest→rest odds *rise* from 0 to ¼ as the dial
-falls: its silences lengthen from one cell to 1.33, and its share of rests
-stays near a quarter throughout (0.25 at 1, 0.27 at ½, 0.25 at 0). The two
-walkers meet the uniform draw from opposite sides.
-
-## 9. What is left out, and why
-
-Everything that is not the chain is off this page, and the list is longer than
-the page: **no density gate** at the voice's door, **no rest length and no rest
-variance**, **no rate divider**, **no breath**, **no presets**, **no per-walker
-control of any kind**. A gate makes the trail a sample of the walk rather than
-the walk; a rest length is a parameter for something the chain already does
-with a weight; rate and breath are statements about the meter rather than about
-the chain. This is further from the Conductor than a page with those dials
-would be, by design: the claim is about what a first-order chain can and cannot
-hold, and every dial beside it is an argument about something else.
-
-**Voice Mode.** The instrument has one voice-level switch deciding what a new
-sound does to what is already sounding: **Patience**, where a sound claims its
-length and the metronome waits for it; **Chop**, where a new sound cuts
-everything that voice is sounding with a short declick; and **Cloud**, where
-sounds simply layer. This page is Cloud, and only because that is what the
-shared voice library does — not by a choice made here. The omission has teeth:
-Chop and Patience change how a walk is *phrased* without changing a single
-weight, so two ports of these matrices can sound genuinely unalike. A port that
-has any of the three should say which.
-
-**More than two walkers.** Two is what carries the second half of the claim:
-one is not polyphony and three is the same fact a third time at fifty per cent
-more screen. The parameter count is *per walker*, and that a third costs
-another sixteen is better stated by the pair than shown by filling the page.
-
-**The performer's hands.** In the Conductor the matrix is edited live, and that
-editing is where phrase-scale structure actually comes from. This page keeps
-both matrices editable while they play — there is no mode boundary — but it
-makes no attempt to show a performance of a matrix, and a visitor who only
-listens will hear the chain at its most limited.
-
-**Motifs.** `MotifTypes.h` in the source repository is the answer the
-instrument's author reached for next: a sliding window recording the last eight
-events, stored motifs, and a small Markov chain selecting between them — a
-second-order structure over phrases rather than over sounds. It is the sequel
-to this page's argument and deliberately not on it.
-
-## 10. What must survive a port
-
-Keep, or it is a different instrument:
-
-1. The chain is **first-order over a flat state space**. One step of memory, no
-   history, no counter — so every state carries exactly one distribution over
-   successors. Everything the page claims follows from this.
-2. **The rest is a state**, drawn from the same matrix as the sounds, with no
-   length of its own. A long silence is a heavy rest→rest weight and its length
-   is geometric. Silence placed by the grammar is not the same object as
-   silence left by a gate, and an instrument with only the second one cannot
-   punctuate.
-3. **A weight is a relative frequency within its row**, normalised by the row's
-   own sum.
-4. **An all-zero row is a dead end** at `structure` 1: the machine stays, the
-   trigger emits nothing. Not a re-fire, not a uniform draw, not an error.
-5. **The empty instrument is stopped**, and the first weight in a rest row
-   starts that walker. Whatever the page opens on, the empty matrices must be
-   one action away, because writing a matrix from nothing is where the
-   argument lands.
-6. **What the walk draws is what sounds.** No gate, no probability between the
-   chain and the voice. A port that adds one has changed what the display can
-   be trusted to mean.
-7. **There are two walkers and they share nothing** — no state, no weight, no
-   random stream. Only the lattice. A weight added to one must not alter the
-   other's walk, and a visitor must be able to hear that they are not
-   coordinated.
-8. **Every weight is directly editable while it plays.** No mode, no page, no
-   menu. The count being uncomfortable is the argument; hiding it behind
-   navigation answers the argument instead of making it.
-9. **Some view shows a span of each walk**, not only the present state.
-10. **The walks are re-rollable without touching the matrices.** Without that,
-    a visitor has no way to tell a grammar from a pattern, and the page's
-    central claim rests on their patience instead of on one press.
-11. **The sounds are audibly unlike one another**, within a walker and between
-    the two. What the trail shows as repetition has to be hearable as
-    repetition, and what it shows as two independent lanes has to be hearable
-    as two.
-12. **The structure blend is in probability space** (§3.1): each row is
-    normalised before it is mixed with the uniform row, an empty row reads as
-    "stay", `s = 1` is the plain chain exactly, and the dial reads the
-    matrices without writing them.
-
-Incidental — change freely:
-
-- The palette, the synthesis, the whole master chain, the colours.
-- The lattice's subdivision (a sixteenth here; an eighth is the same engine),
-  the tempo range, and the default tempo.
-- The weight cap and the gesture that sets it. Integer steps under a tap are
-  one answer; a drag and a continuous weight is another, and §3 is unchanged.
-- Persistence, and therefore the `clear` control that persistence makes
-  necessary. The opening example — the material, not the fact that one exists
-  and that `clear` leaves it.
-- The number of states per walker. Four is small enough that a visitor can hold
-  one matrix in their head, which is what makes the failure of the figure
-  legible rather than merely reported. What is not incidental is that the rest
-  is one state among them.
-- The trail's two-bar span, and the presence of a mixer at all.
-
-**Guesses, not ear values.** Every number below was chosen by reasoning and has
-not been heard against a listening pass: the two walker hues (`#8f86d8` and
-`#d2789e`), the trail's two-bar span, the 420 ms long press and its 9 px travel
-tolerance, the weight cap of 4, the factory tempo of 100 bpm, and the
-structure dial's default of 1 and its 0.01 step. The blend law is the lead's;
-how its middle sounds waits for JP's ear. The example's matrices and its
-86 bpm are JP's.
+- The sounds, which states are which sounds, and that outputs are sounds at
+  all.
+- Four states per walker, two walkers, the weight cap of 4 and integer
+  weights; a continuous weight changes nothing in §3.
+- The sixteenth-note lattice, the tempo range and 86 BPM.
+- The shipped matrices; a port is checked on them, not bound to them.
+- Mulberry32, the root-seed derivation and the seed; they matter only to §5.6.
+- The `r <= cum` boundary convention and the draw-of-zero case.
+- Persistence, starting each load from the rest at the head of the stream, and
+  clear as a control.
+- Everything the page draws.

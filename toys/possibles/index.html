@@ -173,7 +173,7 @@
    owns sound, time, controls and state. What is left here is the
    instrument: a finger in the tree, the grid the machine reads it
    back on, and the trace of what came out. See spec.md — the claim
-   is §1, the two verbs are §3 and the bias law is §4.
+   is §1, and the two verbs and the walk with its bias law are §3.
 
    NOTHING THE HAND DOES MAKES A SOUND. There is no way to strike a
    drum here. The write buttons and their key twins put symbols into
@@ -245,7 +245,7 @@ if (saved && saved.tree) ip.fromJSON(saved.tree);
    that is the transport's doing rather than a parameter's: the audio context is
    built inside the visitor's first press and never at load, so a restored page
    is silent until a hand presses Play — and then it speaks the tree it was left
-   with, which is what a restored score is for (spec.md §5). */
+   with, which is what a restored score is for. */
 
 let finger = ip.root();      // where the hand writes — the dashed square
 let reader = ip.root();      // where the SCHEDULER has walked to
@@ -347,7 +347,7 @@ function afterWrite() {
 }
 
 /* ============================================================
-   THE WALK (spec.md §4)
+   THE WALK (spec.md §3)
 
    One symbol per 8th note. Reaching a leaf the machine goes home to
    the root and descends again INSIDE THE SAME CELL, so the crossing

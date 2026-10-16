@@ -1,561 +1,413 @@
 # motif-memory — mechanism spec
 
-Five stochastic voices share one pulse. Each carries a rolling record of the
-last two bars it played, kept without being asked for and never audible as a
-recording. Throwing a voice's **MEM** switch freezes that record as its score
-at the next bar line, and the voice begins playing it. One knob per voice —
-**fidelity** — then decides, cell by cell and on a fresh roll every time, how
-much of the stream is the frozen score and how much is invention, at an
-unchanged amount of music throughout.
+Stochastic voices share one integer pulse. Each generating voice rolls its
+density at its own opportunities and records the last two bars of what
+sounded, as cells and gains. A claim freezes that record into a score at the
+next bar line; then every cell is settled by a fresh roll: a remembered event
+is removed with probability `(1−d)(1−f)`, an empty opportunity filled with
+`d(1−f)`, for density `d` and fidelity `f`. At `f = 1` the voice loops the
+score, at `f = 0` it is its generator, and the expected amount never changes.
+Each voice is monophonic and refuses an event that starts inside its last.
 
-This document is the toy's other medium. It carries the mechanism, its
-parameters, its audio graph and its timing, at the level a reader needs to
-rebuild the instrument somewhere else — another language, another audio
-framework, hardware. Where a choice is arbitrary this file says so.
+This document is the toy's logic in a medium an agent can port from: another
+language, another audio framework, hardware. It is written for an agent, not
+for a reader, so it is exact before it is readable. It carries the claim, the
+state, the rule, the parameters with their shipped values, the measurements a
+port is checked against, and the line between what must survive and what is
+incidental. Everything about how this page shows the mechanism, sounds it, or
+schedules it in a browser stays out: the code holds that, and an agent that
+needs it reads the code.
+
+The mechanism is original to this toy; §1 names the problem it answers.
 
 **Licence: CC0.** Copy it, port it, sell it, no attribution required.
 Attribution is nonetheless welcome: this page lives in the Playable Papers
-repository — `REPOSITORY URL TO BE SET BEFORE PUBLISHING` — and its author at
+repository — <https://github.com/jpdrecourt/playable-papers> — and its author at
 [noisewrangler.art](https://noisewrangler.art).
 
 ---
 
 ## 1. The claim
 
-**Memory is a state of a voice, not a structure beside the ensemble**, and the
-crossing into it can be made inaudible.
+**A stochastic voice can carry its own recent past without being asked and
+cross into it and back out continuously, at an unchanged amount of music, so
+that the crossing is heard only if the performer makes it heard.**
 
-Two things follow, and either could be wrong. The first is that capture need
-not be an action: recording is continuous and invisible, so the performer
-decides *that* a passage was worth keeping and never *which* window to keep —
-there is nothing to aim, nothing to select, nothing to press on the beat. The
-second is that the distance between a remembered passage and a freshly
-generated one can be a continuum a hand rides rather than a switch, because
-the quantity the ear counts — how much music there is — is held fixed across
-the whole of it while the quantity the ear recognises — where the music falls
-— moves. A crossing that changes both at once announces itself. This one only
-announces itself if the performer makes it.
+Source:
 
-## 2. The state space
+- Jean-Philippe Drecourt, "Programming a music performance instrument for a
+  wandering mind and clumsy hands", Sound and Music Computing Conference
+  (SMC 2026), Zagreb, 2–7 November 2026, accepted. §3.2 "The motif trade-off"
+  names the cost of independent stochastic triggering: "Music is a temporal
+  art, and one of its central tenets is memory." §5.2 "What the current
+  architecture cannot reach" states that the triggering mechanism makes
+  motif "structurally impossible": density, frequency and gain are nouns,
+  while remembering a motif is a verb that requires "the system to reference
+  its own past". The paper proposes no mechanism; this toy is one.
+
+## 2. The state
+
+Voices are indexed `i = 0 … V−1` in kit order; the shipped kit has `V = 5`.
+Time is the tick index `n`, one grid cell per tick. A bar is 8 cells.
+
+| quantity | type | range | initial | written by |
+|---|---|---|---|---|
+| `n` | integer | 0 … | 0 at every start | the clock |
+| `t[n]` | seconds | | `t[0] = 0`, `t[n+1] = t[n] + 60/(2·bpm)` | the clock, bpm read at tick `n` |
+| `d[i]` | per voice | 0 – 1 | preset | the hand |
+| `r[i]` | per voice | 1, 2, 4, 8, 16 | preset | the hand |
+| `f[i]` | per voice | 0 – 1 | preset | the hand; CLAIM sets it to 1 |
+| `D[i]` | per voice, seconds | > 0 | the voice's sound length | fixed |
+| `mode[i]` | GEN or MEM | | GEN | the rule |
+| `want[i]` | bool | | false | the hand |
+| `pending[i]` | NONE, MEM, GEN | | NONE | the hand and the rule |
+| `current[i]` | list of `(cell 0–7, gain)` | ≤ 8 entries | empty | the rule |
+| `window[i]` | list of bars, oldest first | ≤ 2 bars | empty | the rule |
+| `score[i]`, `cells[i]` | array of gain or HOLE, its length | 16 cells (8, §3 edge cases) | none, 0 | CLAIM |
+| `loopStart[i]` | integer tick | multiple of 8 | 0 | CLAIM |
+| `lastStart[i]` | seconds | | −∞ | the rule |
+| `rnd` | uniform on [0,1) | | seed 1234567 | the rule |
+
+Every memory quantity is an integer cell index; seconds enter only the
+collision test through `t` and `D`. Every start of the pulse resets `n`, all
+memory state and `lastStart` to their initial values. Parameters are read
+live at every tick; nothing is cached. One stream `rnd` serves every voice and
+every draw, and nothing else draws from it. Reseeding replaces the stream
+mid-run and changes nothing else.
+
+`rnd` is any uniform generator. This implementation's is mulberry32, the
+32-bit state `a` initialised to the seed, arithmetic modulo 2³²:
 
 ```
-Voice {
-  id, name, colour            # identity; see §6
-  density   : 0..1            # chance of sounding at each of its own opportunities
-  rate      : 1|2|4|8|16      # grid cells between its opportunities
-  fidelity  : 0..1            # how remembered the stream is
-  strip     : { gain 0..1.5, mute bool, pan -1..1 }    # the output bus, §6
-
-  mode      : 'gen' | 'mem'   # generating, or playing a claimed memory
-  want      : bool            # where the performer has put the switch
-  pending   : 'mem' | 'gen' | none   # a throw waiting for the bar line
-
-  current   : list of (cell 0..7, gain)     # the bar being filled
-  window    : up to 2 completed bars, oldest first
-  score     : array[16] of gain or HOLE     # frozen; a hole is a silent cell
-  scoreCells: 16 (or 8 — see §3.2)
-  loopStart : integer tick at which the score's cell 0 fell
-}
-
-Global { bpm 40..300, seed uint32, master chain (§6) }
+a += 0x6D2B79F5;  t = imul(a ^ a>>>15, 1 | a);  t = (t + imul(t ^ t>>>7, 61 | t)) ^ t
+return (t ^ t>>>14) / 2^32                      # unsigned
 ```
-
-Every quantity the memory system touches is an **integer cell index**, never a
-duration. The window holds cells and gains; the score is an array indexed by
-cell; playback position is the ticker's own integer tick index taken modulo
-the score's length. Seconds enter only where sound and drawing do. That is why
-a voice can cross into its own past with no timing slop at all: there is no
-second clock to disagree with the pulse.
-
-A bar is `CELLS_PER_BAR = 8` cells; a cell is an 8th note, so the grid is 4/4
-read on 8ths. A window is `WINDOW_BARS = 2` bars — one size, every voice, not
-adjustable.
 
 ## 3. The rule
 
-### 3.1 The window
-
-While a voice is generating, at every cell where `tick % rate == 0` it rolls
-its density. If the roll passes and the collision rule (§3.5) lets the event
-through, the voice sounds and the event is appended to `current` as
-`(tick mod 8, gain)`.
-
-At every bar line — every tick where `tick % 8 == 0` — a generating voice
-pushes `current` onto `window`, drops the oldest bar if `window` now holds
-more than two, and empties `current`.
-
-**Only what sounded is recorded.** An event the collision rule refuses is not
-in the window, which is what makes a captured window playable: a stretch of
-time the voice managed once it can manage again.
-
-An engaged voice records nothing and its window does not advance, so nothing
-the audience did not hear can enter it.
-
-### 3.2 Claiming a memory
-
-The switch is thrown whenever the hand reaches it and lands on the next bar
-line. Between the two the switch is **armed** and the voice finishes the bar.
-
-At that bar line, in this order:
-
-1. the bar that has just finished joins the window (step §3.1);
-2. the window's two bars are flattened into `score`, an array of
-   `bars × 8` cells: `score[b*8 + cell] = gain`, holes everywhere else;
-3. `mode` becomes `mem`, `loopStart` becomes this tick, and the voice plays
-   relative cell 0 **on this same tick** — the one its generator would have
-   had its say on;
-4. **fidelity snaps to 1**, in the engine and on the knob. Claiming means
-   *these two bars* are what the audience should remember, so the claim is
-   verbatim by intent whatever the knob was left at.
-
-A memory claimed at the very first bar line of a run has only one whole bar
-behind it, so `scoreCells` is 8 rather than 16. Everything below holds for
-either length.
-
-Throwing the switch and throwing it back before the bar line cancels the
-throw: the voice never left the state it was in and there is nothing to
-resolve.
-
-### 3.3 Releasing it
-
-Armed at the throw, landed at the next bar line, and nothing else happens.
-The law at fidelity 0 already *is* pure generation, so release changes exactly
-two things: the window starts rolling again, and the memory is gone. Riding
-fidelity to 0 and then releasing is a crossing with nothing in it to hear.
-
-The window is **not** cleared on release. It resumes rolling from where it
-stood, so a re-entry soon after freezes a blend of bars from before and after
-the memory played. The voice's past is continuous even when what it plays is
-not.
-
-### 3.4 The law
-
-While a voice is engaged the memory's temporal grid is fixed: the pointer
-advances with the clock at every step whatever the fidelity, and every step is
-settled on its own fresh roll. With `d` = density and `f` = fidelity:
-
 ```
-STEP (score, rel, rate, d, f)
-    if score[rel] is an event:
-        removed = random() < (1 - d)(1 - f)
-        emit GHOST if removed else SCORE at score[rel]'s gain
-    else:
-        capTick = loopStart - scoreCells + rel      # where this cell was recorded
-        if capTick mod rate ≠ 0: emit NOTHING       # never an opportunity
-        emit EXTRA at a fresh gain if random() < d(1 - f) else NOTHING
+TICK(n)                                        # n = 0, 1, 2, …
+    if n mod 8 == 0: for each voice i in kit order: BARLINE(i, n)
+    for each voice i in kit order: PLAY(i, n)
+
+BARLINE(i, n)
+    if mode == GEN:
+        window.append(current); if len(window) > 2: drop window[0]
+        current = []
+    if pending == MEM and mode == GEN: CLAIM(i, n)
+    elif pending == GEN and mode == MEM:       # release
+        mode = GEN; current = []; pending = NONE
+
+CLAIM(i, n)
+    B = len(window); cells = 8 · max(1, B)
+    score = [HOLE] · cells
+    for b, bar in enumerate(window): for (c, g) in bar: score[8b + c] = g
+    loopStart = n; mode = MEM; pending = NONE
+    f = 1                                      # written to the parameter itself
+
+THROW(i, w)                                    # the hand, at any moment
+    want = w
+    pending = NONE if w == (mode == MEM) else (MEM if w else GEN)
+
+GAIN() = 0.8 · 10^((−3 + 6·rnd()) / 20)
+
+FREE(i, T) = not (T < lastStart + D)           # equality is free
+
+PLAY(i, n)
+    T = t[n]; r = rate; d = density; f = fidelity
+    if mode == MEM:
+        rel = (n − loopStart) mod cells        # mod taken non-negative
+        if score[rel] != HOLE:
+            g = score[rel]
+            if rnd() < (1−d)(1−f): emit GHOST(g); return       # removed
+            mark = SCORE
+        else:
+            cap = loopStart − cells + rel      # the tick this cell was recorded on
+            if cap mod r != 0: return          # never an opportunity: no draw
+            if not (rnd() < d(1−f)): return
+            g = GAIN(); mark = EXTRA
+        if FREE(i, T): lastStart = T; emit mark(g)    # it sounds
+        else: emit GHOST(g)                    # refused: owed, silent
+        return                                 # an engaged voice records nothing
+    if n mod r != 0: return
+    if not (rnd() < d): return
+    g = GAIN()
+    if FREE(i, T): lastStart = T; emit SOUND(g); current.append((n mod 8, g))
 ```
 
-Fidelity never *moves* an event. It invents on silent cells and removes
-existing ones, and that is the whole of it.
+SOUND, SCORE and EXTRA sound at `t[n]` with gain `g`; GHOST is an event the
+memory owed and did not sound. A refused generated event emits nothing.
 
-**The anchor.** A cell the memory occupies is always visited, so the verbatim
-loop survives a rate move. An empty cell is visited only where the voice *had*
-an opportunity while it was recording — `capTick`, not the live tick. That is
-what makes fidelity 0 generation exactly rather than generation-like, and it
-holds for any rate against any score length. Asking the live tick instead
-would hold only while the rate divides the score; where it does not, the
-opportunities walk off the remembered cells pass by pass and the two sets add
-up to more chances per bar than the generator ever had.
+**Invariants.**
+- The window and the score hold only events that sounded, at most one per
+  cell, at the gain they sounded at.
+- `mode == MEM` implies the window is unchanged since the claim and `current`
+  is empty. Release does not clear the window: it resumes rolling from where
+  it stood.
+- `loopStart` is a multiple of 8, and relative cell 0 plays on the landing
+  tick itself, the tick on which the generator would have rolled.
+- At `f = 1` the law removes nothing and invents nothing: the emissions are
+  the score, cell for cell, on every pass.
+- Draw count: one `rnd()` per density opportunity in GEN, plus one for the
+  gain when it passes; one per visit of a score cell and one per visit of an
+  empty opportunity cell in MEM, plus one for the gain of an invention. The
+  draws happen at every `f` and `d`, `f = 1` included.
+- Whenever `r` divides `cells`, `cap ≡ n (mod r)`: the empty cells visited are
+  exactly the live opportunities.
 
-**Three properties, and they are the instrument.**
+**Why the law conserves the amount.** Per cell, the law fires a remembered
+event with probability `1 − (1−d)(1−f) = f + (1−f)·d`, and an empty
+opportunity with probability `(1−f)·d`. Every cell is the score with
+probability `f` and a fresh generator roll with probability `1−f`. A window
+of own density `ρ` therefore plays at `f·ρ + (1−f)·d`, and since the window is
+itself a draw at density `d`, the expected rate is `d` at every `f` (§5.2).
+Given the score, passes are independent, so the occupancy's correlation
+across one score length is `Var(E[x|s]) / Var(x) = f²·d(1−d) / d(1−d) = f²` (§5.3).
 
-- **f = 1** — nothing invented, nothing removed: a verbatim loop.
-- **f = 0** — both branches fire with probability `d`, so every cell the voice
-  would have had anyway fires at exactly the density. The event train is
-  statistically the generator's again.
-- **In between** — one window's expected rate is
-  `f × (that window's own density) + (1 − f) × d`, and a frozen window is
-  itself a `d`-dense draw, so with density left where it was at capture the
-  expected rate is `d` at every fidelity. Fidelity redistributes **placement**
-  toward the remembered pattern; it does not touch **amount**.
+**Edge cases.**
+- **Every claim is 16 cells.** The tick-0 bar line runs before any throw can
+  be pending, and it pushes the empty `current`, so the window holds an empty
+  bar for the time before the run. The first claim of a run lands at tick 8
+  at the earliest, and its first half is that empty bar. CLAIM's `max(1, B)`
+  and the 8-cell score exist only for a port whose throw can be pending at
+  tick 0. There, at `r = 16`, `r` does not divide `cells`: the anchor admits
+  one fixed relative cell on every pass or none at all, so `f = 0` does not
+  reproduce the generator's opportunities.
+- **A rate move while engaged.** Score cells are visited at every rate; only
+  empty cells follow the new rate. If the rate has been made coarser since
+  the window was recorded, remembered events off the new grid still fire at
+  `d` at `f = 0`, so `f = 0` sounds more than the generator would.
+- **A density move while engaged** colours the blend: the amount becomes
+  `f·ρ + (1−f)·d_new`. At `f = 1` density has no effect.
+- **Release** changes the mode only; fidelity stays where it was. Throwing
+  back before the bar line cancels the throw.
+- **The seam.** A score is collision-free as a stretch of time, not as a
+  loop: cells 15 and 0 were 15 cells apart when recorded and are neighbours
+  once it turns. When the score holds both, a voice with `D` over one cell
+  refuses cell 0 after every sounded cell 15, `f = 1` and the first pass
+  included. No other pair of remembered events collides.
+- **The voice over the line.** A voice whose `D` exceeds `r` cells refuses
+  some consecutive opportunities, in GEN as in MEM, and an invention beside a
+  remembered event refuses it or is refused by it.
+- **The collision tie.** `t[n] − lastStart = D` exactly is free. The page
+  refuses when `T < lastStart + D` on accumulated float seconds, so a tie
+  falls on float residue. A port accumulates `t` by the recurrence of §2 and
+  treats the voice as free when `T ≥ lastStart + D − 1e-9`. At the shipped values a tie needs
+  `hum` at a 10-cell gap, which its rate never gives.
 
-The rolls are fresh at every step, so a partly remembered stream breathes
-rather than freezing into a second pattern, and a fidelity move bites at once
-rather than at the next pass.
+**The wrong variant: the keep-probability trap.** This reads fidelity as the
+chance of keeping each remembered event:
 
-**How much of this is measured.** The recurrence is: in a symbolic port of the
-scheduler at 150 bpm, 12 seeded windows per cell, 400 played bars each, the
-autocorrelation of the occupancy vector at lag 16 grows nearly linearly in
-fidelity — about 0.26, 0.50, 0.73, 0.90, 0.995 at f = 0.5, 0.7, 0.85, 0.95,
-1.0 — essentially independently of density, and clears a 400-permutation
-shuffled null at every density tested. At f = 0.85 and density 0.5 only 10% of
-passes are identical to the pass before them: the shape recurs and the
-realisation does not.
+```
+if score[rel] != HOLE: removed = rnd() < (1 − f)          # WRONG
+```
 
-**One thing the law claims and the gains do not honour.** At f = 0 the *event
-train* is the generator's, but the *accents* are not: a remembered event that
-survives replays the gain frozen with it, identically on every pass, while an
-invention draws a fresh one. Measured on the accent channel rather than on
-occupancy, that leaves a small reliable signature at f = 0 — autocorrelation
-0.059 at lag 16 against a 0.04 threshold, significant in 11 of 12 windows, at
-density 0.75 and rate 1. The crossing at f = 0 is not
-information-theoretically clean. Whether it is audible is a different question
-and this measurement does not answer it.
+It looks right at both ends of the knob from the score's side: `f = 1` loops,
+`f = 0` removes every remembered event. Then `f = 0` is not generation but
+its photographic negative: every cell the memory occupies is silent and the
+rest fire at `d`. The amount becomes `d·(f + (1−d)(1−f))`, so at `d = 0.5` the
+stream plays at 0.50 of the generator at `f = 0` and 0.75 at `f = 0.5`.
+§5.2 catches it at once. The removal probability carries the density
+because generation fires an occupied cell with probability `d`, not 0.
 
-Where the density knob sits relative to the density that was playing at
-capture is the one thing that colours the blend: leave it and the amount never
-changes; raise it and the remembered pattern thickens with inventions around
-it; drop it and the memory thins. At f = 1 density has nothing to act on, by
-construction — both probabilities carry the `(1 − f)` factor — so thinning a
-memory means easing fidelity slightly off the top.
+A second variant, "with probability `f` the score cell, else a generator roll
+with a fresh gain", has the law's occupancy exactly and loses the frozen gain
+whenever the generator branch fires. A surviving remembered event replays its
+frozen gain, which makes it the same event; §5.4 catches the variant.
 
-### 3.5 Collisions, and the one way the amount is not conserved
+## 4. Parameters and the shipped preset
 
-Each voice is **monophonic and nothing is ever stolen**: an event that would
-overlap one already committed to that voice is dropped and the earlier
-commitment stands. The check runs over scheduled intervals, not over sounding
-voices, because scheduling runs ahead of playback. Remembered and generated
-events meet the same rule.
-
-One condition governs everything below it: **a voice whose sound is longer
-than the gap between its own opportunities — `rate` cells at the current
-bpm — cannot play two opportunities running.** The `kick` rings for 0.28 s
-while a cell at 150 bpm is 0.2 s, so at rate 1 — where it opens — it is
-already over that line; at 300 bpm rate 2 is. Give a voice a rate that leaves
-room for its own tail and none of what follows happens: at rate 4 the kick
-refuses nothing at any fidelity.
-
-**Inside a window the memory never collides with itself**, because the window
-records only what sounded. **At the seam it can.** The window is
-collision-free as a stretch of time and not as a loop: its last cell and its
-first were fifteen cells apart when they were recorded and become neighbours
-the moment it turns. A voice over the line refuses that one event — at
-fidelity 1, where the law is doing nothing at all — and refuses it again on
-every pass, for as long as the memory holds.
-
-**Inventions have no protection anywhere.** An invention landing beside a
-remembered event either dies or displaces it.
-
-Measured, for a voice with the kick's 0.28 s ring at 150 bpm, **rate 1 and
-density 0.5** throughout (200 000 captured windows for the seam figure, 600
-windows × 60 passes for the rest):
-
-| | |
-|---|---|
-| windows holding an event on both cell 0 and cell 15 — the seam | 11.0% |
-| events the law wants that never sound, f = 1 | 1.8% |
-| f = 0.85 | 11% |
-| f = 0.5 | 25% |
-| f = 0 | 33% |
-
-The seam thins with the density that recorded the window — 7.5% at density
-0.38, 4.1% at 0.25 — and disappears entirely at rate 2, where the gap between
-opportunities is longer than the ring: 0%, at every density and every fidelity.
-The kick at rate 4 refuses nothing at all.
-
-So about nine windows in ten turn verbatim in the air and the tenth drops one
-event on every pass it makes; and a half-remembered stream at rate 1 loses a
-quarter of what the law asked for.
-None of this is the law drifting — the law is exact and every event fires on
-its own cell. It is monophony meeting a grid finer than the voice, and it is
-the one way the conservation of amount fails to reach the ear.
-
-Every one of these losses draws as a ghost (§8).
-
-## 4. Parameters
-
-Per voice, all live at every fidelity:
-
-| name | range | default | scale | meaning |
+| symbol | meaning | range | taper | shipped value |
 |---|---|---|---|---|
-| density | 0..1 | see below | linear | chance of sounding at each of its own opportunities. **The sole rate control**, with MEM on or off. |
-| rate | 1, 2, 4, 8, 16 | see below | five steps, equal travel each | grid cells between this voice's opportunities |
-| fidelity | 0..1 | 1 | linear | how remembered the stream is; inert while MEM is off |
-| level | 0..1.5 | 1 | linear | the voice's output bus |
-| pan | −1..1 | 0 | linear | the voice's output bus |
-| mute | bool | off | | the voice's output bus |
-| MEM | bool | off | | claim the last two bars; lands on the bar line |
+| `d` | chance of sounding at each opportunity; the sole amount control | 0 – 1 | linear | kick 0.29, knock 0.45, cowbell 0.5, click 0.6, hum 0.14 |
+| `r` | cells between a voice's opportunities | 1, 2, 4, 8, 16 | equal travel per step; an outside value snaps to the nearest step in log₂ | kick 1, knock 2, cowbell 4, click 1, hum 8 |
+| `f` | fidelity: how remembered the stream is; inert in GEN | 0 – 1 | linear | 1 for every voice |
+| `D` | sound length | | | kick 0.28 s, knock 0.09 s, cowbell 0.15 s, click 0.01 s, hum 2.0 s |
+| bpm | the pulse; one cell is an eighth note | 40 – 300 | linear | 150: 0.2 s a cell, 1.6 s a bar |
+| bar | cells per bar, "a bar" | fixed | | 8: 4/4 read on eighths |
+| window | bars kept, "a short past" | fixed | | 2, every voice |
+| gain | per event | 0.8 · ±3 dB, uniform in dB | | as GAIN |
+| seed | of `rnd` | uint32 | | 1234567 |
 
-Global:
+Nothing is claimed at the start, so the generator is heard before the memory.
+At 150 bpm `D` is kick 1.4 cells, knock 0.45, cowbell 0.75, click 0.05, hum 10:
+kick at rate 1 and hum at rate 8 are over the line of §3. Every rate step
+divides the bar. Densities, rates and tempo were set by ear; the tapers, the
+gain spread and the lengths are reasoned and unheard.
 
-| name | range | default | meaning |
+## 5. What the rule does, measured
+
+**Conventions.** The core of §3 runs alone, one voice per run, 150 bpm.
+- **The voice.** Click-like: `D = 0.01 s`, which never collides at 150 bpm.
+  Kick-like: `D = 0.28 s`.
+- **The protocol.** Bar line `k` is tick `8k`. Every throw is made after
+  every voice's BARLINE of that tick and before any PLAY, and lands at the
+  next bar line; where it falls relative to PLAY changes nothing. The first throw on is
+  at bar line 2, so the first claim lands at 3 with bars 1 and 2. A claim
+  stays engaged 8 bars: the throw off is made at bar line `L+7` and lands at
+  `L+8`. The next throw on is made at `L+9` and lands at `L+10`, with two bars
+  generated after the release in the window. 2 000 claims per run, a run of
+  20 003 bars.
+- **Fidelity** is written to the condition's value right after the landing's
+  bookkeeping, before that tick's PLAY, overriding the snap.
+- An **engaged bar** is 8 ticks from a landing to its release; a
+  **generating bar** is 8 ticks in GEN, the run's first three included.
+- An **emission** is a SCORE or EXTRA outcome of the law, before FREE. A
+  **sounded** event passed FREE. GHOST is not an emission.
+- Every frequency and ratio below is pooled over the run, total over total,
+  never a mean of per-claim ratios.
+- **Removal frequency** is removals over visits of score cells. **Invention
+  frequency** is EXTRA outcomes over visits of empty opportunity cells.
+- **Amount ratio** is emissions per engaged bar over `8d/r`. **Sound ratio**
+  is sounded events per engaged bar over sounded events per generating bar,
+  in the same run. **Lost** is `1 −` sounded over emissions, engaged ticks
+  only.
+- A **pass** is 16 consecutive engaged ticks starting at the landing or a
+  multiple of 16 after it. **Occupancy** `x = 1` on an emission, else 0; the
+  **accent** `y` is the emission's gain, else 0. **Recurrence** is the Pearson
+  correlation, population moments, of the pairs `(x[n], x[n+16])` with both
+  ticks in one engagement, pooled over the run; likewise for accents. A pass
+  is **identical** when its occupancy, or its sounded pattern, equals the
+  previous pass of the same engagement cell for cell. The sounded pattern is
+  binary, sounded or not; gains are ignored. The share's denominator is the
+  passes that have a previous pass, 3 per engagement.
+- A **seam** is a claimed score holding events at both cell 0 and cell 15,
+  counted on the score at landing as a fraction of the claims. Fidelity does
+  not enter it.
+- **Bands** are set over seeds 1 to 30 under two generators, mulberry32 and
+  splitmix64 (state += 0x9E3779B97F4A7C15, the standard mix, top 53 bits over
+  2⁵³), 60 runs per condition, at about twice the half-range of what those
+  runs gave. Any uniform generator must land inside them. A port checks each
+  of its runs individually against each band, not only their mean; 30 seeds
+  of its own generator suffice. "Exactly 1" means within 1e-12, the float
+  Pearson's residue. Rate 1 unless stated. The seed-7 values
+  are mulberry32 under this protocol, for a port with the same generator and
+  the same draw order.
+
+### 5.1 The law's frequencies
+
+Click-like voice. Each cell gives the 60-run mean of removal over invention
+frequency, against `(1−d)(1−f)` and `d(1−f)`.
+
+| | f = 0 | f = 0.5 | f = 0.85 |
 |---|---|---|---|
-| bpm | 40..300 | 150 | the shared pulse; one cell is an 8th note |
-| seed | uint32 | 1234567 | the event stream, not the palette (§6) |
-| master / drive / glue / reverb | 0..1 | 0.9 / 0 / 0.65 / 0.15 | the shared master chain |
+| d = 0.25 | 0.7499 / 0.2498 | 0.3746 / 0.1253 | 0.1128 / 0.0375 |
+| d = 0.5 | 0.4997 / 0.5000 | 0.2497 / 0.2501 | 0.0749 / 0.0752 |
+| d = 0.75 | 0.2501 / 0.7499 | 0.1251 / 0.3746 | 0.0375 / 0.1128 |
 
-Per-voice openings, which are the values of `default.json` (§5): `kick`
-density 0.29 rate 1 level 0.75, `knock` 0.45 / 2, `cowbell` 0.5 / 4, `click`
-0.6 / 1, `hum` 0.14 / 8. The page's factory table carries the same values, so
-reset and the double press land where the page opens, and a page that cannot
-read the file plays the same five voices.
+Seed 7 at `d = 0.5`: 0.4968 / 0.5038, 0.2492 / 0.2516, 0.0760 / 0.0750. Band:
+every frequency within 0.015 of its formula; the largest half-range over the
+60 runs is 0.0069.
 
-**The rate scale is the exponent, not the value.** Its 270° sweep spends equal
-travel on each of the five steps; a 1..16 continuum would put half the throw
-between 8 and 16. Powers of two are not decoration: every one of them divides
-the bar, so a voice's opportunities fall on the bar lines the memory switches
-land on and a claimed memory holds a whole number of that voice's own chances.
-A rate arriving from outside the vocabulary snaps to the nearest step measured
-in **octaves** — on a ratio scale 3 sits nearer 4 than 2.
+### 5.2 The amount is conserved
 
-**Every taper and trim in this section is unheard, and so is every default
-but the per-voice openings and the tempo**, which are the state JP left the
-page in on 2026-10-05. The rest are reasoned from the mechanism — long voices
-get coarse rates and low densities or the texture turns to soup; the kick sits
-at 75% because a 54 Hz sine at the same event gain as a click swallows the
-rest — and none of them has had an ear pass. Treat every one as a guess.
+Click-like voice. Amount ratio, 60-run mean:
 
-## 5. The arrival state
-
-A visitor arrives at a page that is **silent and stopped**, with five voices
-holding their densities, rates and fidelities, and nothing playing. The page
-opens on `default.json` beside it — five voices at 150 bpm, every fidelity at
-1, nothing memorised: the visitor hears the random before the motif, on
-purpose. A returning visitor's own session comes before the file; a page that
-cannot read the file (opened off a disk, where the fetch is refused) says so
-once and opens on its factory values, which are the file's. One
-discovery stands between arrival and the first sound: the play button, which
-the start line names, and which the Space bar duplicates.
-
-**What persists** across a reload, in `localStorage` under the toy's own name:
-bpm, seed, every voice's density / rate / fidelity, the mixer strips, and the
-master chain. The same snapshot writes and reads as a file.
-
-**What does not:** MEM state and window contents. Every voice loads with no
-memory and an empty window, and starting the transport clears them for the
-same reason — the tick index restarts at zero and a score frozen against the
-old one would mean nothing. A claimed memory belongs to the run it was played
-in. Nothing that makes sound reopens above zero; the page never reopens
-sounding.
-
-The storage key is the toy's name, so a session saved under an earlier name is
-not read and does not come back.
-
-**Reset** is what persistence obliges, and it is a two-press button in the
-session bar. It puts the five voices back where they opened — density, rate,
-fidelity, level, pan and mute — and lets go of every memory and every window,
-so a voice has no past at hand exactly as it has none on arrival. It **keeps**
-the seed, the tempo and the master chain: reseed is the control that owns the
-seed, and the other two are the session's settings rather than the instrument's
-state. It writes the snapshot as it finishes, so the reset is what a reload
-finds. Pressing it with nothing to undo refuses to arm and says so.
-
-## 6. Audio graph
-
-Every hit is one event of one voice:
-
-```
-source(s) → shared envelope → the hit's panner
-          → the voice's BUS: StereoPanner → Gain      # level · mute · pan
-          → master gain → waveshaper drive → glue compressor
-          → [dry + small convolution reverb] → limiter (−3 dB, 20:1) → out
-```
-
-The envelope is the library's one envelope: 3 ms attack, exponential decay
-over the voice's `decay` seconds. Render voices carry their envelope baked
-into the buffer and are repitched by playback rate instead.
-
-**The bus belongs to the voice's identity, not to the hit**, which is why
-level, mute and pan are the final gate on everything that voice sounds,
-remembered or generated alike, and why they bite immediately — over an 8 ms
-ramp, including on a tail already ringing. That is the opposite of density,
-which acts on the *scheduler*: a density move changes only events not yet
-scheduled, and a muted voice still schedules and still draws.
-
-The master chain is the library's default: glue compression at 0.65
-(≈ −19.5 dB, 3:1) and reverb at 0.15. The toy leaves both where the library
-puts them.
-
-**The five sounds**, in kit order — the anchor, then the kit built up from it,
-then the sustain that lies underneath:
-
-| id | kind | length | note |
+| | f = 0 | f = 0.5 | f = 1 |
 |---|---|---|---|
-| `kick` | synth | 0.28 s (envelope decay) | shared drum palette, synthesised per hit |
-| `knock` | render | 0.09 s | sits about where a snare would |
-| `cowbell` | render | — | the 808 pair of detuned tones, kept mild: triangles rather than squares, a ramped onset rather than a step |
-| `click` | render | 0.01 s | |
-| `hum` | render | 2.0 s | the only long voice |
+| d = 0.3, r = 1 | 1.0005 | 1.0000 | 0.9985 |
+| d = 0.3, r = 4 | 0.9995 | 1.0027 | 1.0011 |
+| d = 0.6, r = 1 | 1.0001 | 1.0004 | 0.9987 |
+| d = 0.6, r = 4 | 0.9995 | 1.0001 | 0.9993 |
 
-Four of the five are rendered once, offline, from a seed derived from their own
-name, so each always sounds like itself in this toy and in every other toy on
-the same library — and no seed here can change that. `kick` is synthesised per
-hit through the one envelope; its length is that envelope's decay. Playback
-varies only gain.
+Band: within 0.04 of 1 at `r = 1`, largest half-range 0.018; within 0.09 at
+`r = 4`, largest half-range 0.042, at `f = 1` where each claim is one draw of
+four opportunities. The keep-probability variant of §3 gives 0.499 at
+`f = 0` and 0.750 at `f = 0.5`, `d = 0.5`, outside both bands.
 
-Event gain is `0.8 × 10^(u/20)` with `u` drawn uniformly from −3..+3 dB, from
-the same stream as everything else. A voice's silence is a density of 0; there
-is no arm/disarm switch and no per-voice on/off beyond mute.
+### 5.3 Fidelity 1 and 0 over the run
 
-## 7. Timing
+Click-like voice, 8 engaged bars, 4 passes, per claim.
 
-One lookahead scheduler drives everything. A 25 ms interval wakes and walks
-every tick that falls inside the horizon, calling the tick handler with the
-tick's own **absolute** timestamp; each event is scheduled at that timestamp.
-The horizon is 150 ms while the tab is visible and widens to 1.6 s while it is
-hidden, because background timers are throttled to about a second and a 150 ms
-horizon starves.
+| | f = 0 | f = 0.5 | f = 0.85 | f = 1 |
+|---|---|---|---|---|
+| `f²` | 0 | 0.25 | 0.7225 | 1 |
+| recurrence, d = 0.25 | 0.0008 | 0.2493 | 0.7216 | 1 |
+| recurrence, d = 0.5 | 0.0006 | 0.2504 | 0.7223 | 1 |
+| identical passes, d = 0.25 | 0.0005 | 0.0052 | 0.1714 | 1 |
+| identical passes, d = 0.5 | 0.0000 | 0.0006 | 0.0915 | 1 |
 
-The tick period is read **live** once per tick — `60 / bpm / 2` seconds — so a
-tempo move alters only ticks not yet scheduled and there is no phase jump.
+Band: recurrence within 0.02 of `f²`, largest half-range 0.0092. At `f = 1`
+recurrence and identical passes are exactly 1 in every run. Identical passes
+at `f = 0.85` within 0.03 of the row's mean, largest half-range 0.014. The
+shape recurs and its realisation does not: at `f = 0.85` the correlation is
+0.72 while fewer than one pass in five repeats the last.
 
-Order within a tick, and it matters:
+### 5.4 The gains remember at f = 0
 
-1. if this is a bar line, do the bar-line bookkeeping: advance every generating
-   voice's window, land every switch thrown during the bar;
-2. per voice, play — an engaged voice puts the law to the memory cell that has
-   just arrived, a generating voice rolls its density at its own opportunities.
+Click-like voice, `d = 0.75`. At `f = 0` the occupancy recurrence is −0.0008,
+the generator's, while the accent recurrence is 0.0763, range 0.0665 to
+0.0857 over the 60 runs, seed 7 0.0765. The expected value is
+`d²·Var(g) / (E[g²] − d·E[g]²) ≈ 0.074`. A surviving remembered event replays
+its frozen gain on every pass, and an invention draws a fresh one. Band: accent
+recurrence 0.056 to 0.096, occupancy within 0.02 of 0. At `f = 1` both are
+exactly 1.
 
-The whole memory system rides inside that one tick handler. There is no second
-scheduler that could be a tick early or a tick late, which is what makes the
-crossing seamless.
+### 5.5 Collisions
 
-**The grid's position in seconds is re-anchored on every tick**, from the
-ticker's most recent tick and its index, rather than held from a start time.
-After a tempo move the true tick positions no longer equal
-`start + n × period`, and bar lines drawn against the old anchor would drift
-off the grid the engine is actually playing.
+Kick-like voice, rate 1, `D = 1.4` cells:
 
-Stopping is a 50 ms master fade, not a context close: it silences events
-already committed inside the lookahead window. Starting fades in over 30 ms
-and sets the first tick 50 ms ahead of the clock.
+| | f = 1 | f = 0.85 | f = 0.5 | f = 0 |
+|---|---|---|---|---|
+| lost, d = 0.5 | 0.0208 | 0.1135 | 0.2527 | 0.3332 |
+| lost, d = 0.25 | 0.0121 | 0.0674 | 0.1523 | 0.1999 |
+| sound ratio, d = 0.5 | 0.9792 | 0.9528 | 0.9335 | 1.0005 |
+| sounded passes identical, d = 0.5 | 1 | 0.1968 | 0.0062 | 0.0006 |
 
-**Reproducibility.** Every draw the performance makes — the density rolls, the
-gain variation, and the law's per-step rolls — comes from one seeded PRNG
-(mulberry32). A fresh run from a saved seed replays the same stream. Reseeding
-swaps the stream mid-run: the transport keeps running, a frozen score stays
-frozen, and the timbres never move.
+Seams: 0.1107 of claims at `d = 0.5`, 0.0388 at `d = 0.25`. At `f = 0` the
+voice loses what its generator loses, a third of the rolls at `d = 0.5`, and
+sounds exactly the generator's amount. At `f = 1` the only loss is the seam,
+on every pass, and the sounded loop repeats exactly. In between, inventions
+collide with remembered events and the sounded amount dips by 5 to 7%: this is
+the one way the conservation of §5.2 fails to reach the ear. At rate 2, where
+two cells are longer than the sound, lost and seams are exactly 0 at every
+density and fidelity, measured at `d = 0.5`, `f = 1` and 0. The click-like
+voice loses exactly 0 at every density and fidelity, measured likewise.
 
-## 8. The surface
+Band: lost within 0.012 of each cell, largest half-range 0.0052; sound ratio
+within 0.025, largest half-range 0.012; seams within 0.035 at `d = 0.5` and
+0.025 at `d = 0.25`, half-ranges 0.017 and 0.011. Sounded identical passes
+at `d = 0.5` within 0.035 at `f = 0.85`, 0.006 at 0.5 and 0.0015 at 0,
+half-ranges 0.017, 0.0027 and 0.0006. The zeros and ones are exact.
 
-The instrument is the rack: one row per voice, columns aligned down the page,
-in kit order. What a voice generates, what it remembers and how it sits in the
-mix are the same voice, so they are the same row —
+## 6. What must survive, and what is incidental
 
-`name · mute · level · pan · density · rate · fidelity · MEM`
+The mechanism. A port that changes any item has built a different instrument:
 
-— the four standard columns first, then this toy's own, most-reached-for
-first. On a narrow window the rack scrolls sideways rather than reflowing:
-reading a column down the five voices is the point of it. The page declares no
-reflow width of its own above the teaser breakpoint.
+1. **Cells, not seconds.** The window, the score and the playback position
+   are integer cell indices on the one pulse; the score turns on the tick
+   index modulo its length. No second clock.
+2. **Capture is not an action.** Every generating voice records continuously;
+   the switch says keep what was just heard, and it lands on the bar line in
+   both directions. Nothing previews or selects the window.
+3. **The window holds only what sounded**, at the gains it sounded at, and it
+   does not advance while engaged.
+4. **The law, exactly:** remove a remembered event with probability
+   `(1−d)(1−f)`, fill an empty opportunity with `d(1−f)`, a fresh roll at
+   every step, and never move an event. Not the keep-probability variant.
+5. **The empty cells follow the recording's opportunities**: an empty cell
+   is visited only where `cap mod r = 0`. Remembered cells are always
+   visited.
+6. **Fidelity snaps to 1 on the claim**, in the parameter itself, so the
+   control and the engine cannot disagree. Release leaves fidelity alone and
+   keeps the window.
+7. **A surviving remembered event keeps its frozen gain.**
+8. **Monophonic, earliest commitment wins**, generated and remembered events
+   alike, a refused remembered event owed and silent, a refused generated
+   event nothing.
+9. **One stream** for the density rolls, the gains and the law, and no
+   memory survives a restart of the pulse.
 
-**The MEM dot has three looks and two meanings**: dark, no memory held; solid,
-this voice has its own past at hand; a pulsing outline, the switch is thrown
-and the bar line has not arrived — in either direction. It is the one coloured
-control on the page, because what it reports is a fact about events and not a
-state of the chrome.
+Incidental. A port that reproduces these has misread the spec:
 
-**The timeline is the one thing a rack row cannot hold**, and what it holds is
-time: five fixed lanes, one per voice, in the rack's own top-to-bottom order,
-scrolling right to left with now at the right edge. It does not line up
-vertically with the rack — the rack ends where the roll begins, which puts the
-last row directly above the first lane. A lane is identified by the coloured
-edge at its left and by the matching swatch beside its voice's name, never by
-what happens to sit above it.
-
-An event draws as a rounded bar starting at its onset and running for as long
-as that voice sounds, so `hum` reads as a long sustain and `click` as a
-sliver. Bars therefore overlap on a fine grid: overlap is a reading of the
-sound's *length*, never a second draw of one event and never an event off its
-cell.
-
-Three marks, independent, so the combinations read without a legend:
-
-| mark | means |
-|---|---|
-| fill (opacity follows gain) | it sounded |
-| white outline | this voice has a memory engaged |
-| dashed | the law invented it; it is not in the frozen score |
-
-Which gives four blocks: filled plain is generated; filled with a solid white
-outline is the memory sounding; filled and dashed is an invention sounding;
-and an unfilled **ghost** — a faint outline in the voice's own colour, at
-exactly the position and width it would have had — is an event that owed the
-ear something and stayed silent. A *generated* event the collision rule
-refuses draws nothing at all: only a memory owes the ear something it can be
-seen to withhold.
-
-A ghost has two causes and wears one mark: the removal roll took it, or the
-collision rule refused it. They are told apart by the company they keep — a
-refusal always sits within one voice-length of a bar that did sound, a removal
-can sit anywhere. Under the conditions in §3.5 the refusals outnumber the
-removals several times over, so a lane full of ghosts is a voice at war with
-its own tail rather than a memory being thinned. **A ghost that lands on a bar
-line every second bar, at fidelity 1, is the seam.**
-
-Riding fidelity down is therefore visible as it happens: solid outlines turn
-into ghosts, dashes fill the gaps between them, and — for a voice with room
-for its own tail — the count of filled bars holds steady. At fidelity 0 the
-memory turns as a full loop of ghosts under a stream of inventions: plainly
-still at hand, and inaudible.
-
-Faint **bar lines** run across the whole roll, drawn over the events rather
-than under them so a bar sitting exactly on its line does not hide it. They
-are where every memory switch lands, which is what makes them the one grid
-worth drawing.
-
-The canvas is drawn in CSS pixels into a backing store sized in device pixels,
-so the picture is the same at any display density.
-
-**The teaser.** Below the collection's teaser width the page is its phone
-mode: the same engine and the same default, with the rack, the master strip
-and the session bar put away. The phone keeps the play button — the piece has
-a beginning, and the random before the motif is heard only after Play — and
-the timeline, and gets two controls of its own:
-
-- **memory** throws every voice's MEM switch at once, exactly as pressing the
-  five dots would, so each switch lands on the next bar line. One press is
-  one direction for the whole set: it claims every voice unless every voice
-  already wants its memory, and then it lets them all go. It wears the dot's
-  three looks for the set — solid when all five hold a memory, the pulsing
-  outline while any throw waits for its bar line, dark otherwise. Pressed
-  before anything has played, it starts the piece and is thrown on the
-  second cell of the run, so it lands at the end of the first bar with that
-  bar in it rather than freezing the silence before the run.
-- **fidelity** is one dial over the five voices: a move writes the same value
-  into all five, which the rack's own fidelity knobs show, and the dial reads
-  the five's mean, which is that value whenever they agree. Claiming snaps
-  every fidelity to 1 and the dial follows.
-
-Nothing else is editable on the phone. Under the timeline the page invites
-the visitor to the desktop and offers to send the link to themselves.
-
-## 9. What is left out, and why
-
-- **No way to see the window before claiming it.** Recording is invisible on
-  purpose: a preview would turn claiming back into selecting, which is the one
-  thing §1 says it is not.
-- **No memory length control.** Two bars, every voice. A length knob makes the
-  claim a decision with a parameter in it.
-- **No transposition, no time-stretch, no reversal of a memory.** The score is
-  played at the cells and gains it was recorded at, or it is not that memory.
-- **Memories do not survive the transport or a reload.** They are of the run
-  they were played in; §5 says why.
-- **No polyphony per voice, and no stealing.** Both are in §3.5, and the
-  refusals they cause are drawn rather than hidden.
-- **The gains leak at fidelity 0** (§3.4). Stated rather than fixed: freezing a
-  gain is what makes a remembered event the same event.
-- **Reset does not touch the tempo or the master chain.** Both persist and
-  neither is the instrument's state; §5 says what reset restores and what it
-  keeps.
-
-## 10. What must survive a port
-
-1. **Cells, not seconds.** The window, the score and the playback pointer are
-   integer cell indices on the shared grid. A port that stores the window as
-   timestamps has built a different instrument.
-2. **Capture is not an action.** Recording is continuous and invisible; the
-   switch says *keep what I just heard*, and it lands on the bar line in both
-   directions.
-3. **The window holds only what sounded**, and it does not advance while the
-   memory is engaged.
-4. **The law, exactly**: invent on a silent cell with probability `d(1 − f)`,
-   remove an existing one with probability `(1 − d)(1 − f)`, a fresh roll every
-   step, and never move an event.
-5. **The anchor**: an empty cell is visited only where the recording voice had
-   an opportunity, measured on the capture's own tick, not the live one.
-6. **Fidelity snaps to 1 on entry**, through whatever the parameter's single
-   owner is, so the control and the engine cannot disagree.
-7. **Monophonic, earliest-commitment-wins**, over scheduled intervals rather
-   than sounding voices.
-8. **One seeded PRNG** for the density rolls, the gain variation and the law,
-   and none of it reaching the timbres.
-9. **Anything that makes sound opens at zero**, and no memory survives a
-   restart.
-
-Incidental, and a port that reproduces it has misread this file: the five
-particular sounds and their colours; the eight-cell bar and the two-bar window
-as *numbers* rather than as "a bar" and "a short past"; the 40..300 bpm range;
-the rack's column order; the piano roll — the timeline is one way to see the
-marks in §8 and the marks are the part that matters; every default in §4,
-none of which has been heard.
+- The five voices, their sounds, lengths and gains, the gain law's 0.8 and
+  ±3 dB; the law is indifferent to what an event sounds like, except that its
+  length decides collisions.
+- The eight-cell bar and the two-bar window as numbers rather than as "a bar"
+  and "a short past"; the five rate steps; the 40 – 300 bpm range; the PRNG
+  and the seed, which matter only to reproduce §5's seed-7 values.
+- The empty pre-run bar in the first claim of a run; a port may start its
+  window empty, provided it then handles 8-cell scores at rate 16.
+- Reseeding mid-run, the transport and the mixer.
+- Everything the page draws, the GHOST mark included as a picture; what
+  survives is that an owed event is distinguishable from no event.

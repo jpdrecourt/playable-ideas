@@ -197,7 +197,8 @@ const IP = (function () {
           const k = kids[i];
           if (!k || typeof k.s !== 'number') continue;
           const child = makeNode(k.s, node);
-          child.count = (typeof k.k === 'number') ? k.k : 1;
+          // a count below 1 (a hand-written file) would put 0^gamma in the bias law
+          child.count = (typeof k.k === 'number' && isFinite(k.k) && k.k >= 1) ? k.k : 1;
           node.children.set(k.s, child);
           dec(child, k);
         }

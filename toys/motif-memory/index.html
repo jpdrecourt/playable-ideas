@@ -349,7 +349,7 @@ function barLineAtOrAfter(t) {
    their neighbours refuse each other and the stream thins below
    the density — at rate 1, 150 bpm, density 0.5, a quarter of
    what the law wants to sound never does at f 0.5, and a third
-   at f 0. The spec's §3.5 carries the table.
+   at f 0. The spec's §5.5 carries the table.
 
    None of this is the law drifting; the law is exact and every
    event fires on its own cell. It is monophony meeting a grid
@@ -545,14 +545,13 @@ function memoryLaw(hasEvent, d, f, rnd) {
 // a rate move. An empty cell is visited only where the voice HAD an
 // opportunity while it was recording — the memory carries its own temporal
 // grid, phase included, and an invention therefore lands exactly where
-// generation would have landed. That anchor is what makes f = 0 generation
-// EXACTLY rather than generation-like, and it holds for any rate against any
-// score length. Asking the LIVE tick instead would hold only while the rate
-// divides the score: whenever it does not, the opportunities walk off the
-// remembered cells pass by pass and the two sets add up to more chances per
-// bar than the generator ever had. RATE_STEPS makes that mostly true and a
-// one-bar score (a memory claimed at the very first bar line) makes it false
-// again — hence the anchor rather than the assumption.
+// generation would have landed: that is what makes f = 0 generation EXACTLY
+// rather than generation-like. Every score a visitor can reach is 16 cells and
+// every rate divides 16, so asking the LIVE tick would pick the same cells
+// here. The two differ only where the rate does not divide the score, an
+// 8-cell score at rate 16, which cannot occur. The anchor is kept because it
+// states the rule where the rule is made: an opportunity belongs to the grid
+// the memory was recorded on, not to whatever the clock is doing now.
 function memoryStep(v, rel, rate, d, f, rnd, gainFor) {
   const remembered = v.scoreAt[rel];
   if (remembered !== undefined) {

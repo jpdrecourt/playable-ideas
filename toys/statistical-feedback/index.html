@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>statistical-feedback</title>
-<meta name="description" content="Dice have no memory. Six voices and a silence share one pulse by keeping books: every option carries a running debt of attention, playing charges it, and the next turn goes to whoever is furthest behind. The ledger is on screen.">
+<meta name="description" content="Randomness with a ledger. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
 <meta property="og:title" content="statistical-feedback — Playable Papers">
-<meta property="og:description" content="Charles Ames' statistical feedback, playable. Choice with a ledger: variety with balance, where weighted dice give you clumps and droughts and a fair rotation gives you a machine.">
+<meta property="og:description" content="Randomness with a ledger. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
 <meta property="og:image" content="https://play.noisewrangler.art/statistical-feedback/og.png">
 <meta property="og:url" content="https://play.noisewrangler.art/statistical-feedback/">
 <meta property="og:type" content="website">
@@ -325,8 +325,7 @@ const AMES = {
    next one, and two members of the same family arriving in that
    window read as one voice with a wobble.
 
-   Which six is a measurement as much as a choice (spec §5.1,
-   tools/palette): every voice rendered under this toy's envelope,
+   Which six is a measurement as much as a choice (tools/palette): every voice rendered under this toy's envelope,
    cut at a 150 ms turn, compared as a log-mel spectrogram in three
    time slices, a set scored by its closest pair. The four short
    voices are motif-memory's, so the collection shares one palette,
@@ -556,7 +555,7 @@ const ledgerQ = [];                    // { t, S, sel, n } waiting for the audio
 const shown = new Float64Array(NOPT);  // the books as currently drawn
 const flash = new Float64Array(NOPT);  // 1 at a selection, decaying to 0
 
-const LEDGER_MIN_SCALE = 1.5;   // the band the law itself sits in; see spec.md §8
+const LEDGER_MIN_SCALE = 1.5;   // the band the law itself sits in; see spec.md §5
 const FLASH_SEC = 0.26;
 let ledScale = LEDGER_MIN_SCALE;
 let heardIndex = -1;            // the tick the EAR is on, which is not tickIndex
@@ -1033,10 +1032,7 @@ function audibleVoices() {
 
 page = Lab.page.build({
   title: 'statistical-feedback',
-  shows: 'Dice have no memory, and the ear hears the difference. Six voices and a ' +
-         'silence share one pulse by keeping books: every option carries a running debt ' +
-         'of attention, playing charges it, and the next turn goes to whoever is furthest ' +
-         'behind. The ledger is on the screen.',
+  shows: 'Randomness with a ledger. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING (no remote configured yet)
   site: 'https://noisewrangler.art',
@@ -1110,13 +1106,12 @@ page = Lab.page.build({
       return null;
     },
     words: {
-      notStarted: 'press ▶ Play, or the Space bar, and one option is chosen on every turn.',
-      nothing: 'nothing carries any weight, so nobody can be chosen — turn a voice’s ' +
-               'weight up, or open silence.',
+      notStarted: 'press ▶ Play and one option is chosen on every pulse.',
+      nothing: 'every weight is at zero, so nothing can be chosen. Turn one up.',
       stuck: '',
       shut: 'it is running and nothing reaches you: every voice is muted, at weight zero, ' +
             'or the master level is at zero.',
-      running: 'turn heterogeneity up and hear the same shares lose their grain.'
+      running: 'turn heterogeneity up: the ledgers matter less, and the rare voice comes when it comes.'
     }
   },
 
@@ -1140,31 +1135,13 @@ page = Lab.page.build({
   session: [resetBtn, Lab.state.buttons()],
 
   text: [
-    { head: 'Press Play.', body: 'One option is chosen per pulse — six voices and a ' +
-      'silence, which is an option like any other. Nothing here rolls dice for each voice ' +
-      'in turn; instead every option keeps a <b>ledger</b>, the bar beside its name, and ' +
-      'the next turn goes to whoever the books say is furthest behind. Playing charges ' +
-      'you; while you wait, everyone sinks a little. The seven bars always sum to zero, ' +
-      'so one can only rise by the others falling — that is the see-saw, and it is the ' +
-      'whole law.' },
-    { head: 'Weight is share.', body: 'Turn one down and it comes round less; turn it to ' +
-      'zero and the voice leaves the game, its row dims and <i>its ledger freezes where ' +
-      'it stood</i>. Bring the weight back and it re-enters carrying the debt it went ' +
-      'away with — there is no removal rule and no forgetting, only a weight of zero. The ' +
-      'level beside it is a different question: how loud, not how often.' },
-    { head: 'Stress is cost, not odds.', body: 'The eight bars scale what a turn is ' +
-      'charged, so a voice taken on a heavy step pays more and stays away longer. Nothing ' +
-      'is sequenced, and yet the heavy steps fill with the heavy voices and the light ' +
-      'steps level out: the metre is something the ledger produces. Drag along the row to ' +
-      'draw a different shape.' },
-    { head: 'Tap a name', body: 'to play that voice now, off the grid — and it is charged ' +
-      'to the books exactly as a turn would be, so hammering a voice really does buy its ' +
-      'silence afterwards.' },
-    { head: 'Heterogeneity', body: 'is a regularity control and nothing else: at 0 each ' +
-      'option comes round as regularly as the pool allows; at 2 the turns arrive ' +
-      'unpredictably, nearly dice. The proportions are held exactly all the way across — what changes is ' +
-      '<i>when</i> each option comes round, and the rare voices loosen far more than the ' +
-      'common ones.' }
+    { head: 'Press Play.', body: 'One option is chosen per pulse. The bar beside each option ' +
+      'is its ledger. The further left it is, the likelier it plays next.' },
+    { head: 'Weight and stress.', body: 'Weight is how often. Stress makes a turn cost more, ' +
+      'so a voice taken on a heavy step stays away longer.' },
+    { head: 'Heterogeneity.', body: 'A low weight makes a voice rare. At 0 the ledgers are ' +
+      'fully respected and a rare voice comes round at even spacing. The higher up, the ' +
+      'less they matter, and the rare voice comes when it comes.' }
   ],
 
   keys: '<kbd>Space</kbd> play · <kbd>?</kbd> what does this do — then tap anything · ' +
@@ -1182,22 +1159,19 @@ page = Lab.page.build({
     gesture: GESTURE,
     words: {
       notStarted: 'press ▶ Play: six voices and a silence take turns.',
-      nothing: 'nothing carries any weight, so nobody can be chosen; the weights are on ' +
-               'the desktop page.',
+      nothing: 'every weight is at zero. The weights are on the desktop page.',
       shut: 'it is running and nothing reaches you: it is muted or at zero on the ' +
             'desktop page.',
-      running: 'turn heterogeneity up and hear the same shares lose their grain.'
+      running: 'turn heterogeneity up: the ledgers matter less, and the rare voice comes when it comes.'
     },
-    share: { text: 'Six voices share one pulse by keeping books. One knob loosens how ' +
-                   'closely they read them. The ledger itself wants a desktop.' },
+    share: { text: 'The phone has one dial. The ledger is on the desktop page.' },
     /* The phone's standing text: only what the phone shows — Play, the dial
        and the record — and the claim in the visitor's words. */
-    text: [{ head: 'Dice with a ledger.', body: 'Six voices and a silence share one ' +
-      'pulse, and each turn goes to whoever is furthest behind its fair share. ' +
-      'Heterogeneity loosens how closely that ledger is read: at 0 each voice comes ' +
-      'round as regularly as its share allows, and turned up the same shares arrive ' +
-      'like dice. The record shows every turn; a gap in a column is silence taking ' +
-      'its own.' }]
+    text: [{ head: 'Press Play.', body: 'One option is chosen per pulse, from six voices and a ' +
+      'silence. It starts from a default setup. At heterogeneity 0 the ledgers are fully ' +
+      'respected; the higher up, the less they matter. On the desktop page you can change ' +
+      'the weights to give a voice more or less importance, and set a weight to zero to ' +
+      'silence it.' }]
   }
 });
 

@@ -132,7 +132,6 @@
 <script src="../../lib/ui.js"></script>
 <script src="../../lib/shell.js"></script>
 <script src="../../lib/page.js"></script>
-<script src="../../lib/midi.js"></script>
 <script src="../../lib/state.js"></script>
 <script>
 "use strict";
@@ -1100,7 +1099,6 @@ const page = Lab.page.build({
     onChange: v => { params.bpm = v; }
   },
   master: saved && saved.fx ? saved.fx : {},
-  midi: { onEnable: () => Lab.ui.status('MIDI is on — this page binds nothing to it yet') },
   hints: true,
 
   status: () => {

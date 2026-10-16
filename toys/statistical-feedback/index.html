@@ -337,28 +337,21 @@ const AMES = {
    THE POOL — six voices from the shared palette and a silence.
 
    Chosen to be tellable apart in a fast stream more than to make
-   a kit: a hiss, a wooden tick, a low drum, a plucked string, a
-   303 and a long cymbal. Six families rather than six drums,
+   a kit: a kick, a muted knock, a cowbell, a click, a plucked string
+   and a long cymbal. Six families rather than six drums,
    because at a fast tempo a listener gets one event and then the
    next one, and two members of the same family arriving in that
    window read as one voice with a wobble.
 
-   Which six is a measurement, not a taste. Every synth voice in
-   the palette was rendered under this toy's envelope, cut at a
-   150 ms turn, and compared as a log-mel spectrogram in three time
-   slices; of the 1716 ways to pick six of the thirteen, this is
-   one of the two furthest apart. The bar it had to clear was the
-   pool that shipped before it, measured the same way — 10.1 dB
-   between its closest pair, against 14.0 dB here.
-
-   The comparison is run twice, with level and without it. A set
-   can look separable because one voice is simply louder, which is
-   a distinction a mix can erase, so the number that counts is the
-   one with each voice's level divided out. Tuning the gains to
-   maximise the score is possible and is not done: these trims
-   equalise per-hit energy across the window instead, which is a
-   stated principle rather than a fit to the scorer, and they
-   still clear the bar by 4 dB.
+   Which six is a measurement as much as a choice (spec §5.1,
+   tools/palette): every voice rendered under this toy's envelope,
+   cut at a 150 ms turn, compared as a log-mel spectrogram in three
+   time slices, a set scored by its closest pair. The four short
+   voices are motif-memory's, so the collection shares one palette,
+   and that is paid for in separability: 10.0 dB level-free between
+   knock and kick, against 14.4 dB for the pool this one replaced.
+   Knock is the pair to listen for; crash's nearest neighbour is
+   20 dB away.
 
    The default weights are deliberately unequal, spread over six
    to one, so the proportion law is audible the first time anyone
@@ -372,13 +365,16 @@ const AMES = {
    questions, and neither is the event gain the palette was
    equalised at.
    ============================================================ */
+/* Kick and knock are trimmed to 0.40: measured as per-hit energy over the first
+   150 ms, they sit about 14 dB above the other four at gain 1.0, and 0.40 brings
+   the six within a 10 dB spread. The ear has not ruled on any of these gains. */
 const VOICES = [
-  { id: 'hat',   w: 3.0, gain: 1.00 },
-  { id: 'clave', w: 2.0, gain: 1.00 },
-  { id: 'tom',   w: 1.5, gain: 0.31 },
-  { id: 'pluck', w: 1.0, gain: 1.00 },
-  { id: 'acid',  w: 1.6, gain: 0.65 },
-  { id: 'crash', w: 0.5, gain: 0.85 }
+  { id: 'kick',    w: 1.6, gain: 0.40 },
+  { id: 'knock',   w: 1.5, gain: 0.40 },
+  { id: 'cowbell', w: 2.0, gain: 1.00 },
+  { id: 'click',   w: 3.0, gain: 1.00 },
+  { id: 'pluck',   w: 1.0, gain: 1.00 },
+  { id: 'crash',   w: 0.5, gain: 0.85 }
 ];
 const NV = VOICES.length;
 const SIL = NV;                    // silence is the last option, always

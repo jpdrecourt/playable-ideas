@@ -41,7 +41,7 @@ method is "Statistics and Compositional Balance".[^ames-pnm]
   *costs*, never its odds — so a weight buys a share of the stress spent, not
   of the turns taken, and heavy voices end up on the strong beats while light
   voices pay in many weak-beat turns (§2.5). Measured, `crash` at weight 0.5
-  reached the downbeat once in 2 500 of them against `hat`'s 856. Nothing is
+  reached the downbeat once in 2 500 of them against `click`'s 856. Nothing is
   sequenced and no step is reserved for anyone.
 - **Silence is a citizen, not a gap.** It has a weight, it takes turns, it
   keeps a ledger. Its weight is renormalized live so the *probability* of
@@ -103,7 +103,7 @@ bounded lands on the same frequencies; what the selection rule chooses is the
 selected option's weight, `S[m*] += A/W[m*]` with
 `S[k] -= (A/ΣW)·(W[k]/W[m*])` — is *also* exactly zero-sum, and it is wrong.
 Redo the drift calculation and it gives `f[m] ∝ W[m]²`. Measured on the
-shipped weights it is not subtle: `hat` (W 3.0) takes 35.4% where its weight
+shipped weights it is not subtle: `click` (W 3.0) takes 35.4% where its weight
 says 25.9%, `crash` (W 0.5) takes 0.99% where its weight says 4.31%, and
 silence set to 0.25 arrives at 33.1%. Zero-sum is necessary and nowhere near
 sufficient; a port should check §8.1 rather than trust the invariant.
@@ -193,7 +193,7 @@ What that produces is a metrical hierarchy nobody wrote down. Who takes which
 step, as a share of that step's turns, over 20 000 ticks at `H = 1`,
 `p = 0.25`, shipped stress, seed 7:
 
-| A | hat | clave | tom | pluck | acid | crash | silence |
+| A | click | cowbell | knock | pluck | kick | crash | silence |
 |---|---|---|---|---|---|---|---|
 | **1.00** (step 0) | 34.2% | 16.4% | 11.3% | 4.2% | 1.0% | **0.0%** | 32.8% |
 | 0.70 (step 4) | 27.8% | 18.7% | 12.8% | 7.8% | 3.5% | 1.1% | 28.3% |
@@ -202,7 +202,7 @@ step, as a share of that step's turns, over 20 000 ticks at `H = 1`,
 
 Read the first row against the last: on the downbeat the field is steeply
 ordered by weight, and on the offbeats it is nearly level. In raw counts,
-**`crash` reached the A = 1 downbeat once in 2 500 of them, against `hat`'s
+**`crash` reached the A = 1 downbeat once in 2 500 of them, against `click`'s
 856.** No rule anywhere forbids a light voice a strong beat; it simply cannot
 afford one often.
 
@@ -259,7 +259,7 @@ that is correct: the parked option's debt is still owed.
 
 | control | range | what it does |
 |---|---|---|
-| **weight** `W[m]` | 0 – 4 per voice, defaults 3.0 / 2.0 / 1.5 / 1.0 / 1.6 / 0.5 (hat, clave, tom, pluck, acid, crash) | that voice's share of the stress the pattern spends. 0 removes it and freezes its ledger. |
+| **weight** `W[m]` | 0 – 4 per voice, defaults 1.6 / 1.5 / 2.0 / 3.0 / 1.0 / 0.5 (kick, knock, cowbell, click, pluck, crash) | that voice's share of the stress the pattern spends. 0 removes it and freezes its ledger. |
 | **silence** `p` | 0 – 0.95, default 0.34 | the probability of a silent turn, held constant against the pool (§2.3) |
 | **tempo** | 40 – 300 BPM, linear, default 120 | one turn is an **eighth note**, `30 / bpm` seconds — 250 ms at the default — so one cycle of the eight-step stress loop is one bar of 4/4. The law counts turns, not seconds, so this changes no proportion at all. |
 | **heterogeneity** `H` | 0 – 2, default 0 | how loosely the ledger is read: 0 as regular as the pool allows, 2 near-dice — with the shares unmoved (§8.5) |
@@ -322,27 +322,25 @@ with a wobble:
 
 | voice | weight | event gain | what it is |
 |---|---|---|---|
-| `hat` | 3.0 | 1.00 | the metallic bank behind a highpass, ~50 ms |
-| `clave` | 2.0 | 1.00 | an impulse into a bandpass at 2.5 kHz, Q 42, 100 ms |
-| `tom` | 1.5 | 0.31 | struck sine, 340 → 90 Hz in 110 ms |
+| `kick` | 1.6 | 0.40 | a sine swept 250 → 48 Hz in 50 ms with a short click on top |
+| `knock` | 1.5 | 0.40 | 20 ms of noise through a bandpass at 900 Hz, over a 120 Hz sine thump, 90 ms |
+| `cowbell` | 2.0 | 1.00 | the metallic bank narrowed to two squares at 540 and 800 Hz, a brief clank over a ringing body, 150 ms |
+| `click` | 3.0 | 1.00 | a 2–5 ms noise burst behind a 4 kHz highpass |
 | `pluck` | 1.0 | 1.00 | a Karplus–Strong string, 500 ms |
-| `acid` | 1.6 | 0.65 | a saw through a resonant lowpass swept by its own envelope |
 | `crash` | 0.5 | 0.85 | the metallic bank spread wide over noise, 900 ms |
 
 ### 5.1 Choosing the six, and the bar it had to clear
 
-Which six is a measurement rather than a taste, because the toy's whole claim
-rests on a listener hearing *which* voice took a turn. Every synth voice in
-the palette is rendered under this toy's envelope, **cut at a 150 ms turn**, and
-compared as a log-mel spectrogram in three time slices — the attack, the body,
-and what is still sounding when the next event lands. The distance between two
+Which six is a measurement as much as a choice, because the toy's whole claim
+rests on a listener hearing *which* voice took a turn. The measurement lives in
+`tools/palette/` and runs on the repo's own `lib/voices.js`: every voice is
+rendered under this toy's envelope in a headless browser, **cut at a 150 ms
+turn**, and compared as a log-mel spectrogram (40 bands, 40 Hz to 16 kHz) in
+three time slices — the attack (0–20 ms), the body (20–100 ms), and what is
+still sounding when the next event lands (100–150 ms). The distance between two
 voices is the mean absolute difference in dB across that feature, and a set is
 scored by its CLOSEST pair, since a pool is only as separable as its worst
-confusion. Of the 1716 ways to choose six of the thirteen, this set is one of
-the two furthest apart.
-
-**The threshold is not invented.** It is the pool that shipped before this one,
-measured the same way: 10.1 dB between its closest pair, against 14.0 dB here.
+confusion.
 
 **The comparison is run twice, with level and without it.** A scalar gain
 shifts every band of the feature equally, so subtracting a voice's own mean
@@ -350,37 +348,61 @@ removes level and leaves shape — and a set that separates only because one
 voice is louder leans on a distinction any mix can erase. Both readings are
 reported; the level-free one is the one that counts.
 
+**This set was chosen for the collection, and it pays for that in
+separability.** Kick, knock, cowbell and click are motif-memory's short voices,
+so a visitor who walks down the front page hears one palette from one toy to
+the next; pluck and crash come from the pool this one replaced. Scored the same
+way:
+
+| pool | with level | level-free | closest pair |
+|---|---|---|---|
+| this six, at the shipped gains | 10.4 dB | 10.0 dB | `kick`–`knock` |
+| the pool before it (`hat`, `clave`, `tom`, `pluck`, `acid`, `crash`) | 15.4 dB | 14.4 dB | `acid`–`pluck` / `crash`–`hat` |
+| the pool before that (`click`, `tick`, `knock`, `rim`, `thump`, `ping`) | 7.9 dB | 9.1 dB | `rim`–`tick` |
+
+The rule this spec sets for a palette change is that the new pool clears the
+previous one's score, and this pool does not: it sits about 4 dB under it on
+the reading that counts, and the shortfall holds under every dB floor and slice
+boundary tried. `knock` is the bottleneck of every set built on motif-memory's
+voices, with `kick` on one side (10.0 dB) and `cowbell` on the other (12.1 dB),
+so changing the sixth cannot repair it; only pulling `knock` would. Keeping it
+is JP's ruling, by ear, for the shared palette, and `knock` against `kick` is
+the pair to listen for in a fast stream.
+`crash` does its job as the most distinctive voice: its nearest neighbour is
+20 dB away on both readings, and it is the rarest, so its drought is the one an
+ear notices when memory goes off.
+
+The absolute numbers lean on the dB floor (−100 dB here): a short voice is
+mostly silence in the later slices, so part of its distance measures how deep
+the silence is assumed to be. The floor also makes the score move with the
+trims: at gain 1.0 `kick` and `knock` stood 13.7 dB apart, and the 0.40 trim
+pushes more of both under the floor and brings them to 10.0. The ordering of
+the three pools holds across the sweep.
+
 Tuning the gains to maximise the score is possible and is deliberately not
-done: a search over the musical range reaches 18.2 dB as heard but *falls* to
-13.4 dB on the reading that matters, which is the signature of fitting the
-scorer rather than the ear. The shipped trims are not that fit, and they clear
-the bar by about 4 dB on both readings.
+done: a search over the musical range can lift the heard score while lowering
+the level-free one, which is the signature of fitting the scorer rather than
+the ear.
 
-**What the trims do not do is equalise per-hit energy.** Equal energy per hit
-was the principle they were reasoned from, and it is not what they achieve —
-the intent must not be read as the result. Measured as ∫x² over one 150 ms
-turn, each voice rendered under this toy's envelope at its own
-event gain, the six span **11.2 dB**:
+**What the trims do is cap the spread of per-hit energy, and nothing finer.**
+Measured as ∫x² over one 150 ms turn, each voice rendered under this toy's
+envelope at its own event gain:
 
-| tom | acid | clave | pluck | crash | hat |
+| kick | knock | pluck | cowbell | click | crash |
 |---|---|---|---|---|---|
-| −30.5 dB | −31.7 dB | −34.9 dB | −36.1 dB | −40.2 dB | −41.7 dB |
+| −29.0 dB | −30.1 dB | −35.3 dB | −35.4 dB | −36.2 dB | −39.1 dB |
 
-`crash` sits **7.1 dB below the median** of the other five and `tom` 9.7 dB
-above it. Two things that spread is *not*. It is not the cymbal's length: the
-shared envelope falls 79 dB over `crash`'s 0.9 s decay, so the whole hit's
-energy exceeds the first turn's by 0.1 dB, and nothing is being counted outside
-the window. And it is not this toy's 0.85 — `crash` carries a −12 dB trim
-inside the library's own voice, underneath that gain, and without it the voice
-would sit 4.9 dB *above* the median rather than 7.1 below.
+At gain 1.0 `kick` and `knock` sat about 14 dB above the other four; 0.40
+brings the six within 10 dB. `crash` is the quietest, 3.8 dB below the median
+of the other five, and it carries a −12 dB trim inside the library's own voice
+underneath this toy's 0.85. Whether the spread is right is an ear's ruling and
+it has not been made; every gain in the table above is a guess until it is.
+This paragraph is here rather than in §8 because §5 is where a port reads the
+gains, and a port that took equal energy for the principle would equalise and
+believe it had.
 
-Whether the spread is right is an ear's ruling and it has not been made; every
-gain in the table above is a guess until it is. This paragraph is here rather
-than in §8 because §5 is where a port reads the gains, and a port that took the
-principle for the measurement would equalise nothing and believe it had.
-
-A port that changes the palette re-runs this, and the bar for it is whatever
-its own previous pool measured.
+A port that changes the palette re-runs `tools/palette/`, and the bar for it is
+whatever its own previous pool measured.
 
 The weights are deliberately unequal, spread six to one, so the proportion law
 is audible on the first press. Which voice gets which weight is not
@@ -542,7 +564,7 @@ Measurements, so a port can check itself. The core is a dependency-free block
 (`AMES BEGIN` … `AMES END` in `index.html`); everything below was produced by
 lifting it into a bare script with a seeded mulberry32 and no page around it.
 Unless stated, the pool is the weights 3.0 / 2.0 / 1.5 / 1.0 / 0.7 / 0.5
-(hat, clave, tom, pluck, acid, crash) with `p = 0.25`, and seconds are at a
+(click, cowbell, knock, pluck, kick, crash) with `p = 0.25`, and seconds are at a
 150 ms turn. That is a measurement pool, not the page's opening one (§4).
 
 ### 8.1 Proportionality
@@ -551,11 +573,11 @@ Unless stated, the pool is the weights 3.0 / 2.0 / 1.5 / 1.0 / 0.7 / 0.5
 
 | option | W | W/ΣW | measured share | relative error |
 |---|---|---|---|---|
-| hat | 3.0 | 25.86% | 25.86% | 0.01% |
-| clave | 2.0 | 17.24% | 17.24% | 0.01% |
-| tom | 1.5 | 12.93% | 12.93% | 0.01% |
+| click | 3.0 | 25.86% | 25.86% | 0.01% |
+| cowbell | 2.0 | 17.24% | 17.24% | 0.01% |
+| knock | 1.5 | 12.93% | 12.93% | 0.01% |
 | pluck | 1.0 | 8.62% | 8.62% | 0.01% |
-| acid | 0.7 | 6.03% | 6.04% | 0.01% |
+| kick | 0.7 | 6.03% | 6.04% | 0.01% |
 | crash | 0.5 | 4.31% | 4.32% | 0.11% |
 | **silence** | (p = 0.25) | 25.00% | **25.00%** | 0.0000 absolute |
 
@@ -579,11 +601,11 @@ carries the per-step table this one is the summary of.
 
 | option | W/ΣW | share of turns | share of charge |
 |---|---|---|---|
-| hat | 25.86% | 22.56% | 25.86% |
-| clave | 17.24% | 16.89% | 17.24% |
-| tom | 12.93% | 13.53% | 12.93% |
+| click | 25.86% | 22.56% | 25.86% |
+| cowbell | 17.24% | 16.89% | 17.24% |
+| knock | 12.93% | 13.53% | 12.93% |
 | pluck | 8.62% | 10.28% | 8.62% |
-| acid | 6.03% | 8.27% | 6.04% |
+| kick | 6.03% | 8.27% | 6.04% |
 | crash | 4.31% | 6.64% | 4.31% |
 | silence | 25.00% | 21.82% | 25.00% |
 
@@ -602,11 +624,11 @@ of variation of the gaps):
 
 | option | longest gap ON | OFF | gap CV ON | gap CV OFF |
 |---|---|---|---|---|
-| hat | 14 | 29 | 0.63 | 0.85 |
-| clave | 21 | 42 | 0.66 | 0.91 |
-| tom | 25 | 58 | 0.66 | 0.94 |
+| click | 14 | 29 | 0.63 | 0.85 |
+| cowbell | 21 | 42 | 0.66 | 0.91 |
+| knock | 25 | 58 | 0.66 | 0.94 |
 | pluck | 37 | 88 | 0.67 | 0.94 |
-| acid | 44 | 138 | 0.68 | 1.04 |
+| kick | 44 | 138 | 0.68 | 1.04 |
 | crash | 66 | 188 | 0.72 | 0.97 |
 | silence | 14 | 31 | 0.64 | 0.88 |
 
@@ -634,11 +656,11 @@ see, which is the finding:
 
 | option | target | H = 0 | H = 0.5 | H = 1 | H = 1.5 | H = 2 |
 |---|---|---|---|---|---|---|
-| hat | 25.86% | 25.86% | 25.86% | 25.86% | 25.86% | 25.86% |
-| clave | 17.24% | 17.24% | 17.24% | 17.24% | 17.23% | 17.24% |
-| tom | 12.93% | 12.93% | 12.93% | 12.93% | 12.93% | 12.93% |
+| click | 25.86% | 25.86% | 25.86% | 25.86% | 25.86% | 25.86% |
+| cowbell | 17.24% | 17.24% | 17.24% | 17.24% | 17.23% | 17.24% |
+| knock | 12.93% | 12.93% | 12.93% | 12.93% | 12.93% | 12.93% |
 | pluck | 8.62% | 8.62% | 8.62% | 8.62% | 8.62% | 8.62% |
-| acid | 6.03% | 6.03% | 6.04% | 6.04% | 6.04% | 6.04% |
+| kick | 6.03% | 6.03% | 6.04% | 6.04% | 6.04% | 6.04% |
 | crash | 4.31% | 4.30% | 4.31% | 4.32% | 4.32% | 4.32% |
 | silence | 25.00% | 25.00% | 25.00% | 25.00% | 25.00% | 24.99% |
 
@@ -650,11 +672,11 @@ larger:
 
 | option | H = 0 | H = 0.5 | H = 1 | H = 1.5 | H = 2 | H2 / H0 |
 |---|---|---|---|---|---|---|
-| hat (W 3.0) | 0.229 | 0.346 | 0.458 | 0.533 | 0.571 | ×2.5 |
-| clave | 0.140 | 0.345 | 0.472 | 0.544 | 0.593 | ×4.2 |
-| tom | 0.088 | 0.369 | 0.479 | 0.558 | 0.634 | ×7.2 |
+| click (W 3.0) | 0.229 | 0.346 | 0.458 | 0.533 | 0.571 | ×2.5 |
+| cowbell | 0.140 | 0.345 | 0.472 | 0.544 | 0.593 | ×4.2 |
+| knock | 0.088 | 0.369 | 0.479 | 0.558 | 0.634 | ×7.2 |
 | pluck | 0.201 | 0.372 | 0.503 | 0.569 | 0.635 | ×3.2 |
-| acid | 0.078 | 0.388 | 0.519 | 0.603 | 0.640 | ×8.2 |
+| kick | 0.078 | 0.388 | 0.519 | 0.603 | 0.640 | ×8.2 |
 | crash (W 0.5) | 0.032 | 0.388 | 0.537 | 0.615 | 0.695 | ×21.6 |
 
 For scale, the same measurement with memory **off** — dice — gives 0.85 to
@@ -730,7 +752,7 @@ selection frequencies come out **proportional to `W²`**:
 
 | option | W | intended share | what this variant gives |
 |---|---|---|---|
-| hat | 3.0 | 25.86% | **35.44%** |
+| click | 3.0 | 25.86% | **35.44%** |
 | crash | 0.5 | 4.31% | **0.99%** |
 | silence | (p = 0.25) | 25.00% | **33.11%** |
 

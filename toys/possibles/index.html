@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>possibles</title>
-<meta name="description" content="Write the tree of what can follow what — branches and weights, five symbols, two verbs — and a machine walks it aloud without stopping. Nothing you do makes a sound.">
+<meta name="description" content="Write a tree of the sequences that can be played. A heavier branch matters more. Five voices, one of them silent.">
 <meta property="og:title" content="possibles — Playable Papers">
-<meta property="og:description" content="You write the field of possibles; the machine is the only speaker. Existing and mattering are two different verbs here.">
+<meta property="og:description" content="Write a tree of the sequences that can be played. A heavier branch matters more. Five voices, one of them silent.">
 <meta property="og:image" content="https://play.noisewrangler.art/possibles/og.png">
 <meta property="og:url" content="https://play.noisewrangler.art/possibles/">
 <meta property="og:type" content="website">
@@ -792,9 +792,7 @@ SYMBOLS.forEach(function (S) {
 
 const page = Lab.page.build({
   title: 'possibles',
-  shows: 'You write the tree of what can follow what — branches and weights, two ' +
-         'separate verbs — and a machine walks it aloud without stopping. Nothing you ' +
-         'do makes a sound.',
+  shows: 'Write a tree of the sequences that can be played. A heavier branch matters more. Five voices, one of them silent.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING
   site: 'https://noisewrangler.art',
@@ -860,15 +858,12 @@ const page = Lab.page.build({
       return null;
     },
     words: {
-      notStarted: 'press ▶ Play to start the machine, then write branches with the ' +
-                  'strips’ write buttons.',
-      nothing: 'the tree is empty, so the machine is walking nothing. Press write on a ' +
-               'strip — kick, say — and that branch exists under the finger.',
+      notStarted: 'press ▶ Play and the playhead walks the tree.',
+      nothing: 'the tree is empty. Write a voice.',
       stuck: '',
-      shut: 'it is running and nothing reaches you: every symbol is muted in the strips, ' +
-            'or the master level in the bar above is at zero.',
-      running: 'press a strip’s write to make that symbol follow the finger, then ' +
-               'heavier to have the machine take that branch more often.'
+      shut: 'it is running and nothing reaches you: every voice is muted, or the master ' +
+            'level is at zero.',
+      running: 'write a sequence of voices, then make a branch heavier.'
     },
     /* The reason, and the composition appends the remedy — the same split the
        rack's cells, the pulse slot, the master chain and `controls` take, so
@@ -909,30 +904,12 @@ const page = Lab.page.build({
   session: [forgetBtn, Lab.state.buttons()],
 
   text: [
-    { head: 'Start.', body: 'Press <b>▶ Play</b> — the machine walks whatever the tree ' +
-      'holds, and on an empty tree that is silence. Then press <b>write</b> on a few ' +
-      'strips in a row: <i>kick, snare, kick, rest</i> writes that motif and every ' +
-      'prefix of it, and the machine has it on the next cell.' },
-    { head: 'Two verbs, and keeping them apart is the point.', body: 'A <b>write</b> ' +
-      'makes a branch <i>exist</i> under the finger and steps into it; walking a path ' +
-      'you already wrote only walks it, and says nothing about how likely it is. ' +
-      '<b>heavier</b> and <b>lighter</b> are the other verb — how much a branch ' +
-      '<i>matters</i>. Existing and mattering are different questions, and the tree ' +
-      'lets you answer them one at a time. At zero the branch is cut away, and ' +
-      'everything under it goes with it, which is why that press asks twice.' },
-    { head: 'Reading the tree.', body: 'The root is the empty motif at the left and ' +
-      'depth runs rightward, so the tree grows as its motifs get longer. A square’s ' +
-      'size is the weight <i>you wrote</i>; an edge’s thickness is the odds the machine ' +
-      'would give that branch <i>right now</i>. Turn <b>bias</b> and every square stays ' +
-      'put while every edge moves — that is the difference between what a tree contains ' +
-      'and what it is likely to say. The white ring is the machine, with its menu lit ' +
-      'around it; the dashed amber square is your finger.' },
-    { head: 'The machine is the only speaker.', body: 'There is no way to strike a drum ' +
-      'here. Placing sounds in time is first-order work and lives elsewhere; this is the ' +
-      'order above it, the field of possibles. So a figure you want at a particular ' +
-      'moment is exactly what you cannot have — and the <b>rest</b> is one of the five ' +
-      'symbols, so a silence is something the tree says rather than a gap between the ' +
-      'things it says.' }
+    { head: 'Press Play.', body: 'The playhead walks the tree. Write a sequence of voices ' +
+      'into the tree, and branch for alternatives.' },
+    { head: 'Write and weigh.', body: 'Write makes a branch exist. Heavier and lighter set ' +
+      'how much it matters. Zero cuts the branch and everything under it.' },
+    { head: 'Bias.', body: 'Left, the playhead follows the weights. Right, it goes against ' +
+      'them.' }
   ],
 
   /* ---- which of this page's own keys are WRITES ----
@@ -964,24 +941,17 @@ const page = Lab.page.build({
     stage: [traceBlk],
     gesture: 'Press ▶ Play',
     words: {
-      notStarted: 'press ▶ Play and the machine starts walking the tree.',
-      nothing: 'the tree is empty, and the phone cannot write one — the desktop ' +
-               'page can.',
-      shut: 'running, but muted or the master is at zero — only the desktop ' +
-            'page can change that.',
-      running: 'turn bias and listen: left, the figure sharpens; right, it ' +
-               'dissolves.'
+      notStarted: 'press ▶ Play and the playhead walks the tree.',
+      nothing: 'the tree is empty. The desktop page can write one.',
+      shut: 'it is running and nothing reaches you: it is muted, or at zero, on the ' +
+            'desktop page.',
+      running: 'turn bias: left follows the weights, right goes against them.'
     },
-    share: { text: 'A hand wrote this motif tree; the machine walks it. One knob ' +
-                   'leans it from faithful to contrary. Write your own on a desktop.' },
+    share: { text: 'The phone has one dial. The tree is on the desktop page.' },
     /* The phone's standing text: only what the phone shows — Play, bias and
        the trace — and the claim in the visitor's words. */
-    text: [{ head: 'The machine is the only speaker.', body: 'A hand wrote a tree of ' +
-      'what may follow what — kick, snare, cowbell, crash and a rest — and pressing ' +
-      '<b>▶ Play</b> sets the machine walking it, one symbol per eighth note. Nothing ' +
-      'you touch makes a sound: <b>bias</b> only leans how it chooses, so turn it left ' +
-      'and the weights win and the figure sharpens, turn it right and the light branches ' +
-      'win and it dissolves. The trace above is the last four bars it said.' }]
+    text: [{ head: 'Press Play.', body: 'You work with a tree that is already written. ' +
+      'Press Play to walk it. Bias leans how the branches are chosen.' }]
   }
 });
 

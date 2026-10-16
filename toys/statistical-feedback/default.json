@@ -4,7 +4,6 @@
     "bpm": 120,
     "het": 0,
     "silence": 0.3410491943359375,
-    "memory": true,
     "weights": {
       "kick": 1.6,
       "knock": 1.5,

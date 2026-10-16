@@ -3,8 +3,7 @@
 Six voices and a silence share one pulse. Nothing here rolls dice for each of
 them in turn: every option keeps a ledger — turns it has taken, less the turns
 its weight entitled it to — and the next turn goes to whoever the books say is
-furthest behind. The ledger is on the screen, the books always sum to zero,
-and one switch decides whether selection reads them at all.
+furthest behind. The ledger is on the screen and the books always sum to zero.
 
 This document is the toy's other medium. It carries the mechanism, its
 parameters, its audio graph and its timing at the level a reader needs to
@@ -210,26 +209,23 @@ Under a flat stress pattern all of this collapses — turns and charge are the
 same quantity and §8.1's table is the whole story. The metre lives entirely in
 the shape of `A`.
 
-### 2.6 Memory ON / OFF — the experiment
+### 2.6 The reference: the same weights as dice
 
 ```
-ON   select by the law above
-OFF  select with probability W[m] / ΣW           # plain weighted dice
+LAW   select by the law above
+DICE  select with probability W[m] / ΣW           # plain weighted dice
 ```
 
-**The books are kept identically either way.** The toggle decides only whether
-selection *reads* them, and that asymmetry is the experiment.
+The page has no dice mode. DICE is the condition §8 measures the law against:
+the same weights, the same books charged on every turn, selection that does not
+read them.
 
-While memory is off, dice already realize the equilibrium frequencies, so the
-ledger loses its restoring force entirely: `S` becomes an unbiased random walk
-and the debts grow as `√n`. Measured, worst debt after an off-stretch:
-3.42 at 100 ticks, 8.72 at 800 — a factor of 2.5 over a factor of 8 in
-length, which is `√8 = 2.83` inside the noise of single runs. That is why the
-bars visibly walk apart while nothing sounds wrong, and why turning memory
-back on pays them off in a burst of exactly the starved voices (§8.4).
-
-A port that "optimises" by skipping the charge while memory is off has removed
-the experiment, and the page has nothing left to argue.
+Under DICE the frequencies are already the equilibrium ones, so the ledger loses
+its restoring force entirely: `S` becomes an unbiased random walk and the debts
+grow as `√n`. Measured, worst debt after a stretch of dice: 3.42 at 100 ticks,
+8.72 at 800 — a factor of 2.5 over a factor of 8 in length, which is
+`√8 = 2.83` inside the noise of single runs. When the law reads the books again
+it pays them off in a burst of exactly the starved voices (§8.4).
 
 ## 3. Every gesture goes through the same books
 
@@ -238,7 +234,6 @@ the experiment, and the page has nothing left to argue.
 | **tap a voice's name** | it sounds now, off the grid, **and is charged exactly as a turn**: `CHARGE(m, A)` at the most recent tick's stress. At weight 0 it sounds and the books are untouched. From a stopped instrument it starts the pulse first and then sounds, because a hand asking for a voice is a hand asking for sound. |
 | **turn a weight to 0** | the option leaves both loops. It cannot be selected, it receives no share of anyone's payment, and **its statistic freezes** at the value it held. |
 | **turn the weight back up** | it re-enters carrying that same statistic — so a voice muted while deep in debt comes back and is paid first. |
-| **memory off, then on** | §2.6 |
 
 **The tap is the one that answers "what happens when a pooled item is invoked
 again".** A gesture from outside enters the same ledger the machine keeps for
@@ -264,7 +259,6 @@ that is correct: the parked option's debt is still owed.
 | **tempo** | 40 – 300 BPM, linear, default 120 | one turn is an **eighth note**, `30 / bpm` seconds — 250 ms at the default — so one cycle of the eight-step stress loop is one bar of 4/4. The law counts turns, not seconds, so this changes no proportion at all. |
 | **heterogeneity** `H` | 0 – 2, default 0 | how loosely the ledger is read: 0 as regular as the pool allows, 2 near-dice — with the shares unmoved (§8.5) |
 | **stress** `A[0..7]` | 0.05 – 1 each, default `[1, .25, .5, .25, .7, .25, .5, .25]` | the cost of a turn at each step of an 8-step loop |
-| **memory** | on / off | whether selection reads the books. They are kept either way. |
 | **level** | 0 – 1.5 per voice, default 1 | the voice's output level. A mix control, outside the mechanism: it is how loud, where the weight is how often. |
 | **mute** | per voice | that voice's output to zero. It is **still in the pool** — it takes its turns and its ledger goes on moving; what stops is the sound. |
 
@@ -283,7 +277,7 @@ page reveals it, so a random one would buy nobody anything and cost the
 ability to reproduce a report of what the instrument did.
 
 **Saved state is the settings, not the books** — the six weights, the stress
-shape, tempo, heterogeneity, silence, the memory switch, every voice's level,
+shape, tempo, heterogeneity, silence, every voice's level,
 mute and pan, and the master chain. The ledger is what *this run* has done, and
 restoring a debt against a pool that has changed underneath it would be a
 fiction. A saved session carrying a `period` instead of a tempo restores no
@@ -291,7 +285,7 @@ tempo and opens at 120 BPM.
 
 **Reset** is what that persistence obliges, and it does two things: it puts
 every setting in the list above back where it opened — weights, stress shape,
-tempo, heterogeneity, silence, the memory switch, and every level, mute and
+tempo, heterogeneity, silence, and every level, mute and
 pan — and it **clears the books**, so no option is owed anything. It keeps the
 master chain, which is the session's setting rather than the instrument's
 state, and it does not touch the transport: reset while the pulse is running
@@ -370,7 +364,7 @@ by ear on 2026-10-16, for the shared palette; `knock` against `kick` is the
 pair a port should listen for.
 `crash` does its job as the most distinctive voice: its nearest neighbour is
 20 dB away on both readings, and it is the rarest, so its drought is the one an
-ear notices when memory goes off.
+ear notices.
 
 The absolute numbers lean on the dB floor (−100 dB here): a short voice is
 mostly silence in the later slices, so part of its distance measures how deep
@@ -407,7 +401,7 @@ The weights are deliberately unequal, spread six to one, so the proportion law
 is audible on the first press. Which voice gets which weight is not
 arbitrary: **`crash` is the rarest and also the longest and most
 distinctive**, so its drought is the one an ear notices, and it is what makes
-the memory switch a demonstration rather than a statistic.
+the law audible rather than a statistic.
 
 **Event gains are fixed and are not the level control.** The table above is the
 gain each voice is *played* at — chosen as §5.1 describes, and measured there —
@@ -474,7 +468,7 @@ zero-sum means one can only rise by the others falling. A brief flash marks
 the row that was chosen.
 
 **The scale adapts, slowly and asymmetrically.** It opens at about 0.55 s so a
-debt built during a memory-off stretch stays inside the cell, and closes at
+debt built during a long drought stays inside the cell, and closes at
 about 3.2 s so the bars do not twitch between ticks, with a floor of **1.5**
 — the band the law's own steady state occupies (§8.6), so an idle ledger does
 not magnify float dust into a full bar.
@@ -497,9 +491,8 @@ The page is one rack and two time surfaces, in that order, because the weights
 are what the hands play and the rest is what the eyes read.
 
 - **The master strip** carries the transport, the master chain, the
-  **tempo** in the collection's pulse slot, and the three controls that shape
-  the whole pool rather than one option: **heterogeneity**, **silence** and the
-  **memory** switch. None of them asks for sound, so none of them starts the
+  **tempo** in the collection's pulse slot, and the two controls that shape
+  the whole pool rather than one option: **heterogeneity** and **silence**. None of them asks for sound, so none of them starts the
   instrument; each says so in its own words when it is touched before the
   pulse has begun, and names the transport.
 - **The rack** is one row per option, silence included as the grey row:
@@ -515,7 +508,7 @@ are what the hands play and the rest is what the eyes read.
   text.
 
 **The keyboard reaches all of it.** Tab walks the transport, the four master
-knobs, the tempo, the three pool controls, the hint toggle, then each rack row in column
+knobs, the tempo, the two pool controls, the hint toggle, then each rack row in column
 order — name, mute, level, weight — then the eight stress bars one at a time,
 then reset and the file buttons. Every one of those is operated by the arrows
 (Page, Home and End too); each stress bar is named for the step it is —
@@ -538,7 +531,7 @@ no horizontal overflow of the document or the body at 1440, 1320, 1200, 1000,
 900, 800, 760, 721, 720, 700, 620, 560, 480, 390, 380, 360 or 320 px.
 
 **The teaser.** A phone shows **Play** and **heterogeneity**, alone, and the
-record; the rack, the tempo, the master chain, the silence and memory controls,
+record; the rack, the tempo, the master chain, the silence control,
 the stress row and the session bar are the desktop's. The heterogeneity dial
 is a twin of the desktop one — two controls writing `H`, each showing the
 other's writes — and touched from cold it presses Play first and then turns.
@@ -550,9 +543,8 @@ not clockwork: measured on the opening pool at `H = 0` with the shipped
 stress, 20 000 ticks, seed 7, the stream has no period up to 4 000 ticks
 (§8.6 gives the same finding for the measurement pool) — so the dial runs from *weighted* randomness to
 *pure* randomness, which is another way to hear what a motif is. It is the
-control, rather than the memory switch, because it is the one whose whole
-travel is audible at once on a phone, where the ledger that makes the memory
-switch legible is not shown. The stress row writes on a drag, so it is the
+control the phone keeps because its whole travel is audible at once, with no
+ledger on screen. The stress row writes on a drag, so it is the
 desktop's; the record is kept because it is passive. At 390 px the dial's face
 is 56 px and Play and the share button are 44 px tall, with no horizontal
 overflow.
@@ -610,18 +602,18 @@ carries the per-step table this one is the summary of.
 
 ### 8.4 The drought, and the debt
 
-20 000 ticks, `H = 1`, shipped stress, five seeds, memory ON against memory
-OFF on the same seeds. Longest gap between plays of `crash` (W = 0.5):
+20 000 ticks, `H = 1`, shipped stress, five seeds, the law against the same
+weights drawn as dice with no ledger, on the same seeds. Longest gap between plays of `crash` (W = 0.5):
 
 | seed | 1 | 2 | 3 | 4 | 5 | worst |
 |---|---|---|---|---|---|---|
-| memory **ON** | 66 | 53 | 66 | 65 | 55 | **66** ticks — 9.9 s |
-| memory **OFF** | 188 | 165 | 159 | 183 | 147 | **188** ticks — 28.2 s |
+| law | 66 | 53 | 66 | 65 | 55 | **66** ticks — 9.9 s |
+| dice | 188 | 165 | 159 | 183 | 147 | **188** ticks — 28.2 s |
 
 Every option, seed 1, with the regularity of its turns beside it (coefficient
 of variation of the gaps):
 
-| option | longest gap ON | OFF | gap CV ON | gap CV OFF |
+| option | longest gap, law | dice | gap CV, law | gap CV, dice |
 |---|---|---|---|---|
 | click | 14 | 29 | 0.63 | 0.85 |
 | cowbell | 21 | 42 | 0.66 | 0.91 |
@@ -631,13 +623,13 @@ of variation of the gaps):
 | crash | 66 | 188 | 0.72 | 0.97 |
 | silence | 14 | 31 | 0.64 | 0.88 |
 
-**The books under memory ON sit in a band**: over a 1 000-tick window at
+**The books under the law sit in a band**: over a 1 000-tick window at
 steady state the largest `|S|` averages 0.60 and peaks at 1.14 (§8.6 gives
 1.26 over 20 000 ticks — a longer run reaches a little further, and that is
-all). An off-stretch walks out of the band, and turning memory back on walks
-it home:
+all). A stretch of dice walks out of the band, and the law reading the books again
+walks it home:
 
-| memory off for | worst debt reached | ticks for ON to return it to the band |
+| dice for | worst debt reached | ticks for the law to return it to the band |
 |---|---|---|
 | 100 ticks | 3.42 | 27 — 4.0 s |
 | 200 ticks | 2.69 | 78 — 11.7 s |
@@ -678,7 +670,7 @@ larger:
 | kick | 0.078 | 0.388 | 0.519 | 0.603 | 0.640 | ×8.2 |
 | crash (W 0.5) | 0.032 | 0.388 | 0.537 | 0.615 | 0.695 | ×21.6 |
 
-For scale, the same measurement with memory **off** — dice — gives 0.85 to
+For scale, the same measurement drawn as dice gives 0.85 to
 1.04. So `H` sweeps the texture from clockwork (`crash` at 0.03 is a
 metronome) to most of the way to dice, with the proportions nailed at every
 point. **This is the honest characterization, and it is not the intuitive
@@ -726,8 +718,8 @@ Keep, or it is a different instrument:
 5. **Stress scales the charge and appears in no probability**, so the metre is
    something the ledger produces (§2.5) rather than something anyone
    sequenced.
-6. **The memory toggle updates the books without reading them.** This is the
-   experiment; skipping the charge while it is off deletes the toy.
+6. **The charge is the update, and it is not optional.** Selection alone cannot
+   hold the shares (§2.5); skipping the charge deletes the toy.
 7. **An external invocation is charged as a selection**, at the current
    stress, through the same function.
 8. **The ledger is visible and released against the audio clock**, showing

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>statistical-feedback</title>
-<meta name="description" content="Dice have no memory. Six voices and a silence share one pulse by keeping books: every option carries a running debt of attention, playing charges it, and the next turn goes to whoever is furthest behind. The ledger is on screen; turn it off and the same weights become dice.">
+<meta name="description" content="Dice have no memory. Six voices and a silence share one pulse by keeping books: every option carries a running debt of attention, playing charges it, and the next turn goes to whoever is furthest behind. The ledger is on screen.">
 <meta property="og:title" content="statistical-feedback — Playable Papers">
 <meta property="og:description" content="Charles Ames' statistical feedback, playable. Choice with a ledger: variety with balance, where weighted dice give you clumps and droughts and a fair rotation gives you a machine.">
 <meta property="og:image" content="https://play.noisewrangler.art/statistical-feedback/og.png">
@@ -174,11 +174,9 @@
    their weight-proportional share of that payment, and the next
    turn goes to whoever the books say is owed most.
 
-   The whole experiment is one switch: the books are kept
-   identically whether or not selection reads them. Turn memory
-   off and the same weights become dice; the droughted voices go
-   on accumulating visible debt, and turning it back on pays
-   them at once.
+   The books are read on every turn and updated on every turn,
+   including a visitor's tap, so a voice that has been starved
+   carries its debt until the law pays it.
 
    Read spec.md for the mechanism in prose and pseudocode.
    ============================================================ */
@@ -285,24 +283,9 @@ const AMES = {
     return best;
   },
 
-  // Memory OFF: dice with no memory at all — probability W[m]/ΣW.
-  selectRandom: function (st, W, sumW, rnd) {
-    if (!(sumW > 0)) return -1;
-    let x = rnd() * sumW, last = -1;
-    for (let m = 0; m < st.n; m++) {
-      if (!(W[m] > 0)) continue;
-      last = m;
-      x -= W[m];
-      if (x <= 0) return m;
-    }
-    return last;                       // float dust at the very top of the range
-  },
-
-  /* The books, kept identically whether or not selection reads them. This is
-     the whole of the memory toggle: while it is off the droughted options go
-     on accumulating visible debt, and turning it back on pays that debt at
-     once. It is also what a visitor's tap runs, so a gesture from outside
-     enters the same books as a turn the machine took itself. */
+  /* The books: the chosen option pays, everyone takes their weight-proportional
+     share of the payment. It is also what a visitor's tap runs, so a gesture
+     from outside enters the same books as a turn the machine took itself. */
   charge: function (st, m, W, sumW, A) {
     if (m < 0 || !(W[m] > 0) || !(sumW > 0)) return;
     st.S[m] += A;
@@ -313,11 +296,10 @@ const AMES = {
   // One turn. Returns the selected option index, or -1 when nothing carries
   // any weight at all (every voice at 0 with silence out) — a pool with no
   // citizens chooses nobody and charges nobody.
-  tick: function (st, W, A, H, memory, rnd) {
+  tick: function (st, W, A, H, rnd) {
     const sumW = AMES.total(W, st.n);
     if (!(sumW > 0)) return -1;
-    const m = memory ? AMES.selectAmes(st, W, A, H, rnd)
-                     : AMES.selectRandom(st, W, sumW, rnd);
+    const m = AMES.selectAmes(st, W, A, H, rnd);
     AMES.charge(st, m, W, sumW, A);
     return m;
   },
@@ -405,7 +387,7 @@ const colorOf = id => { const v = Lab.voices.get(id); return v ? v.color : '#999
 const nameOf = id => { const v = Lab.voices.get(id); return v ? v.name : id; };
 
 /* The gesture phrase, written once and read by the composition: every
-   cold-hand answer on this page — the rack's, the master chain's and the four
+   cold-hand answer on this page — the rack's, the master chain's and the three
    controls' — ends on it, and `Lab.page` is what appends it. */
 const GESTURE = 'Press ▶ Play';
 
@@ -414,7 +396,6 @@ const params = {
   bpm: DEFAULT_BPM,
   het: DEFAULT_HET,
   silence: DEFAULT_SILENCE,
-  memory: true,
   weights: {},
   strips: {},                      // id -> { gain, mute, pan } — the rack writes here
   stress: DEFAULT_STRESS.slice()
@@ -452,7 +433,6 @@ if (saved && saved.params) {
   // to the gate's own step (0.01), so a file carrying a thumb position opens
   // where reset lands, rather than a hair beside it
   if (num(s.silence, 0, 1) !== null) params.silence = Math.round(num(s.silence, 0, 1) * 100) / 100;
-  if (typeof s.memory === 'boolean') params.memory = s.memory;
   if (s.weights && typeof s.weights === 'object') VOICE_IDS.forEach(id => {
     const w = num(s.weights[id], 0, WEIGHT_MAX);
     if (w !== null) params.weights[id] = w;
@@ -510,7 +490,7 @@ const ticker = Lab.clock.createTicker({
     const A = AMES.stressAt(params.stress, n);
     lastStress = A;
     readWeights();
-    const m = AMES.tick(state, W, A, params.het, params.memory, rnd);
+    const m = AMES.tick(state, W, A, params.het, rnd);
     if (m >= 0 && m < NV) {
       Lab.voices.play(VOICES[m].id, t, { gain: VOICES[m].gain });
     }
@@ -817,18 +797,6 @@ const gSilence = Lab.ui.gate({
 });
 const silenceCtl = Lab.ui.inline('silence', gSilence, SILENCE_HINT);
 
-const MEM_HINT = 'whether selection READS the ledger. On: the next turn goes to whoever ' +
-  'is furthest behind. Off: the same weights, rolled as dice. The books are kept either ' +
-  'way — so leave it off, watch the debts grow, and turn it back on.';
-const memDot = Lab.ui.dot({
-  text: 'S', on: params.memory, title: MEM_HINT,
-  // the readout is otherwise repainted on the composition's own 200 ms poll,
-  // which is up to a fifth of a second of the one control this page is about
-  // looking as though it did nothing
-  onToggle: v => { params.memory = v; page.paint(); }
-});
-const memCtl = Lab.ui.inline('memory', memDot, MEM_HINT);
-
 /* ============================================================
    THE STRESS ROW — eight bars on one pointer surface.
 
@@ -977,7 +945,7 @@ stressPanel.appendChild(stressEl);
    Everything on this page survives a reload except the books, so
    reset is the way back: it puts every setting where the file
    opens it — the six weights, the stress shape, tempo, heterogeneity,
-   silence, the memory switch, and every level, mute and pan — and
+   silence, and every level, mute and pan — and
    clears the ledger. It keeps the master chain, which is the
    session's setting rather than the instrument's state.
    ============================================================ */
@@ -988,7 +956,7 @@ function atDefaults() {
   // exact comparison.
   const near = (a, b) => Math.abs(a - b) < 1e-6;
   if (!near(params.bpm, DEFAULT_BPM) || !near(params.het, DEFAULT_HET)) return false;
-  if (!near(params.silence, DEFAULT_SILENCE) || params.memory !== true) return false;
+  if (!near(params.silence, DEFAULT_SILENCE)) return false;
   for (let i = 0; i < STRESS_STEPS; i++) if (params.stress[i] !== DEFAULT_STRESS[i]) return false;
   for (let i = 0; i < NV; i++) {
     const v = VOICES[i], s = params.strips[v.id];
@@ -1005,9 +973,6 @@ function resetAll() {
   page.bpmKnob.set(DEFAULT_BPM);
   dHet.set(DEFAULT_HET);
   gSilence.set(DEFAULT_SILENCE);
-  // a dot's .set renders without firing onToggle, so the param goes by hand
-  memDot.set(true);
-  params.memory = true;
   for (let i = 0; i < STRESS_STEPS; i++) setStress(i, DEFAULT_STRESS[i]);
   VOICES.forEach(v => {
     const k = rack && rack.cell(v.id, 'weight');
@@ -1025,7 +990,7 @@ const resetBtn = Lab.ui.confirm({
   text: 'reset',
   armed: 'reset — sure?',
   hint: 'put every setting back where it opened — the six weights, the stress shape, ' +
-        'tempo, heterogeneity, silence, the memory switch and the mix — and clear the ' +
+        'tempo, heterogeneity, silence and the mix — and clear the ' +
         'ledger. The master chain stays. It asks twice: there is no undo, and the ' +
         'autosave means a reload will not bring your settings back.',
   onArm: () => {
@@ -1071,7 +1036,7 @@ page = Lab.page.build({
   shows: 'Dice have no memory, and the ear hears the difference. Six voices and a ' +
          'silence share one pulse by keeping books: every option carries a running debt ' +
          'of attention, playing charges it, and the next turn goes to whoever is furthest ' +
-         'behind. The ledger is on the screen. Turn it off and the same weights become dice.',
+         'behind. The ledger is on the screen.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING (no remote configured yet)
   site: 'https://noisewrangler.art',
@@ -1108,15 +1073,13 @@ page = Lab.page.build({
   },
   master: saved && saved.fx ? saved.fx : { reverb: 0.1 },
   /* Each `says` is the REASON alone; the composition closes the sentence with
-     the gesture phrase above. All three change the sound; they just do not
+     the gesture phrase above. Both change the sound; they just do not
      start it. */
   controls: [
     { el: dHet, says: 'that is heterogeneity — it loosens WHEN each option comes ' +
         'round, never how often' },
     { el: silenceCtl, says: 'that is silence — the share of the pulse that goes ' +
-        'to nobody, held against the pool' },
-    { el: memCtl, says: 'that is memory — whether selection reads the books. ' +
-        'They are kept either way' }
+        'to nobody, held against the pool' }
   ],
   hints: true,
 
@@ -1128,7 +1091,6 @@ page = Lab.page.build({
     // the readout once from inside `build()`, before this file's `page` has
     // been assigned, and the ticker is the truth either way.
     const bits = [ticker.running ? 'running' : 'stopped',
-                  'memory ' + (params.memory ? 'on' : 'off'),
                   live + (live === 1 ? ' voice' : ' voices')];
     if (heard.length >= 40) bits.push('silence heard ' + Math.round(sil / heard.length * 100) + '%');
     return bits.join(' · ');
@@ -1154,8 +1116,7 @@ page = Lab.page.build({
       stuck: '',
       shut: 'it is running and nothing reaches you: every voice is muted, at weight zero, ' +
             'or the master level is at zero.',
-      running: 'turn memory off and watch the debts walk apart, then turn it back on — ' +
-               'the starved voices are all paid at once.'
+      running: 'turn heterogeneity up and hear the same shares lose their grain.'
     }
   },
 
@@ -1186,11 +1147,6 @@ page = Lab.page.build({
       'you; while you wait, everyone sinks a little. The seven bars always sum to zero, ' +
       'so one can only rise by the others falling — that is the see-saw, and it is the ' +
       'whole law.' },
-    { head: 'Turn memory off', body: 'and selection stops reading the books, though the ' +
-      'books go on being kept: the same weights become plain dice, the stream clumps and ' +
-      'droughts, and you can watch the starved voices sink further and further left. Turn ' +
-      'it back on and they are paid at once — a burst of exactly the voices that were ' +
-      'owed. That payoff is the argument in one gesture.' },
     { head: 'Weight is share.', body: 'Turn one down and it comes round less; turn it to ' +
       'zero and the voice leaves the game, its row dims and <i>its ledger freezes where ' +
       'it stood</i>. Bring the weight back and it re-enters carrying the debt it went ' +
@@ -1298,7 +1254,7 @@ function frame(ms) {
   }
 
   /* Auto-scale, and asymmetrically: it opens up quickly enough that a debt
-     built during a memory-off stretch stays inside the cell, and closes slowly,
+     built during a long drought stays inside the cell, and closes slowly,
      because a scale that chased the maximum down would make every bar twitch
      between ticks. The floor is the band the law's own steady state occupies,
      so an idle ledger does not magnify float dust into a full bar. */

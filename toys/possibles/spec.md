@@ -24,8 +24,8 @@ The tree is the dictionary of Incremental Parsing as Assayag and Dubnov use it
 for machine improvisation (§1), with its learning half removed.
 
 **Licence: CC0.** Copy it, port it, sell it, no attribution required.
-Attribution is nonetheless welcome: this page lives in the Playable Papers
-repository — <https://github.com/jpdrecourt/playable-papers> — and its author at
+Attribution is nonetheless welcome: this page lives in the Playable Ideas
+repository — <https://github.com/jpdrecourt/playable-ideas> — and its author at
 [noisewrangler.art](https://noisewrangler.art).
 
 ---

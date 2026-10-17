@@ -21,8 +21,8 @@ needs it reads the code.
 The mechanism is original to this toy; §1 names the problem it answers.
 
 **Licence: CC0.** Copy it, port it, sell it, no attribution required.
-Attribution is nonetheless welcome: this page lives in the Playable Papers
-repository — <https://github.com/jpdrecourt/playable-papers> — and its author at
+Attribution is nonetheless welcome: this page lives in the Playable Ideas
+repository — <https://github.com/jpdrecourt/playable-ideas> — and its author at
 [noisewrangler.art](https://noisewrangler.art).
 
 ---

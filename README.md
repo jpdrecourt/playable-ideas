@@ -1,4 +1,4 @@
-# Playable Papers
+# Playable Ideas
 
 Browser audio toys, each built around one mechanism, served at [play.noisewrangler.art](https://play.noisewrangler.art). Vanilla JavaScript and Web Audio on a shared library (`lib/`); no build step.
 

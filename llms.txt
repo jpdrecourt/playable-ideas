@@ -1,4 +1,4 @@
-# Playable Papers
+# Playable Ideas
 
 > A collection of browser audio toys, each built around one mechanism. Each
 > toy carries a markdown spec written so an agent can rebuild the mechanism

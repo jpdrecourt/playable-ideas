@@ -22,8 +22,8 @@ The mechanism is the first-order chain that the Chaos Conductor paper names
 and declines (§1).
 
 **Licence: CC0.** Copy it, port it, sell it, no attribution required.
-Attribution is nonetheless welcome: this page lives in the Playable Papers
-repository — <https://github.com/jpdrecourt/playable-papers> — and its author at
+Attribution is nonetheless welcome: this page lives in the Playable Ideas
+repository — <https://github.com/jpdrecourt/playable-ideas> — and its author at
 [noisewrangler.art](https://noisewrangler.art).
 
 ---

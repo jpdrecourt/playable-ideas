@@ -33,17 +33,10 @@ repository — <https://github.com/jpdrecourt/playable-ideas> — and its author
 cross into it and back out continuously, at an unchanged amount of music, so
 that the crossing is heard only if the performer makes it heard.**
 
-Source:
-
-- Jean-Philippe Drecourt, "Programming a music performance instrument for a
-  wandering mind and clumsy hands", Sound and Music Computing Conference
-  (SMC 2026), Zagreb, 2–7 November 2026, accepted. §3.2 "The motif trade-off"
-  names the cost of independent stochastic triggering: "Music is a temporal
-  art, and one of its central tenets is memory." §5.2 "What the current
-  architecture cannot reach" states that the triggering mechanism makes
-  motif "structurally impossible": density, frequency and gain are nouns,
-  while remembering a motif is a verb that requires "the system to reference
-  its own past". The paper proposes no mechanism; this toy is one.
+Independent stochastic triggering makes motif structurally impossible:
+density, frequency and gain are nouns, while remembering a motif is a verb,
+one that requires the system to reference its own past. This toy is one
+mechanism for that verb.
 
 ## 2. The state
 

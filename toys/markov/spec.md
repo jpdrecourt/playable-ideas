@@ -18,8 +18,7 @@ incidental. Everything about how this page shows the mechanism, sounds it, or
 schedules it in a browser stays out: the code holds that, and an agent that
 needs it reads the code.
 
-The mechanism is the first-order chain that the Chaos Conductor paper names
-and declines (§1).
+The mechanism is a first-order chain, two of them side by side (§1).
 
 **Licence: CC0.** Copy it, port it, sell it, no attribution required.
 Attribution is nonetheless welcome: this page lives in the Playable Ideas
@@ -43,27 +42,12 @@ visits each state at most once, so the figure stays out of reach even with the
 chance taken away. Polyphony is a second chain with its own sixteen weights:
 the parameters grow with the walkers and buy no structure across them.
 
-Sources:
-
-- Jean-Philippe Drecourt, "Programming a music performance instrument for a
-  wandering mind and clumsy hands", 23rd Sound and Music Computing Conference
-  (SMC 2026), accepted, camera-ready version;
-  conference: <https://smc26.mbz.hr/>.
-  - §3.2 "The motif trade-off": each sampler of the Chaos Conductor fires
-    independently, with "no cross-correlation between sound events". "A model
-    encoding inter-event dependencies, such as a first-order Markov chain,
-    would require controlling a number of parameters that grows with the
-    square of the number of samplers", which the author has "not found a way
-    to make that controllable in live performance".
-  - §5.2 "What the current architecture cannot reach": density, frequency and
-    gain are nouns; "remembering a motif, developing a structure" are verbs
-    that "require the system to reference its own past".
-  - §5.5 "Conclusion": the architecture "offers nouns but no verbs: states
-    without memory".
-
-The toy builds the chain the paper declines and shows what it still cannot
-reach: a chain does reference its past, by one step, and one step is not a
-motif.
+Independent stochastic triggering, one sampler per voice with no
+cross-correlation between events, cannot hold a motif at all. A first-order
+chain is the smallest model that encodes an inter-event dependency, at the
+price of a parameter count that grows with the square of the voices. The toy
+builds that chain and shows what it still cannot reach: a chain does reference
+its past, by one step, and one step is not a motif.
 
 ## 2. The state
 

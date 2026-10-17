@@ -51,12 +51,6 @@ Sources:
   Variable-Rate Coding", *IEEE Transactions on Information Theory* 24(5), 1978,
   pp. 530–536, doi:10.1109/TIT.1978.1055934. The parse Incremental Parsing
   comes from, cited as such by Assayag and Dubnov.
-- Jean-Philippe Drecourt, "Programming a music performance instrument for a
-  wandering mind and clumsy hands", SMC 2026 (accepted). §3.1: "the machine
-  is the mediator between the human and the loudspeaker". §3.2 and §5.2:
-  independent triggering makes motif "structurally impossible", and a Markov
-  chain's parameters grow with the square of the voices. §5.5 leaves motif
-  under second-order control as the open problem this toy answers.
 
 Departures from Assayag and Dubnov, one each:
 
@@ -64,10 +58,10 @@ Departures from Assayag and Dubnov, one each:
   performance, and structure and weight have separate verbs.
 - **Counts are the distribution.** The node's distribution is its children's
   counts, raised to `γ`.
-- **A walk, not a suffix search.** The paper conditions each step on the
+- **A walk, not a suffix search.** Assayag and Dubnov condition each step on the
   longest suffix of everything generated so far. The reader here descends from
   the node it stands on, and at a leaf returns to the empty context, the root.
-- **The bias exponent** `γ` has no counterpart in the paper.
+- **The bias exponent** `γ` has no counterpart there.
 - **A rest is a symbol** of the alphabet.
 
 ## 2. The state

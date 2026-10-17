@@ -368,7 +368,9 @@ can never start disagreeing):
 
 - `Lab.ui.knob({label, min, max, step, value, def, fmt, onChange, fine?, hint?})` —
   rotary knob (`.knob-wrap`): tiny uppercase label, pointer −135°..+135°,
-  `.val` readout via `fmt`. `fine` multiplies the drag travel. Reachable by
+  `.val` readout via `fmt`. A full-range drag is 130 px for a mouse and twice
+  that for a finger (read from the pressing pointer's `pointerType`), and `fine`
+  multiplies either. Reachable by
   **Tab** and turned by the **arrows** (Page / Home / End too, Shift for a tenth
   of the range), `role="slider"` with the aria value pair — the same keyboard
   `dial` has, because a published page has no control a keyboard cannot reach,
@@ -378,7 +380,9 @@ can never start disagreeing):
   — **the touch-first rotary**, and the one to reach for on a page a stranger
   will meet: a 56 px face (64 on a coarse pointer), name above and value below,
   `role="slider"` with arrow / Page / Home / End keys, and `taper:'log'` for
-  anything spanning decades. `knob` remains the dense bench control for a lab
+  anything spanning decades. A full-range vertical drag is 160 px for a mouse
+  and 320 px for a finger, about 5 cm on a phone, so a short swipe does not
+  throw half the range; `fine` multiplies either. `knob` remains the dense bench control for a lab
   toolbar; the two are not interchangeable and neither replaces the other.
 
   Three differences from `knob` that are design, not detail:
@@ -421,6 +425,9 @@ can never start disagreeing):
   view of state living elsewhere.
 - `Lab.ui.gate({value, def=1, onChange, left?, right?, width?, hint?, label?})` — the Bernoulli
   probability bar; pass the toy's own `def` when the resting probability isn't 1.
+  The ends read **low** and **high** unless the toy passes its own `left` /
+  `right`; the default 104 px is the narrowest bar where those words and a
+  centred `100%` sit apart, so a narrower `width` wants shorter ends.
   Reachable by **Tab** and moved by the **arrows** (Page / Home / End too, Shift
   for a tenth), `role="slider"` with the aria value pair — the same keyboard
   `knob` and `dial` answer, because a hand learns the grammar once. `label`
@@ -687,7 +694,7 @@ The head carries one obligation of the same kind: the collection's icon lives in
 `lib/icon` and every page links it with the five tags `toys/_template/` carries,
 so a toy never draws its own.
 
-- `Lab.shell.frame({title, shows, spec?, repo?, site?, licence?, invite?, mount?})`
+- `Lab.shell.frame({title, shows, spec?, repo?, site?, licence?, invite?, home?, mount?})`
   → `{h1, sub, invite|null, footer}`. Inserts the nameplate at the top of the mount
   (default `.wrap`) and the footer at the end, and sets `document.title`.
 
@@ -697,13 +704,18 @@ so a toy never draws its own.
   **The nameplate is the reference page's**: an `h1` and a `p.sub`, direct
   children of `.wrap`, under `lab.css`'s own two selectors and with no shell
   class of their own — which is to say the exact markup
-  `toys/motif-memory/` hand-writes. The spec link rides inside the `h1`,
-  a baseline flex row, so it costs the line nothing; a scratch copy of the
+  `toys/motif-memory/` hand-writes. The spec link reads **spec for builders ↗**,
+  so a phone visitor knows before the tap that it opens a technical document,
+  and carries a hint. It rides inside the `h1`,
+  a baseline flex row, so it costs the line nothing where title and link fit
+  side by side (on a phone a long title sends the link whole to a second line); a scratch copy of the
   reference page wearing the shell lands `h1`, `.sub` and the first `.bar` on
   the same pixels as the page itself.
 
   **The footer** is one quiet line in the `.hint` register the reference page
-  already ends on: spec · source · site · licence. The **invitation** exists
+  already ends on: all toys · spec · source · site · licence. **All toys** links
+  back to the toy list, `../../` from a toy page; `home:` points it elsewhere and
+  `home: false` drops it. The **invitation** exists
   only when the toy passes `invite:` a non-empty string, and `invite` is null
   otherwise. The library has no invitation text of its own: the front page
   tells a phone visitor once that the toys are built for a large screen. It
@@ -836,7 +848,7 @@ const page = Lab.page.build({
   master: {} | false,          // masterFx opts, or no master chain
   bpm: Element | { el?, says?, sentence?, min, max, def, value, hint, onChange,
        control?: 'dial', taper? } | false,   // any control, any unit
-  transport: { onStart, onStop, labels?, hint? } | false,   // false ⇒ arm
+  transport: { onStart, onStop, labels?, hint? } | false,   // false ⇒ arm; binds Space
   controls: [Element | {el, says?, sentence?}],   // SHAPE — they decline
   globals: [Element],          // toy-global buttons that ASK — they arm
   midi: { onEnable } | false,  // the badge, absent where Web MIDI is not
@@ -937,6 +949,22 @@ const page = Lab.page.build({
   what `arm` already listens for; on a transport page Play is a button and
   already is one. The clause is appended to the `notStarted` words; pass
   `start.keyboardNote: false` to word it yourself.
+- **Space is the transport** on a page that declares one; the composition binds
+  it at the window, so a toy does not. It stands aside wherever Space already
+  means something: a focused button (which presses itself natively, so Play
+  with focus toggles once), a link, a text field, an element with a
+  button-like role, or a key a control has already `preventDefault`ed. On
+  sliders, which answer the arrows, it stays the transport. It prevents the
+  page scroll, ignores auto-repeat and modified presses, and in hint mode raises
+  Play's bubble instead of pressing it. A page without a transport binds
+  nothing. The footer's `keys` line says `Space play or stop` and leaves the
+  focused-button rule to this page.
+- **The owned-names check** warns when a page's own `<style>` defines one of
+  the short list of class names `lab.css` holds (`.bar`, `.dot`, …). It runs
+  only on a builder's host: a `file:` page, localhost, 127.0.0.1, [::1], or
+  any host with `?dev` in the query. The public host stays quiet, because the
+  toys ship as the files they are written in and there is no build step to
+  strip it.
 - **The write keys.** `writeKeys` says which of a page's own keys are writes, so
   a confirm is disarmed by one. The composition counts a press, an operating key
   or an input inside the armed region; a toy's window-level letter keys are none

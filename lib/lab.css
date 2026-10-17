@@ -104,7 +104,7 @@ body{font:15px/1.5 var(--f);font-variant-numeric:tabular-nums}
 
 /* ---- nameplate ---- */
 h1{font-family:var(--fp);font-size:2rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0;
-  display:flex;align-items:baseline;gap:12px}
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:0 12px}
 .sub{font-family:var(--fp);color:var(--dim);font-size:1.25rem;margin:6px 0 16px;line-height:1.6;max-width:900px}
 .sub b{color:var(--ink);font-weight:700}
 
@@ -267,8 +267,10 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
   text-transform:uppercase;color:var(--faint);line-height:1.6}
 .blk-head b{color:var(--dim);font-weight:700}
 
-/* Bernoulli gate — the standard PROBABILITY control, 疎 sparse → 密 dense */
-.gate{position:relative;width:72px;flex:0 0 72px;height:20px;border:1px solid var(--line2);
+/* Bernoulli gate — the standard PROBABILITY control, low → high. 104 px is
+   the narrowest bar where the default end words and a centred "100%" sit
+   apart at 12 px bold: low 21 px, high 28 px, 100% 28 px, 5 px insets. */
+.gate{position:relative;width:104px;flex:0 0 104px;height:20px;border:1px solid var(--line2);
   border-radius:5px;background:#000;overflow:hidden;cursor:ew-resize;user-select:none;touch-action:none}
 .gate .gfill{position:absolute;left:0;top:0;bottom:0;background:#fff}
 /* white text + difference blend → black over the white fill, white over the black — reads on both */
@@ -295,8 +297,12 @@ code{color:var(--duple);font-size:.9em}
    builds the reference page's own `h1` + `p.sub`, straight into `.wrap`,
    under the two selectors at the top of this file. The spec link is the one
    thing the shell adds, and it rides inside the h1's baseline flex row, so
-   the nameplate keeps the height it has when a toy hand-writes it. */
-.pp-spec{font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--faint);
+   the nameplate keeps the height it has when a toy hand-writes it wherever
+   title and link share a line. On a phone a long title pushes the link to a
+   second line of its own. */
+/* One unit: where the title leaves no room, the link drops whole to a line of
+   its own under it rather than squeezing the title or breaking mid-label. */
+.pp-spec{white-space:nowrap;font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--faint);
   text-decoration:none;border-bottom:1px solid var(--line2);padding-bottom:1px}
 .pp-spec:hover{color:var(--ink);border-bottom-color:var(--accent)}
 /* The invitation is not an apology and not a promise. On a page with no

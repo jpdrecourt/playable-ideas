@@ -6,7 +6,7 @@
 <title>markov</title>
 <meta name="description" content="Two first-order Markov chains, four states each, thirty-two weights. Each voice looks one step ahead. Set the weights by hand and listen to what one step of memory gives you.">
 <meta property="og:title" content="markov — Playable Ideas">
-<meta property="og:description" content="Two voices that look one step ahead. Set what follows what, then turn the structure dial from strict to random.">
+<meta property="og:description" content="Two voices, three sounds and a rest each. Each looks one step ahead: a matrix of what may follow what, and a dial for how strictly it is followed.">
 <meta property="og:image" content="https://play.noisewrangler.art/markov/og.png">
 <meta property="og:url" content="https://play.noisewrangler.art/markov/">
 <meta property="og:type" content="website">
@@ -120,6 +120,11 @@
 .rack .rrow .rname::before{content:'';width:2px;height:12px;border-radius:1px;
   background:var(--cell);flex:0 0 auto}
 
+/* The free column's caption, "what may follow each row's sound", is the last
+   caption on each group's row and points back at the squares, so it sits
+   against them rather than centred in the wide column. */
+.rack .rcap > .rcapl:last-child{justify-self:start;padding-left:var(--mkgap,22px)}
+
 
 /* ---- the trail: the last two bars of each walk ----
    In the DOM rather than on a canvas: thirty-two discrete slots per walker,
@@ -147,7 +152,31 @@
 .tsl.rest i{inset:auto 2px 8px 2px;height:2px;background:var(--line2)}
 .tsl.stuck i{inset:6px 42% 6px 42%;background:var(--warn);opacity:.45}
 .tnote{margin:9px 2px 0;font-family:var(--fp);font-size:1rem;color:var(--faint);line-height:1.6;max-width:900px}
+.tnote span{display:block}
 @media (max-width:720px){ .tnote{font-size:.95rem} }
+
+/* ---- the phone's matrices: a view of the rack, read-only ----
+   Two 4x4 grids side by side in the 390 px column. A row is a grid of its own
+   (name, then four cells) so the lit row can take a ground, which a
+   `display:contents` row cannot. The cells are the rack's cells drawn smaller:
+   the same ground, the same rest-column shade, the same square scaled by its
+   weight in the hue of the state it points at. */
+.mkm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.mkg{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mkrow{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,minmax(0,22px));gap:3px;
+  align-items:center;padding:2px 3px;border-radius:3px;border:1px solid transparent}
+.mkrow.cur{background:#191c22;border-color:var(--line2)}
+.mkn{font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:4px;min-width:0}
+.mkrow.cur .mkn{color:var(--ink)}
+.mkt{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:5px;padding:0 4px 2px}
+.mkt i,.mksw{width:7px;height:7px;border-radius:2px;flex:0 0 auto;display:block}
+.mksw{justify-self:center}
+.mkc{aspect-ratio:1;border-radius:3px;background:var(--cell);border:1px solid var(--line);
+  display:flex;min-width:0}
+.mkc.torest{background:#191b21}
+.mkc i{display:block;width:100%;height:100%;border-radius:2px;transform:scale(0);
+  transition:transform .09s ease-out}
 </style>
 </head>
 <body>
@@ -226,6 +255,7 @@ function capCell(text, hue) {
 function captionFor(wi) {
   const out = { name: () => capCell(WALKERS[wi].name, WALKERS[wi].color) };
   for (let c = 0; c < S; c++) out['n' + c] = () => capCell(stName(wi, c), stColor(wi, c));
+  out.pad = () => document.createTextNode('← what may follow each row’s sound');
   return out;
 }
 
@@ -236,6 +266,7 @@ function captionHintFor(wi) {
   for (let c = 0; c < S; c++) {
     out['n' + c] = 'how often ' + stName(wi, c) + ' may follow each strip’s state';
   }
+  out.pad = 'a row is the sound now, a column the sound next';
   return out;
 }
 
@@ -296,12 +327,10 @@ params.structure = (typeof params.structure === 'number' && isFinite(params.stru
   ? Math.max(0, Math.min(1, params.structure)) : 1;
 
 /* NOTHING HAS TO BE ZEROED ON LOAD. A page never reopens sounding, and here
-   that is the start gesture's doing rather than a parameter's: the audio
-   context is built inside the visitor's first press and never at load, so a
+   that is the transport's doing rather than a parameter's: the page opens
+   stopped and the audio context is built inside the press on Play, so a
    restored page is silent until a hand asks — and then it resumes the grammar
-   it was left with, which is what a restored matrix is for. A page whose gate
-   is a saved number has to force that number back to zero; this one has no
-   gate at all. */
+   it was left with, which is what a restored matrix is for. */
 
 /* ---- the walkers' state, and their randomness ----
    Each walker owns its stream. Two walkers drawing from one generator would
@@ -494,9 +523,81 @@ const trailBlk = Lab.ui.panel({
 });
 trailBlk.appendChild(trailEl);
 trailBlk.insertAdjacentHTML('beforeend',
-  '<p class="tnote">A block is a sound, a low dash is a rest the grammar placed, ' +
-  'and a small amber tick is a walker standing on a row with no weights. ' +
-  'The two lanes never line up for long: nothing is shared between them but the grid.</p>');
+  '<p class="tnote"><span>A block is a sound, in that sound’s colour.</span>' +
+  '<span>A low dash is a rest: a silent step.</span>' +
+  '<span>A small amber tick means the walker is stuck: its row has no weights.</span></p>');
+
+/* ============================================================
+   THE PHONE'S MATRICES — the rack's weights, as a picture.
+
+   The phone has no rack; the weights are written on the desktop
+   page. This is a VIEW of the same params, painted by the same
+   paintCell and lit by the same paintCurrent, so it moves exactly
+   as the rack does and holds no control. It is a stage member only
+   the teaser needs: above the teaser width the rack shows the same
+   thing, so the style below hides it there, reading the width from
+   the library rather than copying the number.
+   ============================================================ */
+const miniCells = WALKERS.map(() => new Array(CELLS).fill(null));
+const miniRows = WALKERS.map(() => new Array(S).fill(null));
+const miniBlk = Lab.ui.panel({
+  title: 'the matrices',
+  note: 'what may follow each sound',
+  label: 'the two matrices'
+});
+miniBlk.id = 'mk-mini';
+miniBlk.dataset.hint = 'the lit row is where each walker stands now';
+const miniEl = document.createElement('div');
+miniEl.className = 'mkm';
+WALKERS.forEach(function (wk, i) {
+  const g = document.createElement('div');
+  g.className = 'mkg';
+  g.setAttribute('role', 'img');
+  g.setAttribute('aria-label', wk.name + ': its sixteen weights, the lit row where it stands');
+  const title = document.createElement('div');
+  title.className = 'mkt';
+  const tsw = document.createElement('i');
+  tsw.style.background = wk.color;
+  title.append(tsw, document.createTextNode(wk.name));
+  g.appendChild(title);
+  const head = document.createElement('div');
+  head.className = 'mkrow';
+  head.appendChild(document.createElement('div'));
+  for (let c = 0; c < S; c++) {
+    const sw = document.createElement('i');
+    sw.className = 'mksw';
+    sw.style.background = stColor(i, c);
+    head.appendChild(sw);
+  }
+  g.appendChild(head);
+  for (let r = 0; r < S; r++) {
+    const row = document.createElement('div');
+    row.className = 'mkrow';
+    const n = document.createElement('div');
+    n.className = 'mkn';
+    n.textContent = stName(i, r);
+    row.appendChild(n);
+    for (let c = 0; c < S; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'mkc' + (c === 0 ? ' torest' : '');
+      cell.appendChild(document.createElement('i'));
+      row.appendChild(cell);
+      miniCells[i][r * S + c] = cell;
+    }
+    g.appendChild(row);
+    miniRows[i][r] = row;
+  }
+  miniEl.appendChild(g);
+});
+miniBlk.appendChild(miniEl);
+miniBlk.insertAdjacentHTML('beforeend',
+  '<p class="tnote">The desktop page writes the weights.</p>');
+{
+  const st = document.createElement('style');
+  st.textContent = '@media not all and ' + Lab.shell.env.teaserQuery +
+    '{#mk-mini{display:none}#mk-mini + .blk{margin-top:0}}';
+  document.head.appendChild(st);
+}
 
 function pushTrail(ev) {
   const buf = trailBuf[ev.w];
@@ -618,12 +719,15 @@ function setWeight(i, r, c, v) {
 }
 
 function paintCell(i, r, c) {
+  const v = wAt(i, r, c);
+  const bg = v > 0 ? stColor(i, c) : '';
+  const tf = 'scale(' + (v > 0 ? 0.34 + 0.66 * (v / MAXW) : 0) + ')';
+  const m = miniCells[i][r * S + c];
+  if (m) { m.firstChild.style.background = bg; m.firstChild.style.transform = tf; }
   const b = cellsEl[i][r * S + c];
   if (!b) return;
-  const v = wAt(i, r, c);
-  const f = b.firstChild;
-  f.style.background = v > 0 ? stColor(i, c) : '';
-  f.style.transform = 'scale(' + (v > 0 ? 0.34 + 0.66 * (v / MAXW) : 0) + ')';
+  b.firstChild.style.background = bg;
+  b.firstChild.style.transform = tf;
   b.setAttribute('aria-label',
     stName(i, r) + ' to ' + stName(i, c) + ', weight ' + v + ' of ' + MAXW);
 }
@@ -635,6 +739,8 @@ function paintAll() {
 }
 
 function paintCurrent() {
+  for (let i = 0; i < NW; i++)
+    for (let r = 0; r < S; r++) miniRows[i][r].classList.toggle('cur', r === shown[i]);
   if (!page || !page.rack) return;
   for (let i = 0; i < NW; i++) {
     for (let r = 0; r < S; r++) {
@@ -669,9 +775,10 @@ const nextColumns = NEXT_KEYS.map(function (k, c) {
     width: '48px',
     caption: CAP1[k],
     captionHint: CAPHINT1[k],
-    /* A weight cell ASKS FOR SOUND — it is what starts a walker — so it is
-       marked rather than left to the region's blanket answer. */
-    asks: true,
+    /* A weight cell WRITES and never starts anything: a tap while stopped
+       changes the weight in silence. Its cold-hand answer says so and names
+       Play, rather than the region's "nothing here sounds yet". */
+    decline: 'that weight is written, and the walkers are stopped',
     cell: ctx => weightCell(ctx, c)
   };
 });
@@ -766,18 +873,36 @@ function allMuted() {
 
 const page = Lab.page.build({
   title: 'markov',
-  shows: 'Two voices, three sounds and a rest each. They look one step ahead: ' +
-         'choose what follows what, and how strictly it is followed.',
+  shows: 'Two voices, three sounds and a rest each. Each looks one step ahead: ' +
+         'a matrix of what may follow what, and a dial for how strictly it is followed.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING
   site: 'https://noisewrangler.art',
 
   /* ---- the master strip ----
-     The master chain, the tempo and the structure dial, and nothing else.
+     The master chain, the tempo, the structure dial and the transport.
      There is no per-walker control anywhere on the desktop page: everything
-     that is not the chain, or how it is read, is off it. No transport either — the walk has no beginning: it runs from the
-     first touch, and after `clear` a button reading "play" would start
-     nothing, which would be the page's first lie. */
+     that is not the chain, or how it is read, is off it.
+
+     THE TRANSPORT starts and stops the walk and nothing else. A visitor must
+     be able to stop a sound they started: a page that sounds from the first
+     touch and has no Stop leaves a gallery visitor with noise they can only
+     end by leaving. Stop holds each walker on the state it reached and Play
+     steps on from there; neither touches the matrices, and a weight written
+     while stopped is written in silence. After `clear` Play still runs: the
+     start line then says both walkers stand on an empty rest. */
+  transport: {
+    hint: 'start and stop both walkers [Space]',
+    onStart: function () {
+      Lab.audio.fadeIn(0.03);
+      ticker.start();
+      if (!raf) raf = requestAnimationFrame(frame);
+    },
+    onStop: function () {
+      ticker.stop();
+      Lab.audio.fadeOut(0.05);
+    }
+  },
   bpm: {
     min: BPM.min, max: BPM.max, def: BPM.def, value: params.bpm,
     hint: 'the pulse both walkers step on, one cell a sixteenth',
@@ -789,15 +914,17 @@ const page = Lab.page.build({
   hints: true,
   midi: false,
   status: () => {
+    const n = weightsSet() + '/' + (NW * CELLS) + ' weights';
+    if (!ticker.running) return 'stopped · ' + n;
     const on = whoWalks();
     const who = on.length === NW ? 'both walking'
       : on.length === 0 ? 'nothing walking'
       : WALKERS[on[0]].name + ' walking';
-    return weightsSet() + '/' + (NW * CELLS) + ' weights · ' + who;
+    return who + ' · ' + n;
   },
 
   start: {
-    gesture: 'Tap a cell in a rest row',      // the phrase for an empty or stuck chain
+    gesture: 'Press ▶ Play',
     state: () => {
       if (!weightsSet() && structured()) return 'nothing';
       if (!whoWalks().length) return 'stuck';
@@ -807,10 +934,8 @@ const page = Lab.page.build({
     },
     words: {
       notStarted: () => (weightsSet()
-        ? 'the matrices hold weights. Touch the rack or the trail and the walkers ' +
-          'start; a tap on a cell adds a step.'
-        : 'tap a cell in a rest row: that is the first weight, and it starts ' +
-          'the audio and the chain at once.'),
+        ? 'press ▶ Play, or the Space bar, and both walkers step through their matrices.'
+        : 'both matrices are empty. Tap a cell in a rest row, then press ▶ Play.'),
       nothing: 'both chains are standing on their rest, and a rest with no weights ' +
                'goes nowhere. Tap a cell in a rest row to say what may follow a silence.',
       stuck: () => 'walker 1 is standing on ' + stName(0, walk[0].state) +
@@ -837,7 +962,7 @@ const page = Lab.page.build({
   /* What the hands play comes before what the eyes read: the matrices are in
      the rack, so the rack IS the instrument and the trail follows it. */
   instrument: 'rack',
-  stage: [trailBlk],
+  stage: [miniBlk, trailBlk],
 
   rack: {
     rows: ROWS,
@@ -848,7 +973,7 @@ const page = Lab.page.build({
       { key: 'name', caption: CAP1.name, captionHint: CAPHINT1.name },
       'mute', 'gain'
     ].concat(nextColumns).concat([
-      { key: 'pad', width: 'minmax(0,1fr)' }
+      { key: 'pad', width: 'minmax(0,1fr)', caption: CAP1.pad, captionHint: CAPHINT1.pad }
     ]),
     state: params.strips,
     onStrip: (key, strip) => { params.strips[key] = strip; }
@@ -867,46 +992,68 @@ const page = Lab.page.build({
       'With one step of memory it is impossible to hold.' }
   ],
 
-  keys: '<kbd>?</kbd> what does this do — then tap anything · ' +
+  keys: '<kbd>Space</kbd> play or stop · ' +
+        '<kbd>?</kbd> what does this do — then tap anything · ' +
         '<kbd>Tab</kbd> to any cell, then <kbd>Enter</kbd> to add a step · ' +
         'hold a cell to clear it',
 
-  /* THE TEASER. One dial from a uniform walk (0) to the matrices as written
-     (1), and the trail kept because it is passive time; the rack is the desk.
-     The phone's words name the dial, never a cell, since no cell is on the
-     phone — and below 1 nothing can be empty or stuck. */
+  /* THE TEASER. Play, one dial from a uniform walk (0) to the matrices as
+     written (1), the matrices as a picture that lights as the walkers step,
+     and the trail; the rack is the desk. The phone's words name what the
+     phone shows, never a cell it cannot write — and below 1 nothing can be
+     empty or stuck. */
   teaser: {
     controls: [tStruct],
-    stage: [trailBlk],
-    gesture: 'Turn the structure dial',
+    stage: [miniBlk, trailBlk],
+    gesture: 'Press ▶ Play',
     words: {
-      notStarted: 'turn structure: 1 follows the weights, 0 is random.',
+      notStarted: 'press ▶ Play and watch each walker’s row light as it steps.',
       nothing: 'both matrices are empty, so at 1 nothing can move. Turn structure down.',
       stuck: 'both walkers stand on rows with no weights, so at 1 nothing moves. ' +
              'Turn structure down.',
       shut: 'it is running and nothing reaches you: it is muted, or at zero, on the ' +
             'desktop page.',
       running: () => (params.structure >= 0.5
-        ? 'turn structure down and the grammar dissolves into a uniform draw.'
-        : 'turn structure up: a grammar arrives, but kick, hat, kick, snare never will.')
+        ? 'turn structure down and the steps stop following the squares.'
+        : 'turn structure up and the steps follow the squares again.')
     },
-    share: { text: 'Two voices, one step of memory each. The phone has one dial; ' +
-                   'the matrices are on the desktop page.' },
-    /* The phone's standing text: only what the phone shows, the dial and the trail. */
-    text: [{ head: 'Strict or random.', body: 'Two voices walk the trail, each ' +
-      'looking one step ahead. At 1 they follow the weights; at 0 every step is a ' +
-      'quarter chance. Turn structure down and listen to the pattern loosen.' }]
-  },
-
-  onStart: () => {
-    Lab.audio.fadeIn(0.03);
-    ticker.start();
-    if (!raf) raf = requestAnimationFrame(frame);
+    share: { text: 'Two voices, one step of memory each. The desktop page writes ' +
+                   'the matrices.' },
+    /* The phone's standing text: only what the phone shows, the matrices, the
+       dial and the trail. */
+    text: [{ head: 'Watch, then turn.', body: 'Each row of a matrix is a sound. Its ' +
+      'squares say what may come next: the bigger the square, the more often. The ' +
+      'lit row is where each walker stands. At structure 1 the walkers follow the ' +
+      'squares; at 0 every step is a quarter chance.' }]
   }
 });
 
 paintAll();
 paintTrail();
+
+/* The phone's matrices are a picture: a tap on them writes nothing and says
+   nothing. Declined with an empty reason, so the region's "nothing here sounds
+   yet" passes them by too; in hint mode the panel still shows its hint. */
+page.declineCell(miniBlk, () => '');
+
+/* The arrow caption's gap holds whatever the last column header is: a header
+   wider than its 48 px column (COWBELL) runs past its edge, so each caption row
+   measures where that header's TEXT ends and starts the arrow 18 px after it,
+   never less than 22 px into its own column. Measured again once the fonts are
+   in, since the end of the text is a text width. */
+function fitArrowCaption() {
+  document.querySelectorAll('.rack .rcap').forEach(function (row) {
+    const caps = row.querySelectorAll(':scope > .rcapl');
+    if (caps.length < 2) return;
+    const prev = caps[caps.length - 2], pad = caps[caps.length - 1];
+    const rg = document.createRange();
+    rg.selectNodeContents(prev);
+    const need = rg.getBoundingClientRect().right + 18 - pad.getBoundingClientRect().left;
+    pad.style.setProperty('--mkgap', Math.ceil(Math.max(22, need)) + 'px');
+  });
+}
+fitArrowCaption();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitArrowCaption);
 
 /* The autosave handle is KEPT rather than dropped: it is otherwise a permanent
    background write loop with no way out, which is not a thing to leave running

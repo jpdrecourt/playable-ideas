@@ -116,6 +116,21 @@
   @media (prefers-reduced-motion: reduce) {
     .dot.mem.armed { animation: none; opacity: .75 }
   }
+
+  /* The density readout sits on a black chip of its own. The bench draws it
+     with a difference blend, which splits a digit black-and-white wherever the
+     fill edge crosses it; at 50% the edge runs through the middle of the
+     number and "50%" read "5O%". On the chip it is white on black at every
+     value, over the fill and over the empty bar alike. */
+  .rack .gate .gpct { mix-blend-mode: normal; background: #000; color: #fff;
+    padding: 0 3px; border-radius: 3px; line-height: 16px; }
+
+  /* The roll's legend: one line per mark, each beside a small copy of it. */
+  #mm-legend { display: flex; flex-wrap: wrap; gap: 4px 22px; margin: 8px 2px 0;
+    font-family: var(--fp); font-size: 14px; line-height: 1.4; color: var(--dim); }
+  #mm-legend .mm-k { display: flex; align-items: center; gap: 8px; }
+  #mm-legend .mm-sw { flex: 0 0 auto; width: 20px; height: 12px; border-radius: 3px;
+    box-sizing: border-box; }
 </style>
 </head>
 <body>
@@ -681,6 +696,28 @@ timelineEl.dataset.hint = 'the last few seconds of events, one lane per voice';
 timelineEl.title = timelineEl.dataset.hint;
 const timelineCtx = timelineEl.getContext('2d');
 
+/* The legend: the four marks drawPianoRollLanes() makes, each beside a small
+   copy of itself drawn in the kick's colour, with the same strokes. Opacity
+   follows the hit's gain, so "paler" belongs to the filled block's line. */
+const legendEl = document.createElement('div');
+legendEl.id = 'mm-legend';
+legendEl.dataset.hint = 'what the marks on the roll mean';
+[
+  ['filled block: played by chance; paler is quieter', null],
+  ['white outline: replayed from memory', '2px solid rgba(255,255,255,0.94)'],
+  ['dashed outline: invented as fidelity drops', '2px dashed rgba(255,255,255,0.94)'],
+  ['empty outline: in the memory, left silent this time', 'ghost']
+].forEach(([words, edge]) => {
+  const k = document.createElement('span'); k.className = 'mm-k';
+  const sw = document.createElement('span'); sw.className = 'mm-sw';
+  const c = colorOf('kick');
+  if (edge === 'ghost') { sw.style.border = '1.5px solid ' + c; sw.style.opacity = '0.55'; }
+  else { sw.style.background = c; if (edge) sw.style.border = edge; }
+  const t = document.createElement('span'); t.textContent = words;
+  k.append(sw, t);
+  legendEl.append(k);
+});
+
 // The canvas in CSS pixels, and the ratio its backing store is built at. The
 // height is the stylesheet's `--roll-h`, read rather than repeated: it is the
 // drawing height at every display ratio, where `clientHeight` was two pixels
@@ -763,10 +800,12 @@ function roundedRectPath(ctx, x, y, w, h, r) {
 //   dashed          the law invented it; it is not in the frozen score
 // and their absence: a ghost — no fill, faint outline in the voice's own
 // colour — is a score event the law removed this pass. Fill and outline
-// are independent, so the four combinations read without a legend: filled
-// plain = generated, filled + solid = the memory sounding, filled + dashed =
-// an invention sounding, unfilled = the memory turning silently. Riding
+// are independent, so four combinations cover every event: filled plain =
+// generated, filled + solid = the memory sounding, filled + dashed = an
+// invention sounding, unfilled = the memory turning silently. Riding
 // fidelity down turns solids into ghosts and fills the gaps with dashes.
+// The legend under the roll names the four; a stranger did not read them
+// from the drawing alone.
 function drawPianoRollLanes(ctx, w, h, laneIds, posEvents, topMargin) {
   if (laneIds.length === 0) return;
   const laneAreaH = h - topMargin;
@@ -1135,7 +1174,7 @@ const page = Lab.page.build({
   /* What the hands play comes before what the eyes read: the rack is the
      instrument here, and the roll is a view of what it did. */
   instrument: 'rack',
-  stage: [timelineEl],
+  stage: [timelineEl, legendEl],
 
   /* ---- the orchestra rack: one row per voice ----
      What a voice generates, what it remembers and how it sits in the mix are
@@ -1157,12 +1196,12 @@ const page = Lab.page.build({
             onChange: x => { p.density = x; }
           }), DENSITY_HINT);
         } },
-      { key: 'rate', width: '133px', cell: c => {
+      { key: 'rate', width: '162px', cell: c => {
           const p = params.voices[c.key];
           return Lab.ui.knob({
             label: 'rate', min: 0, max: RATE_STEPS.length - 1, step: 1,
             value: rateIndex(p.rate), def: rateIndex(VOICE_DEF[c.key].rate),
-            fmt: i => String(RATE_STEPS[Math.round(i)]),
+            fmt: i => { const n = RATE_STEPS[Math.round(i)]; return n + (n === 1 ? ' cell' : ' cells'); },
             hint: 'grid cells between this voice’s opportunities: 1, 2, 4, 8 or 16',
             onChange: i => { p.rate = RATE_STEPS[Math.round(i)]; }
           });
@@ -1204,7 +1243,8 @@ const page = Lab.page.build({
       'ends as you degrade it.' }
   ],
 
-  keys: '<kbd>Space</kbd> play · <kbd>1</kbd>–<kbd>5</kbd> memory on that voice · ' +
+  keys: '<kbd>Space</kbd> play or stop · ' +
+        '<kbd>1</kbd>–<kbd>5</kbd> memory on that voice · ' +
         'drag knobs vertically, gates along the bar, double-click resets',
 
   // the teaser's fidelity dial is a view of five knobs as well as a control
@@ -1217,7 +1257,7 @@ const page = Lab.page.build({
      timeline is passive time and stays; nothing else is editable. */
   teaser: {
     controls: [memAllCtl, fidAllDial],
-    stage: [timelineEl],
+    stage: [timelineEl, legendEl],
     gesture: 'Press ▶ Play',
     words: {
       notStarted: 'press ▶ Play and the five voices start on one pulse.',
@@ -1225,11 +1265,11 @@ const page = Lab.page.build({
                'page can open them.',
       shut: 'running, but muted or the master is at zero — only the desktop ' +
             'page can change that.',
-      running: 'press memory and each voice keeps the two bars it has just ' +
+      running: 'press all and each voice keeps the two bars it has just ' +
                'played. Then ride fidelity down.'
     },
     /* The phone's standing text: what the phone shows, and the claim. */
-    text: [{ head: 'Replay, then degrade.', body: 'Press memory: from the next bar ' +
+    text: [{ head: 'Replay, then degrade.', body: 'Press all: from the next bar ' +
       'each voice loops the last two bars it played. Dial fidelity down and replay ' +
       'gives way to invention. Try to hear where the memory ends.' }],
     share: { text: 'Five random voices loop what they just played; one dial degrades ' +
@@ -1239,13 +1279,9 @@ const page = Lab.page.build({
 
 rack = page.rack;
 
-/* ---- keys: physical positions, so the digits are where they look ---- */
+/* ---- keys: physical positions, so the digits are where they look ----
+   Space is the transport, and the composition binds it. */
 window.addEventListener('keydown', e => {
-  if (e.code === 'Space') {
-    e.preventDefault();
-    if (!e.repeat) page.transport.press();
-    return;
-  }
   if (e.repeat) return;
   for (let i = 0; i < LANE_IDS.length; i++) {
     if (e.code !== 'Digit' + (i + 1)) continue;

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>statistical-feedback</title>
-<meta name="description" content="Randomness with a ledger. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
+<meta name="description" content="Randomness that keeps count. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
 <meta property="og:title" content="statistical-feedback — Playable Ideas">
-<meta property="og:description" content="Randomness with a ledger. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
+<meta property="og:description" content="Randomness that keeps count. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
 <meta property="og:image" content="https://play.noisewrangler.art/statistical-feedback/og.png">
 <meta property="og:url" content="https://play.noisewrangler.art/statistical-feedback/">
 <meta property="og:type" content="website">
@@ -94,11 +94,14 @@
    wears the identity of the option whose debt it shows. Silence is a citizen
    of the pool with no sound, so its row is the one grey one. */
 
-/* ---- the ledger cell ----
-   Centre-zero, one per row. Left of the line is a debt the machine owes this
-   option, right of it is credit it has already spent. `color` is set per row
-   to the voice's hue and the fill reads it, so one property carries identity
-   into every part of the cell. */
+/* ---- the due cell ----
+   Centre-zero, one per row: the option's balance, drawn with its sign turned
+   so the page's word reads off it. Right of the line the option is DUE (it has
+   taken fewer turns than its weight entitles it to) and is the likelier to
+   play next; left of it, it is ahead. A bar grows right while its option waits
+   and jumps left when it plays. `color` is set per row to the voice's hue and
+   the fill reads it, so one property carries identity into every part of the
+   cell. */
 .led { position: relative; width: 116px; height: 17px; flex: 0 0 auto;
   background: #0a0b0f; border: 1px solid var(--line); border-radius: 4px; overflow: hidden }
 .led .lzero { position: absolute; left: 50%; top: 1px; bottom: 1px; width: 1px;
@@ -142,7 +145,27 @@
 .sbar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
 @media (pointer: coarse) { .stress { height: 64px } }
 
-#record { height: 196px }
+/* ---- the record and its lane gutter ----
+   The lane names sit in a gutter of their own LEFT of the roll, where no block
+   ever scrolls: drawn inside the canvas they sat under the oldest blocks. The
+   gutter's rows split the canvas's inner height exactly as the roll splits its
+   lanes (the 1 px padding is the canvas's border), so a name is level with its
+   lane at any height.
+
+   On the phone each row also carries that voice's due bar, the same bar the
+   desktop rack shows in its row, so the phone sees the cause beside the
+   effect. The bars are display only: nothing in the gutter takes a press. */
+.recbox { display: flex; align-items: stretch; height: 196px; min-width: 0 }
+.recbox #record { height: 100%; flex: 1 1 auto; min-width: 0 }
+.lanegut { display: flex; flex-direction: column; flex: 0 0 auto; width: 72px;
+  padding: 1px 6px 1px 0 }
+.lgrow { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-end; gap: 3px }
+.lgname { font-size: 12px; line-height: 1; color: var(--dim); white-space: nowrap }
+.lgdue { display: none; width: 100%; height: 9px }
+.lgdue .lfill { top: 1px; bottom: 1px }
+.recbox.small .lanegut { width: 84px }
+.recbox.small .lgdue { display: block }
 </style>
 </head>
 <body>
@@ -517,7 +540,7 @@ function invoke(id) {
     AMES.charge(state, i, W, sumW, lastStress);
     pushLedger(t, i, -1);
   } else {
-    Lab.ui.status(nameOf(id) + ' is at weight 0 — it sounds, but it is outside the game');
+    Lab.ui.status(nameOf(id) + ' is at weight 0 — it sounds, and it takes no turns');
   }
 }
 
@@ -611,16 +634,75 @@ recordEl.setAttribute('aria-label', RECORD_HINT);
 recordEl.dataset.hint = RECORD_HINT;
 recordEl.title = RECORD_HINT;
 
+/* WORKAROUND, and a bend in the library: `Lab.roll` draws each lane's name
+   inside the canvas at its left edge, under the oldest blocks, and has no
+   option to leave it out. A lane declared with a one-space name draws nothing
+   readable and keeps its colour from the voice; the names go in the gutter
+   below. The library should take `labels: false` (or draw a gutter of its
+   own), and this table goes when it does. */
+const BLANK_LANES = {};
+VOICE_IDS.forEach(id => { BLANK_LANES[id] = { name: ' ' }; });
+
 const roll = Lab.roll.attach(recordEl, {
   laneIds: VOICE_IDS,
+  lanes: BLANK_LANES,
   gridSec: () => 30 / params.bpm,
   origin: () => tickTime,
   originIndex: () => tickIndex,
   accentEvery: 4,
   strongEvery: STRESS_STEPS,
-  pxPerSec: () => (Lab.shell.env.small ? 78 : 112),
+  pxPerSec: () => (Lab.shell.env.small ? 64 : 112),
   windowSec: 10
 });
+
+/* The gutter: one row per lane, the name, and on the phone the due bar. Its
+   bars join the rack's in `dueViews`, so the frame loop drives both from the
+   same released books and the phone's bar moves exactly as the desktop's. */
+const DUE_GUT_HINT = 'each voice’s due bar: right of centre, it is due to play';
+const dueViews = [];                     // per option: [{ fill, glow }, …]
+function addDueView(index, box) {
+  const zero = document.createElement('div'); zero.className = 'lzero';
+  const fill = document.createElement('div'); fill.className = 'lfill';
+  const glow = document.createElement('div'); glow.className = 'lflash';
+  box.append(zero, fill, glow);
+  (dueViews[index] = dueViews[index] || []).push({ fill: fill, glow: glow });
+}
+
+const laneGut = document.createElement('div');
+laneGut.className = 'lanegut';
+VOICE_IDS.forEach((id, i) => {
+  const row = document.createElement('div');
+  row.className = 'lgrow';
+  const name = document.createElement('span');
+  name.className = 'lgname';
+  name.textContent = nameOf(id);
+  const due = document.createElement('div');
+  due.className = 'led lgdue';
+  due.style.color = colorOf(id);
+  addDueView(i, due);
+  row.append(name, due);
+  laneGut.appendChild(row);
+});
+
+const recordBox = document.createElement('div');
+recordBox.className = 'recbox';
+recordBox.append(laneGut, recordEl);
+
+/* The bars in the gutter are the phone's: the desktop reads the same bars in
+   its rack, one row from the weight that drives them, and a second copy beside
+   the roll would draw the books twice. The library marks what the desktop
+   alone shows (`pp-desk`) and has no mark for what the phone alone shows, so
+   the page reads the collection's own breakpoint query and says it with a
+   class. The hint rides on the gutter only where the bars are drawn. */
+const smallQ = window.matchMedia(Lab.shell.env.teaserQuery);
+function markSmall() {
+  recordBox.classList.toggle('small', smallQ.matches);
+  if (smallQ.matches) { laneGut.dataset.hint = DUE_GUT_HINT; laneGut.title = DUE_GUT_HINT; }
+  else { delete laneGut.dataset.hint; laneGut.removeAttribute('title'); }
+}
+if (smallQ.addEventListener) smallQ.addEventListener('change', markSmall);
+else smallQ.addListener(markSmall);
+markSmall();
 
 /* ============================================================
    THE RACK — one row per option, silence included.
@@ -632,26 +714,21 @@ const roll = Lab.roll.attach(recordEl, {
    is most likely to confuse, so each says which it is when it is
    pressed from cold.
    ============================================================ */
-const WEIGHT_HINT = 'this voice’s share of the stress the pattern spends';
-const LEDGER_HINT = 'turns this option has taken, less the turns its weight entitled';
-const TAP_HINT = 'play this voice now and charge it to the books';
-const SILENCE_ROW_HINT = 'silence, an option with its own weight, turns and ledger';
+const WEIGHT_HINT = 'how often this voice is chosen, against the other weights';
+const DUE_HINT = 'how much this option is due to play; left of centre, ahead';
+const TAP_HINT = 'play this voice now; it counts as one of its turns';
+const SILENCE_ROW_HINT = 'silence takes turns like a voice, with its own weight and due';
 const SILENCE_W_HINT = 'silence’s own weight, computed live to hold its probability';
 
-const ledCells = [];       // per option: { fill, glow }
 let silWeightEl = null;
 let rack = null;           // the composition builds it; assigned from page.rack
 
-function ledgerCell(index, hue) {
+function dueCell(index, hue) {
   const box = document.createElement('div');
   box.className = 'led';
   box.style.color = hue;
-  const zero = document.createElement('div'); zero.className = 'lzero';
-  const fill = document.createElement('div'); fill.className = 'lfill';
-  const glow = document.createElement('div'); glow.className = 'lflash';
-  box.append(zero, fill, glow);
-  ledCells[index] = { fill: fill, glow: glow };
-  return Lab.ui.inline('debt', box, LEDGER_HINT);
+  addDueView(index, box);
+  return Lab.ui.inline('due', box, DUE_HINT);
 }
 
 const rackRows = VOICE_IDS.map(id => ({ key: id, voice: id }))
@@ -712,7 +789,7 @@ const RACK_COLUMNS = [
         silWeightEl = v;
         return Lab.ui.inline('weight', v, SILENCE_W_HINT);
       }
-      return Lab.ui.knob({
+      const k = Lab.ui.knob({
         label: 'weight', min: 0, max: WEIGHT_MAX, step: 0.05,
         value: params.weights[c.key],
         def: VOICES[c.index].w,
@@ -720,9 +797,11 @@ const RACK_COLUMNS = [
         hint: WEIGHT_HINT,
         onChange: v => { params.weights[c.key] = v; paintPool(); }
       });
+      reaches(k, 'weight');
+      return k;
     } },
-  { key: 'debt', width: '176px', cell: function (c) {
-      return ledgerCell(c.index, c.key === 'silence' ? SILENCE_HUE : colorOf(c.key));
+  { key: 'due', width: '176px', cell: function (c) {
+      return dueCell(c.index, c.key === 'silence' ? SILENCE_HUE : colorOf(c.key));
     } },
   { key: 'pad', width: 'minmax(0,1fr)' }
 ];
@@ -734,14 +813,14 @@ const RACK_COLUMNS = [
    easiest to say. */
 function declineWords(kind, name) {
   if (kind === 'mute') {
-    return 'that is ' + name + '’s mute — it takes the voice out of the mix and ' +
-           'changes nothing in the books';
+    return 'that is ' + name + '’s mute — it takes the voice out of the mix, and ' +
+           'the voice keeps taking its turns';
   }
   if (kind === 'gain') {
-    return 'that is ' + name + '’s level — how loud it is, not how often; the weight ' +
-           'beside it is how often';
+    return 'that is ' + name + '’s level, how loud it is; the weight beside it is ' +
+           'how often';
   }
-  return 'that is ' + name + '’s ' + kind + ' — it shapes the mix, not the books';
+  return 'that is ' + name + '’s ' + kind + ' — it shapes the mix only';
 }
 
 /* ============================================================
@@ -751,6 +830,18 @@ function declineWords(kind, name) {
    asks for sound, so they sit in `controls`, outside the armed
    region, each answering a cold hand in its own words.
    ============================================================ */
+/* ---- what the hand last reached ----
+   The running line unpacks the control the hand has just reached: stress and
+   heterogeneity keep their names on the page, and the line under the title
+   says what each one does at the moment it is touched. A press or a focus
+   counts, so a keyboard reaching a control by Tab is answered too. */
+let lastHand = null;
+function reaches(el, what) {
+  const mark = () => { lastHand = what; };
+  el.addEventListener('pointerdown', mark, true);
+  el.addEventListener('focusin', mark);
+}
+
 /* The tempo is the library's pulse slot (see the page below), and heterogeneity
    has a TWIN on the phone: two controls writing one parameter, each showing
    the other's writes. */
@@ -770,13 +861,17 @@ tHet = Lab.ui.dial({
   onDefault: () => dHet.set(DEFAULT_HET)
 });
 
+reaches(dHet, 'het');
+reaches(tHet, 'het');
+
 const SILENCE_HINT = 'how much of the pulse goes to silence';
 const gSilence = Lab.ui.gate({
-  value: params.silence, def: DEFAULT_SILENCE, left: '0', right: '.95', width: 108,
+  value: params.silence, def: DEFAULT_SILENCE, left: 'none', right: 'most', width: 108,
   label: 'silence', hint: SILENCE_HINT,
   onChange: v => { params.silence = v; paintPool(); }
 });
 const silenceCtl = Lab.ui.inline('silence', gSilence, SILENCE_HINT);
+reaches(gSilence, 'silence');
 
 /* ============================================================
    THE STRESS ROW — eight bars on one pointer surface.
@@ -799,6 +894,7 @@ stressEl.setAttribute('aria-label', 'stress pattern, eight steps');
    inspectable thing and none of them can be dragged by accident. */
 stressEl.dataset.hint = STRESS_HINT;
 stressEl.title = STRESS_HINT;
+reaches(stressEl, 'stress');
 
 const stressBars = [];
 for (let i = 0; i < STRESS_STEPS; i++) {
@@ -961,16 +1057,16 @@ function resetAll() {
   paintPool();
   autosave.save();                 // so the reset is what a reload finds
   page.paint();
-  Lab.ui.status('the settings are back where they opened, and the books are clear');
+  Lab.ui.status('the settings are back where they opened, and every due is at zero');
 }
 
 const resetBtn = Lab.ui.confirm({
   text: 'reset',
   armed: 'reset — sure?',
-  hint: 'put every setting back where it opened and clear the ledger',
+  hint: 'put every setting back where it opened, every due at zero',
   onArm: () => {
     if (!atDefaults()) return true;
-    Lab.ui.status('everything is already where it opened and the books are clear');
+    Lab.ui.status('everything is already where it opened, and every due is at zero');
     return false;
   },
   onConfirm: resetAll
@@ -1006,9 +1102,24 @@ function audibleVoices() {
   return n;
 }
 
+/* The running line, per control the hand last reached (see `reaches`). */
+const RUNNING = {
+  idle: 'turn heterogeneity up and the rare voice stops coming at even gaps.',
+  het: 'heterogeneity: at 0 each voice comes round at even gaps; up, the gaps go uneven.',
+  stress: 'stress is what a turn costs on that step: a costly turn keeps its voice away longer.',
+  weight: 'weight is how often. Its due bar grows while the voice waits and drops when it plays.',
+  silence: 'silence is how much of the pulse goes to nobody, whatever the weights.'
+};
+const RUNNING_PHONE = {
+  idle: 'turn heterogeneity up and the rare voice stops coming at even gaps.',
+  het: 'heterogeneity: at 0 each voice comes round at even gaps; turn it up and the gaps go uneven.'
+};
+
 page = Lab.page.build({
   title: 'statistical-feedback',
-  shows: 'Randomness with a ledger. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.',
+  /* One line at 1440, so the roll stays inside the first screen (spec: the
+     desktop fold). */
+  shows: 'Randomness that keeps count. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING (no remote configured yet)
   site: 'https://noisewrangler.art',
@@ -1046,8 +1157,8 @@ page = Lab.page.build({
      the gesture phrase above. Both change the sound; they just do not
      start it. */
   controls: [
-    { el: dHet, says: 'that is heterogeneity — it loosens WHEN each option comes ' +
-        'round, never how often' },
+    { el: dHet, says: 'that is heterogeneity — it loosens when each option comes ' +
+        'round, and the shares stay the same' },
     { el: silenceCtl, says: 'that is silence — the share of the pulse that goes ' +
         'to nobody, held against the pool' }
   ],
@@ -1085,7 +1196,7 @@ page = Lab.page.build({
       stuck: '',
       shut: 'it is running and nothing reaches you: every voice is muted, at weight zero, ' +
             'or the master level is at zero.',
-      running: 'turn heterogeneity up: the ledgers matter less, and the rare voice comes when it comes.'
+      running: () => RUNNING[lastHand] || RUNNING.idle
     }
   },
 
@@ -1096,7 +1207,11 @@ page = Lab.page.build({
   /* Both of these are time, which a strip cannot hold: the stress loop is a
      shape spread over eight turns, and the record is what the pool actually
      did with them. */
-  stage: [stressPanel, recordEl],
+  /* One row: the record beside the stress loop, so a weight turned in the rack
+     shows its result in the first screen at 1440x900. The row stacks below
+     twice `stageMin`, the record first. */
+  stage: [[recordBox, stressPanel]],
+  stageMin: '460px',
 
   rack: {
     rows: rackRows,
@@ -1110,15 +1225,16 @@ page = Lab.page.build({
 
   text: [
     { head: 'Press Play.', body: 'One option is chosen per pulse. The bar beside each option ' +
-      'is its ledger. The further left it is, the likelier it plays next.' },
+      'shows how much it is due. The further right, the likelier it plays next.' },
     { head: 'Weight and stress.', body: 'Weight is how often. Stress makes a turn cost more, ' +
       'so a voice taken on a heavy step stays away longer.' },
-    { head: 'Heterogeneity.', body: 'A low weight makes a voice rare. At 0 the ledgers are ' +
-      'fully respected and a rare voice comes round at even spacing. The higher up, the ' +
-      'less they matter, and the rare voice comes when it comes.' }
+    { head: 'Heterogeneity.', body: 'A low weight makes a voice rare. At 0 a rare voice comes ' +
+      'round at even gaps. Turn it up and the gaps grow uneven, while every voice keeps ' +
+      'its share.' }
   ],
 
-  keys: '<kbd>Space</kbd> play · <kbd>?</kbd> what does this do — then tap anything · ' +
+  keys: '<kbd>Space</kbd> play or stop · ' +
+        '<kbd>?</kbd> what does this do — then tap anything · ' +
         '<kbd>Tab</kbd> to any control, including each stress bar, then arrows · ' +
         'drag knobs vertically, gates along the bar, the stress row up and down; ' +
         'double-click resets',
@@ -1126,44 +1242,30 @@ page = Lab.page.build({
   /* THE TEASER. Heterogeneity alone, the desktop dial's twin: the file opens
      it at 0, weighted randomness read off the books, and the thumb moves it
      toward pure randomness with every share held. The record is kept because
-     it is passive; the stress row writes, so it is the desk. */
+     it is passive, and its gutter carries the due bars, read-only; the stress
+     row writes, so it is the desk. */
   teaser: {
     controls: [tHet],
-    stage: [recordEl],
+    stage: [recordBox],
     gesture: GESTURE,
     words: {
       notStarted: 'press ▶ Play: six voices and a silence take turns.',
       nothing: 'every weight is at zero. The weights are on the desktop page.',
       shut: 'it is running and nothing reaches you: it is muted or at zero on the ' +
             'desktop page.',
-      running: 'turn heterogeneity up: the ledgers matter less, and the rare voice comes when it comes.'
+      running: () => (lastHand === 'het' ? RUNNING_PHONE.het : RUNNING_PHONE.idle)
     },
-    share: { text: 'The phone has one dial. The ledger is on the desktop page.' },
+    share: { text: 'Six voices take turns by who is most due. The weights are on the desktop page.' },
     /* The phone's standing text: only what the phone shows — Play, the dial
        and the record — and the claim in the visitor's words. */
     text: [{ head: 'Press Play.', body: 'One option is chosen per pulse, from six voices and a ' +
-      'silence. It starts from a default setup. At heterogeneity 0 the ledgers are fully ' +
-      'respected; the higher up, the less they matter. On the desktop page you can change ' +
-      'the weights to give a voice more or less importance, and set a weight to zero to ' +
-      'silence it.' }]
+      'silence. The bar beside each lane shows how much that voice is due: it grows while ' +
+      'the voice waits and drops when it plays. At heterogeneity 0 a rare voice comes round ' +
+      'at even gaps; turn it up and the gaps grow uneven. The desktop page sets the weights.' }]
   }
 });
 
 rack = page.rack;
-
-/* ---- Space is the transport, except where a control already owns it ----
-   Space activates a focused button, and this page is full of them: the six
-   names, the mutes, reset, Save/Load, the hint toggle. Taking the key from
-   them would leave a keyboard visitor unable to tap a voice at all. Every
-   slider on the page — knob, dial, gate, stress bar — answers the arrows and
-   not Space, so the transport keeps it everywhere else. */
-window.addEventListener('keydown', function (e) {
-  if (e.code !== 'Space') return;
-  const t = e.target;
-  if (t && t.closest && t.closest('button, input, select, textarea, a[href], [contenteditable]')) return;
-  e.preventDefault();
-  if (!e.repeat) page.transport.press();
-});
 
 /* ============================================================
    THE FRAME LOOP — releasing the books against the audio clock.
@@ -1211,14 +1313,22 @@ function frame(ms) {
   const target = Math.max(LEDGER_MIN_SCALE, mx * 1.12);
   ledScale += (target - ledScale) * Math.min(1, dt / (target > ledScale ? 0.55 : 3.2));
 
+  /* DUE is the balance with its sign turned: the law picks the LOWEST
+     statistic, so the option furthest below zero is the most due, and it is
+     drawn furthest right. Every view of an option (its rack bar, its phone bar)
+     takes the same numbers. */
   for (let m = 0; m < NOPT; m++) {
-    const c = Math.max(-1, Math.min(1, shown[m] / ledScale));
+    const views = dueViews[m];
+    if (!views) continue;
+    const c = Math.max(-1, Math.min(1, -shown[m] / ledScale));
     const w = Math.abs(c) * 50;
-    const cell = ledCells[m];
-    if (!cell) continue;
-    cell.fill.style.left = (c >= 0 ? 50 : 50 - w) + '%';
-    cell.fill.style.width = w + '%';
-    cell.glow.style.opacity = (flash[m] * 0.42).toFixed(3);
+    const left = (c >= 0 ? 50 : 50 - w) + '%', width = w + '%';
+    const glow = (flash[m] * 0.42).toFixed(3);
+    for (let j = 0; j < views.length; j++) {
+      views[j].fill.style.left = left;
+      views[j].fill.style.width = width;
+      views[j].glow.style.opacity = glow;
+    }
   }
 
   /* The lit step is the one being HEARD, not the one being scheduled. The

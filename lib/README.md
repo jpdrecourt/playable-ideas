@@ -959,12 +959,17 @@ const page = Lab.page.build({
   `start.keyboardNote: false` to word it yourself.
 - **Space is the transport** on a page that declares one; the composition binds
   it at the window, so a toy does not. It stands aside wherever Space already
-  means something: a focused button (which presses itself natively, so Play
-  with focus toggles once), a link, a text field, an element with a
-  button-like role, or a key a control has already `preventDefault`ed. On
+  means something: a text field or contenteditable, Play's own button (which
+  presses itself natively, so Play with focus toggles once), or a key a control
+  has already `preventDefault`ed. Any other button, link or element with a
+  button-like role keeps Space only when the keyboard focused it. A mouse or
+  touch press leaves focus there too, and after clicking reseed the visitor's
+  Space plays and stops, as the footer says, instead of reseeding again. The
+  page tracks how focus arrived (the last press or key before it) rather than
+  reading `:focus-visible`, which Chrome turns on at the keydown itself. On
   sliders, which answer the arrows, it stays the transport. It prevents the
-  page scroll, ignores auto-repeat and modified presses, and in hint mode raises
-  Play's bubble instead of pressing it. A page without a transport binds
+  page scroll, ignores auto-repeat and modified presses, and in hint mode
+  raises Play's bubble instead of pressing it. A page without a transport binds
   nothing. The footer's `keys` line says `Space play or stop` and leaves the
   focused-button rule to this page.
 - **The owned-names check** warns when a page's own `<style>` defines one of

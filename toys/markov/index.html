@@ -152,7 +152,7 @@
 .tsl.rest i{inset:auto 2px 8px 2px;height:2px;background:var(--line2)}
 .tsl.stuck i{inset:6px 42% 6px 42%;background:var(--warn);opacity:.45}
 .tnote{margin:9px 2px 0;font-family:var(--fp);font-size:1rem;color:var(--faint);line-height:1.6;max-width:900px}
-.tnote span{display:block}
+.tnote span + span::before{content:' '}
 @media (max-width:720px){ .tnote{font-size:.95rem} }
 
 /* ---- the phone's matrices: a view of the rack, read-only ----
@@ -175,6 +175,12 @@
 .mkc{aspect-ratio:1;border-radius:3px;background:var(--cell);border:1px solid var(--line);
   display:flex;min-width:0}
 .mkc.torest{background:#191b21}
+/* Above the teaser width the phone's matrices are hidden, and the library's
+   `.pp-stage > * + *` would still give the trail a gutter above nothing. This
+   rule outranks that one (two classes to one) and loses to the teaser's
+   `.pp-stage.pp-teased > :not(.pp-desk) ~ :not(.pp-desk)` (four), so the phone
+   keeps its gutter between the matrices and the trail without a media query. */
+.pp-stage > .pp-phone + *{margin-top:0}
 .mkc i{display:block;width:100%;height:100%;border-radius:2px;transform:scale(0);
   transition:transform .09s ease-out}
 </style>
@@ -535,8 +541,8 @@ trailBlk.insertAdjacentHTML('beforeend',
    paintCell and lit by the same paintCurrent, so it moves exactly
    as the rack does and holds no control. It is a stage member only
    the teaser needs: above the teaser width the rack shows the same
-   thing, so the style below hides it there, reading the width from
-   the library rather than copying the number.
+   thing, so it wears the library's `pp-phone` mark, which hides it
+   there.
    ============================================================ */
 const miniCells = WALKERS.map(() => new Array(CELLS).fill(null));
 const miniRows = WALKERS.map(() => new Array(S).fill(null));
@@ -546,6 +552,7 @@ const miniBlk = Lab.ui.panel({
   label: 'the two matrices'
 });
 miniBlk.id = 'mk-mini';
+miniBlk.classList.add('pp-phone');
 miniBlk.dataset.hint = 'the lit row is where each walker stands now';
 const miniEl = document.createElement('div');
 miniEl.className = 'mkm';
@@ -592,12 +599,6 @@ WALKERS.forEach(function (wk, i) {
 miniBlk.appendChild(miniEl);
 miniBlk.insertAdjacentHTML('beforeend',
   '<p class="tnote">The desktop page writes the weights.</p>');
-{
-  const st = document.createElement('style');
-  st.textContent = '@media not all and ' + Lab.shell.env.teaserQuery +
-    '{#mk-mini{display:none}#mk-mini + .blk{margin-top:0}}';
-  document.head.appendChild(st);
-}
 
 function pushTrail(ev) {
   const buf = trailBuf[ev.w];
@@ -959,9 +960,10 @@ const page = Lab.page.build({
     }
   },
 
-  /* What the hands play comes before what the eyes read: the matrices are in
-     the rack, so the rack IS the instrument and the trail follows it. */
-  instrument: 'rack',
+  /* The trail comes before the rack. It is the proof (what the matrices make
+     of a walk), and at 1440x900 it has to be on the first screen; under the
+     eight 44 px strips of the rack it starts at the fold. */
+  instrument: 'stage',
   stage: [miniBlk, trailBlk],
 
   rack: {
@@ -988,8 +990,10 @@ const page = Lab.page.build({
     { head: 'Listen.', body: 'Lean kick toward hat, hat toward snare, snare back ' +
       'toward kick. Each step depends on the one before, so the result has a style ' +
       'and it varies from bar to bar.' },
-    { head: 'Two steps.', body: 'Try to build a kick, hat, kick, snare pattern. ' +
-      'With one step of memory it is impossible to hold.' }
+    { head: 'Two steps.', body: 'Build kick, hat, kick, snare. After any kick the ' +
+      'walker picks hat or snare by its weights alone: it remembers one step, not ' +
+      'two. Watch the trail: kick hat kick hat and kick snare kick snare keep ' +
+      'turning up.' }
   ],
 
   keys: '<kbd>Space</kbd> play or stop · ' +
@@ -1022,8 +1026,9 @@ const page = Lab.page.build({
     /* The phone's standing text: only what the phone shows, the matrices, the
        dial and the trail. */
     text: [{ head: 'Watch, then turn.', body: 'Each row of a matrix is a sound. Its ' +
-      'squares say what may come next: the bigger the square, the more often. The ' +
-      'lit row is where each walker stands. At structure 1 the walkers follow the ' +
+      'squares say what may come next, in that sound’s colour: an empty cell ' +
+      'never, a small square sometimes, a big one often. The lit row is where ' +
+      'each walker stands. At structure 1 the walkers follow the ' +
       'squares; at 0 every step is a quarter chance.' }]
   }
 });

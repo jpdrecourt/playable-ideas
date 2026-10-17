@@ -106,6 +106,14 @@
      line, in either direction), on. The armed rule comes after the on rule
      so both directions of a pending throw wear the same face. */
   :root { --mem: #6fffb0; }
+  /* The rack's MEM switch is the one move that matters, and it sits last in
+     its row after five mixer controls. So it is the largest control there
+     and its label wears the hue: the word names what the hue means, which
+     keeps the switch's own face free to say off, armed or on. */
+  .mm-mem > span { color: var(--mem); font-weight: 700; }
+  .mm-mem > button { width: 28px; height: 28px; margin: -4px 0; font-size: 13px;
+    border-color: rgba(255,255,255,.6); color: #fff; }
+  .mm-mem > button:hover { border-color: var(--mem); }
   .dot.mem.on { background: var(--mem); border-color: var(--mem); color: #04180c; }
   .dot.mem.armed {
     background: #0a0b0f; color: var(--mem);
@@ -879,6 +887,27 @@ function drawBarLines(ctx, w, h, now) {
   }
 }
 
+/* Each lane's name, drawn last so a busy lane cannot hide it. A voice that
+   is mostly silent (the hum's density is 0.14 at 8 cells) leaves its lane
+   empty for seconds at a time, and an unnamed empty lane reads as broken. */
+const LANE_NAME_FONT = '12px ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace';
+function drawLaneNames(ctx, h, laneIds, topMargin) {
+  const laneH = (h - topMargin) / laneIds.length;
+  ctx.font = LANE_NAME_FONT;
+  ctx.textBaseline = 'top';
+  laneIds.forEach((id, i) => {
+    const v = Lab.voices.get(id);
+    const name = (v && v.name) || id;
+    const x = LANE_EDGE_PX + 4, y = topMargin + i * laneH + 3;
+    const tw = ctx.measureText(name).width;
+    ctx.fillStyle = 'rgba(13,15,19,0.72)';
+    ctx.fillRect(x - 2, y - 1, tw + 4, 15);
+    ctx.fillStyle = 'rgba(255,255,255,0.62)';
+    ctx.fillText(name, x, y);
+  });
+  ctx.textBaseline = 'alphabetic';
+}
+
 function drawTimeline() {
   const w = vizW;
   const h = vizH;
@@ -896,6 +925,7 @@ function drawTimeline() {
   });
   drawPianoRollLanes(ctx, w, h, LANE_IDS, posEvents, LANE_TOP_MARGIN);
   drawBarLines(ctx, w, h, now);
+  drawLaneNames(ctx, h, LANE_IDS, LANE_TOP_MARGIN);
 }
 
 /* The MEM dots are repainted here rather than on a timer of their own: they
@@ -1073,6 +1103,42 @@ reseedBtn.addEventListener('click', () => {
   renderSeed();
 });
 
+/* Where the hand has got to, for the running line. The line names the next
+   move from what the voices hold, so it never asks for a move already made:
+   nothing yet, a switch waiting for its bar line, a memory at full fidelity,
+   a memory degraded. */
+const LOW_FIDELITY = 0.7;
+function handState() {
+  let held = false, armed = false, low = false;
+  LANE_IDS.forEach(id => {
+    const v = mem[id];
+    if (v.mode === 'mem') {
+      held = true;
+      if (params.voices[id].fidelity <= LOW_FIDELITY) low = true;
+    }
+    if (v.pending) armed = true;
+  });
+  return low ? 'low' : held ? 'held' : armed ? 'armed' : 'fresh';
+}
+const LOW_WORDS = 'try to hear where the memory ends. Turn fidelity back up and ' +
+  'the loop returns: it was held all along.';
+const DESK_RUNNING = {
+  fresh: 'throw a voice’s MEM switch and the two bars it has just played ' +
+         'become its score. Then turn that voice’s fidelity down.',
+  armed: 'the switch lands on the next bar line, and from there the voice ' +
+         'loops its last two bars.',
+  held: 'turn that voice’s fidelity down and watch the dashed outlines arrive.',
+  low: LOW_WORDS
+};
+const PHONE_RUNNING = {
+  fresh: 'press all and each voice keeps the two bars it has just ' +
+         'played. Then ride fidelity down.',
+  armed: 'it lands on the next bar line, and from there each voice loops ' +
+         'its last two bars.',
+  held: 'ride fidelity down and watch the dashed outlines arrive.',
+  low: LOW_WORDS
+};
+
 /* The blurb, in the nameplate. */
 const shows = 'Five random voices on one pulse. Choose to replay the last two bars, ' +
   'and how far to degrade the loops.';
@@ -1141,7 +1207,9 @@ const page = Lab.page.build({
      other four all speak: the line sits directly above the instrument and its
      height is reserved whether or not there is text in it, so a state with
      nothing to say is a band of blank above the rack for as long as it lasts.
-     `running` therefore says what the hand can do next rather than nothing. */
+     `running` therefore says what the hand can do next rather than nothing,
+     and follows the hand (handState above) so it never asks for a move
+     already made. */
   start: {
     gesture: 'Press ▶ Play',
     state: () => {
@@ -1158,8 +1226,7 @@ const page = Lab.page.build({
       stuck: '',
       shut: 'it is running and nothing reaches you: every voice is muted, or the ' +
             'master level is at zero.',
-      running: 'throw a voice’s MEM switch and the two bars it has just played ' +
-               'become its score. Then turn that voice’s fidelity down.'
+      running: () => DESK_RUNNING[handState()]
     }
   },
 
@@ -1217,7 +1284,9 @@ const page = Lab.page.build({
           });
           d.classList.add('mem');
           memDots[c.key] = d;
-          return Lab.ui.inline('mem', d, MEM_HINT);
+          const w = Lab.ui.inline('mem', d, MEM_HINT);
+          w.classList.add('mm-mem');
+          return w;
         } },
       { key: 'pad', width: 'minmax(0,1fr)' }
     ],
@@ -1257,8 +1326,7 @@ const page = Lab.page.build({
                'page can open them.',
       shut: 'running, but muted or the master is at zero — only the desktop ' +
             'page can change that.',
-      running: 'press all and each voice keeps the two bars it has just ' +
-               'played. Then ride fidelity down.'
+      running: () => PHONE_RUNNING[handState()]
     },
     /* The phone's standing text: what the phone shows, and the claim. */
     text: [{ head: 'Replay, then degrade.', body: 'Press all: from the next bar ' +

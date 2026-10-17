@@ -148,8 +148,12 @@
 .pnote{margin:9px 2px 0;font-family:var(--fp);font-size:1rem;color:var(--faint);line-height:1.6;max-width:900px}
 /* A legend: one line per mark, nothing else. */
 .plegend{margin:9px 2px 0;padding:0;list-style:none;font-family:var(--fp);font-size:.95rem;
-  color:var(--faint);line-height:1.55}
-@media (max-width:720px){ .pnote{font-size:.95rem} }
+  color:var(--faint);line-height:1.55;display:grid;grid-template-columns:repeat(2,max-content);
+  column-gap:44px}
+/* Two columns on the desktop, one on the phone: at 1440x900 the four lines of
+   the tree's legend in one column push the trace below the fold, and the trace
+   is the page's proof that the walk follows the weights. */
+@media (max-width:720px){ .pnote{font-size:.95rem} .plegend{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -213,7 +217,9 @@ const BAR_CELLS = 8;                       // one symbol per 8th note
 const TRACE = BAR_CELLS * 4;               // the last four bars
 
 /* ---- the tree's picture ---- */
-const TREE_XSTEP = 74;                     // px per depth level, before fit-to-width
+/* px per depth level at most. The tree is stretched to its box up to this, so
+   a deep tree fills the width and a two-level tree is not one long line. */
+const TREE_XSTEP = 200;
 const TREE_PAD = 26;
 const TREE_HIT = 12;                       // px: how near a node a click has to land
 
@@ -293,14 +299,23 @@ function pathOf(node) {
    only things that move a weight.
    ============================================================ */
 
+/* How far the hand has got, for the running line: 0 nothing yet, 1 wrote,
+   2 weighed, 3 leaned the bias after weighing, 4 cut a branch. It only climbs,
+   so the line always names the next move and never one already made. */
+let reached = 0, biasAtWeigh = 0;
+function reach(n) { if (n > reached) reached = n; }
+
 function writeSymbol(S) {
   finger = ip.plant(finger, S.sym);
+  reach(1);
   afterWrite();
 }
 
 function weighUp() {
   if (!finger.parent) { Lab.ui.status('the root carries no weight — it is nobody’s continuation'); return; }
   ip.bump(finger);
+  if (reached < 2) biasAtWeigh = params.bias;
+  reach(2);
   afterWrite();
 }
 
@@ -335,6 +350,7 @@ function cutBranch() {
       if (inside(r.pruned, pending[i].node)) pending[i].node = ip.root();
     }
     Lab.ui.status('cut ' + pathOf(gone) + ' and everything under it');
+    reach(4);
   }
   afterWrite();
 }
@@ -473,13 +489,18 @@ treeC.setAttribute('aria-label',
   'where the finger is standing.');
 /* The tree is the same canvas at both widths, and only what a press on it does
    differs: on the desktop it moves the finger, on the phone nothing (the phone
-   writes nothing). Its hint follows, and is re-read at every paint. */
+   writes nothing). Its hint follows, and so does its touch-action: the
+   desktop's `none` keeps a drag on the tree from scrolling, and on the phone,
+   where the tree is passive, a swipe across it has to scroll the page. Both are
+   re-read at every paint, so the mode needs no width of its own here. */
 const TREE_HINT_DESK = 'what can follow what: click a node to write from it';
 const TREE_HINT_PHONE = 'what can follow what: the playhead walks it, the desktop writes it';
 const small = () => Lab.shell.env.small;
 function paintTreeHint() {
   const h = small() ? TREE_HINT_PHONE : TREE_HINT_DESK;
   if (treeC.dataset.hint !== h) { treeC.dataset.hint = h; treeC.title = h; }
+  const ta = small() ? 'pan-y' : '';
+  if (treeC.style.touchAction !== ta) treeC.style.touchAction = ta;
 }
 paintTreeHint();
 const g3 = treeC.getContext('2d');
@@ -559,7 +580,7 @@ function drawTree() {
      square, so a heavier branch is told from its siblings by size alone, and the
      number says by how much. The size grows from weight 1, not from 0, so the
      first press on heavier is the biggest visible step. */
-  g3.font = '600 11px ui-monospace, Consolas, monospace';
+  g3.font = '600 ' + (small() ? 12 : 16) + 'px ui-monospace, Consolas, monospace';
   g3.textBaseline = 'bottom';
   (function nodes(node) {
     const q = L.xy(node);
@@ -776,7 +797,7 @@ addEventListener('resize', function () { dirty = true; });
 const forgetBtn = Lab.ui.confirm({
   text: 'forget',
   armed: 'forget — sure?',
-  hint: 'empty the tree and start from nothing',
+  hint: 'erase every branch and weight, back to an empty tree',
   onArm: function () {
     if (ip.root().children.size) return true;
     Lab.ui.status('there is nothing written yet');
@@ -813,6 +834,7 @@ const teaserBias = Lab.ui.dial({
 // one writer for bias; `from` is the dial already showing the value
 function setBias(v, from) {
   params.bias = v;
+  if (reached === 2 && Math.abs(v - biasAtWeigh) >= 0.3) reach(3);
   if (from !== biasDial) biasDial.show(v);
   if (from !== teaserBias) teaserBias.show(v);
   dirty = true;
@@ -825,6 +847,15 @@ function allMuted() {
     return !!(s && s.mute);
   });
 }
+
+/* The running line, one per step of `reached`. */
+const RUNNING = [
+  'write a sequence of voices, then make a branch heavier.',
+  'now press heavier, or P, and watch the number climb.',
+  'listen for your branch: the playhead takes it more often. Then turn bias.',
+  'press lighter, or O, to take the weight down. At zero it cuts the branch.',
+  'write another branch, then weigh it against the others.'
+];
 
 const page = Lab.page.build({
   title: 'possibles',
@@ -899,7 +930,7 @@ const page = Lab.page.build({
       stuck: '',
       shut: 'it is running and nothing reaches you: every voice is muted, or the master ' +
             'level is at zero.',
-      running: 'write a sequence of voices, then make a branch heavier.'
+      running: () => RUNNING[reached]
     },
     /* The reason, and the composition appends the remedy — the same split the
        rack's cells, the pulse slot, the master chain and `controls` take, so
@@ -935,7 +966,8 @@ const page = Lab.page.build({
     { head: 'Press Play.', body: 'The playhead walks the tree. Write a sequence of voices ' +
       'into the tree, and branch for alternatives.' },
     { head: 'Write and weigh.', body: 'Write makes a branch exist. Heavier and lighter set ' +
-      'how much it matters. Zero cuts the branch and everything under it.' },
+      'how much it matters. Zero cuts the branch and everything under it. ' +
+      'Forget, beside Save, erases the whole tree.' },
     { head: 'Bias.', body: 'Left, the playhead follows the weights. Right, it goes against ' +
       'them.' }
   ],

@@ -166,6 +166,15 @@
 .lgname { font-size: 12px; line-height: 1; color: var(--dim); white-space: nowrap }
 .lgdue { width: 78px; height: 9px }
 .lgdue .lfill { top: 1px; bottom: 1px }
+
+/* ---- the record takes the width ----
+   The record is the proof, and the rare voice's gaps are what heterogeneity
+   changes: they only read across twenty seconds or more, so the record gets
+   most of the row and the stress loop the rest, at the loop's own width. Below
+   1000 px the row stacks as the library lays it out. */
+@media (min-width: 1000px) {
+  .pp-stagerow:has(> .recbox) { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) }
+}
 </style>
 </head>
 <body>
@@ -399,6 +408,7 @@ const DEFAULT_STRESS = [1, 0.25, 0.5, 0.25, 0.7, 0.25, 0.5, 0.25];
 const STRESS_STEPS = DEFAULT_STRESS.length;
 const STRESS_MIN = 0.05, STRESS_STEP = 0.05;
 const WEIGHT_MAX = 4;
+const WEIGHT_STEP = 0.05;
 
 /* The seed is fixed rather than drawn. Nothing on the page exposes it and
    there is no reseed, so a random one would buy nobody anything and cost the
@@ -643,8 +653,11 @@ const roll = Lab.roll.attach(recordEl, {
   originIndex: () => tickIndex,
   accentEvery: 4,
   strongEvery: STRESS_STEPS,
-  pxPerSec: () => (Lab.shell.env.small ? 64 : 112),
-  windowSec: 10
+  /* A long memory: at 120 bpm the desktop record holds about eighty turns and
+     the phone's about forty, so the rarest voice shows several gaps side by
+     side. `windowSec` only prunes, so it covers the widest canvas. */
+  pxPerSec: () => (Lab.shell.env.small ? 32 : 40),
+  windowSec: () => (Lab.shell.env.small ? 16 : 40)
 });
 
 /* The gutter: one row per lane, the name, and on the phone the due bar. Its
@@ -696,7 +709,7 @@ recordBox.append(laneGut, recordEl);
    is most likely to confuse, so each says which it is when it is
    pressed from cold.
    ============================================================ */
-const WEIGHT_HINT = 'how often this voice is chosen, against the other weights';
+const WEIGHT_HINT = 'how often this voice is chosen; zero takes it out';
 const DUE_HINT = 'how much this option is due to play; left of centre, ahead';
 const TAP_HINT = 'play this voice now; it counts as one of its turns';
 const SILENCE_ROW_HINT = 'silence takes turns like a voice, with its own weight and due';
@@ -771,14 +784,33 @@ const RACK_COLUMNS = [
         silWeightEl = v;
         return Lab.ui.inline('weight', v, SILENCE_W_HINT);
       }
-      const k = Lab.ui.knob({
-        label: 'weight', min: 0, max: WEIGHT_MAX, step: 0.05,
+      /* A long throw and a soft stop, because zero is not "a little": it takes
+         the voice out of the pool. `fine: 2` spreads the range over 260 px of
+         mouse travel, and a drag that STARTS above zero halts at the lowest step;
+         taking the voice out is a second drag from that step, or the keyboard. */
+      let k = null, grip = null, told = false;
+      k = Lab.ui.knob({
+        label: 'weight', min: 0, max: WEIGHT_MAX, step: WEIGHT_STEP, fine: 2,
         value: params.weights[c.key],
         def: VOICES[c.index].w,
         fmt: v => v.toFixed(2),
         hint: WEIGHT_HINT,
-        onChange: v => { params.weights[c.key] = v; paintPool(); }
+        onChange: v => {
+          if (k && grip > WEIGHT_STEP * 1.5 && v < WEIGHT_STEP / 2) {
+            if (!told) {
+              told = true;
+              Lab.ui.status('drag down again to take ' + nameOf(c.key) + ' out');
+            }
+            k.set(WEIGHT_STEP);
+            return;
+          }
+          params.weights[c.key] = v; paintPool();
+        }
       });
+      k.face.addEventListener('pointerdown', () => {
+        grip = params.weights[c.key]; told = false;
+      }, true);
+      k.face.addEventListener('keydown', () => { grip = null; }, true);
       reaches(k, 'weight');
       return k;
     } },
@@ -1084,24 +1116,34 @@ function audibleVoices() {
   return n;
 }
 
+/* The rarest voice in the pool, by name: heterogeneity shows in ITS gaps first
+   and most, so the running line names the lane to watch. Crash at the
+   defaults; whichever voice the weights make rarest otherwise. */
+function rarest() {
+  let best = -1;
+  for (let i = 0; i < NV; i++) {
+    const w = params.weights[VOICE_IDS[i]];
+    if (w > 0 && (best < 0 || w < params.weights[VOICE_IDS[best]])) best = i;
+  }
+  return best < 0 ? 'the rare voice' : nameOf(VOICE_IDS[best]);
+}
+
 /* The running line, per control the hand last reached (see `reaches`). */
 const RUNNING = {
-  idle: 'turn heterogeneity up and the rare voice stops coming at even gaps.',
-  het: 'heterogeneity: at 0 each voice comes round at even gaps; up, the gaps go uneven.',
-  stress: 'stress is what a turn costs on that step: a costly turn keeps its voice away longer.',
-  weight: 'weight is how often. Its due bar grows while the voice waits and drops when it plays.',
-  silence: 'silence is how much of the pulse goes to nobody, whatever the weights.'
-};
-const RUNNING_PHONE = {
-  idle: 'turn heterogeneity up and the rare voice stops coming at even gaps.',
-  het: 'heterogeneity: at 0 each voice comes round at even gaps; turn it up and the gaps go uneven.'
+  idle: () => 'turn heterogeneity up and watch ' + rarest() + '’s gaps go uneven.',
+  het: () => 'heterogeneity: watch ' + rarest() + '’s gaps. At 0 they are even; ' +
+    'turn it up and they go uneven.',
+  stress: () => 'stress is what a turn costs on that step: a costly turn keeps its voice away longer.',
+  weight: () => 'weight is how often, and zero takes the voice out. Its due bar grows while it waits.',
+  silence: () => 'silence is how much of the pulse goes to nobody, whatever the weights.'
 };
 
 page = Lab.page.build({
   title: 'statistical-feedback',
-  /* One line at 1440, so the roll stays inside the first screen (spec: the
-     desktop fold). */
-  shows: 'Randomness that keeps count. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.',
+  /* Two lines at 1440. The clause after Ames' name says what he noticed, so
+     the name is a credit and not a gate. */
+  shows: 'Randomness that keeps count. One option per pulse, from six voices and a silence. ' +
+    'Based on Charles Ames’ statistical feedback: the option furthest behind its fair share plays next.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING (no remote configured yet)
   site: 'https://noisewrangler.art',
@@ -1150,11 +1192,9 @@ page = Lab.page.build({
     const live = poolVoices();
     let sil = 0;
     for (let i = 0; i < heard.length; i++) if (heard[i] === SIL) sil++;
-    // `ticker.running` and not `page.transport.running`: the composition paints
-    // the readout once from inside `build()`, before this file's `page` has
-    // been assigned, and the ticker is the truth either way.
-    const bits = [ticker.running ? 'running' : 'stopped',
-                  live + (live === 1 ? ' voice' : ' voices')];
+    /* No running/stopped word: the transport's own label says it, and the
+       readout's width is reserved in CSS at its longest form. */
+    const bits = [live + (live === 1 ? ' voice' : ' voices')];
     if (heard.length >= 40) bits.push('silence heard ' + Math.round(sil / heard.length * 100) + '%');
     return bits.join(' · ');
   },
@@ -1178,20 +1218,19 @@ page = Lab.page.build({
       stuck: '',
       shut: 'it is running and nothing reaches you: every voice is muted, at weight zero, ' +
             'or the master level is at zero.',
-      running: () => RUNNING[lastHand] || RUNNING.idle
+      running: () => (RUNNING[lastHand] || RUNNING.idle)()
     }
   },
 
-  /* What the hands play comes before what the eyes read: the weights are the
-     instrument, so the rack precedes the stage. */
-  instrument: 'rack',
+  /* The stage comes first: the record is the proof, and at 1440x900 it sits
+     right under the start line with the whole rack below it, so the weights,
+     their due bars and the record they produce share the first screen. */
+  instrument: 'stage',
 
   /* Both of these are time, which a strip cannot hold: the stress loop is a
      shape spread over eight turns, and the record is what the pool actually
-     did with them. */
-  /* One row: the record beside the stress loop, so a weight turned in the rack
-     shows its result in the first screen at 1440x900. The row stacks below
-     twice `stageMin`, the record first. */
+     did with them. One row, the record taking most of it (see the CSS); it
+     stacks below twice `stageMin`, the record first. */
   stage: [[recordBox, stressPanel]],
   stageMin: '460px',
 
@@ -1235,7 +1274,7 @@ page = Lab.page.build({
       nothing: 'every weight is at zero. The weights are on the desktop page.',
       shut: 'it is running and nothing reaches you: it is muted or at zero on the ' +
             'desktop page.',
-      running: () => (lastHand === 'het' ? RUNNING_PHONE.het : RUNNING_PHONE.idle)
+      running: () => (lastHand === 'het' ? RUNNING.het : RUNNING.idle)()
     },
     share: { text: 'Six voices take turns by who is most due. The weights are on the desktop page.' },
     /* The phone's standing text: only what the phone shows — Play, the dial
@@ -1248,6 +1287,12 @@ page = Lab.page.build({
 });
 
 rack = page.rack;
+
+/* The readout keeps its width. It gains a measured silence share after forty
+   turns; reserved at its longest ("6 voices · silence heard 100%"), it never
+   pushes the bar onto a second line mid-run. Set here rather than in the
+   stylesheet because the readout is the library's element. */
+if (page.statusEl) page.statusEl.style.minWidth = '29ch';
 
 /* ============================================================
    THE FRAME LOOP — releasing the books against the audio clock.

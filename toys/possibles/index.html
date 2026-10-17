@@ -469,9 +469,7 @@ treeC.setAttribute('aria-label',
   'the tree of possibles. The arrows walk it: right into a branch, left to the ' +
   'parent, up and down between branches, Escape to the root. The line below says ' +
   'where the finger is standing.');
-treeC.dataset.hint = 'the tree of what can follow what. Click a node to put the finger ' +
-  'there and write from that motif; click empty space for the root. A square is the ' +
-  'weight you wrote; an edge is the odds the machine gives it now.';
+treeC.dataset.hint = 'what can follow what: click a node to write from it';
 treeC.title = treeC.dataset.hint;
 const g3 = treeC.getContext('2d');
 
@@ -622,9 +620,7 @@ treeC.addEventListener('keydown', function (e) {
 const heavierBtn = document.createElement('button');
 heavierBtn.type = 'button';
 heavierBtn.textContent = 'heavier';
-heavierBtn.dataset.hint = 'raise the weight on the branch under the finger, so the ' +
-  'machine takes it more often — the same as pressing P. It changes how much the ' +
-  'branch matters, not whether it exists.';
+heavierBtn.dataset.hint = 'raise the weight of the branch under the finger [P]';
 heavierBtn.title = heavierBtn.dataset.hint;
 heavierBtn.addEventListener('click', weighUp);
 
@@ -637,9 +633,7 @@ heavierBtn.addEventListener('click', weighUp);
 const lighterBtn = Lab.ui.confirm({
   text: 'lighter',
   armed: 'cut the branch?',
-  hint: 'lower the weight on the branch under the finger — the same as pressing O. ' +
-        'The press that would take it to zero cuts the branch away, with every motif ' +
-        'under it, and that one asks twice.',
+  hint: 'lower the weight of the branch under the finger, zero cuts it [O]',
   onArm: function () {
     if (!finger.parent) {
       Lab.ui.status('the root carries no weight — it is nobody’s continuation');
@@ -710,9 +704,7 @@ addEventListener('resize', function () { dirty = true; });
 const forgetBtn = Lab.ui.confirm({
   text: 'forget',
   armed: 'forget — sure?',
-  hint: 'empty the tree and start again from nothing. The machine keeps walking, with ' +
-        'nothing to walk. It asks twice, because there is no undo and the autosave ' +
-        'means a reload will not bring the tree back.',
+  hint: 'empty the tree and start from nothing',
   onArm: function () {
     if (ip.root().children.size) return true;
     Lab.ui.status('there is nothing written yet');
@@ -727,9 +719,7 @@ const forgetBtn = Lab.ui.confirm({
 const biasDial = Lab.ui.dial({
   label: 'bias', min: -1, max: 1, step: 0.01, value: params.bias,
   fmt: v => (v > 0 ? '+' : '') + v.toFixed(2),
-  hint: 'how the machine leans among a node’s branches. Left it obeys the weights ' +
-        'harder; at the centre it takes them as written; right it evens them out and ' +
-        'then turns them over. It moves no weight — watch the edges, not the squares.',
+  hint: 'how the machine leans: left obeys the weights, right turns them over',
   onInput: function (v) { setBias(v, biasDial); },
   /* The default belongs to the thing addressed, not to the control: bias is a
      page parameter whose default is 0, so the double press puts the parameter
@@ -743,9 +733,7 @@ const biasDial = Lab.ui.dial({
 const teaserBias = Lab.ui.dial({
   label: 'bias', min: -1, max: 1, step: 0.01, value: params.bias,
   fmt: v => (v > 0 ? '+' : '') + v.toFixed(2),
-  hint: 'how the machine leans among a branch’s continuations. Left it obeys the ' +
-        'weights harder and the figure sharpens; right it evens them out, then turns ' +
-        'them over, and the figure dissolves.',
+  hint: 'how the machine leans: left sharpens the figure, right dissolves it',
   onInput: function (v) { setBias(v, teaserBias); },
   onDefault: function () { setBias(0, null); }
 });
@@ -782,9 +770,8 @@ SYMBOLS.forEach(function (S) {
   k.textContent = S.kk;
   b.append(w, k);
   b.setAttribute('aria-label', 'write ' + S.name + ' under the finger');
-  b.dataset.hint = 'make ' + S.name + ' a continuation of the motif under the finger and ' +
-    'step into it — the same as pressing ' + S.kk + '. It makes the branch exist; it ' +
-    'does not make a sound, and it says nothing about how likely the branch is.';
+  b.dataset.hint = 'make ' + S.name + ' a continuation of the motif under the finger [' +
+    S.kk + ']';
   b.title = b.dataset.hint;
   b.addEventListener('click', function () { writeSymbol(S); });
   S.btn = b;                                  // the key's twin, and what the key stands for
@@ -803,7 +790,7 @@ const page = Lab.page.build({
      bias is a `control` rather than a `global`, because it shapes how the
      machine leans and never asks it for sound. */
   transport: {
-    hint: 'start and stop the machine. Writing works either way — only the speaking stops.',
+    hint: 'start and stop the machine [Space]',
     onStart: function () {
       speaking = true;
       Lab.audio.fadeIn(0.03);
@@ -824,7 +811,7 @@ const page = Lab.page.build({
   },
   bpm: {
     min: BPM.min, max: BPM.max, def: BPM.def, value: params.bpm,
-    hint: 'the machine’s grid — one symbol per 8th note',
+    hint: 'the machine’s grid, one symbol per 8th note',
     onChange: function (v) { params.bpm = v; }
   },
   master: saved && saved.fx ? saved.fx : {},

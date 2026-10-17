@@ -602,9 +602,7 @@ function clearLedger() {
 
    Silence draws nothing. The empty column is the mark.
    ============================================================ */
-const RECORD_HINT = 'the record: one lane per voice, one column per turn, newest at the ' +
-  'right. A silent turn draws nothing, and that gap in an otherwise regular column is ' +
-  'silence taking its turn. The heavy line is where the stress loop starts.';
+const RECORD_HINT = 'one lane per voice, one column per turn, newest at the right';
 
 const recordEl = document.createElement('canvas');
 recordEl.id = 'record';
@@ -634,19 +632,11 @@ const roll = Lab.roll.attach(recordEl, {
    is most likely to confuse, so each says which it is when it is
    pressed from cold.
    ============================================================ */
-const WEIGHT_HINT = 'this voice’s share of the pool. It is a share of the STRESS the ' +
-  'pattern spends, not of the turns — a light voice takes more turns, on weaker beats, ' +
-  'to pay the same. At 0 the voice leaves the game and its ledger freezes where it stands.';
-const LEDGER_HINT = 'the ledger: turns this option has taken, less the turns its weight ' +
-  'entitled it to. Right of the line is credit already spent, left of it is a debt the ' +
-  'machine owes. The seven always sum to zero, so one bar can only rise by the others sinking.';
-const TAP_HINT = 'play this voice now, off the grid — and charge it to the books exactly ' +
-  'as a turn would be, at the current beat’s stress. Hammer it and the machine avoids it ' +
-  'afterwards. From cold it presses Play first, because it is asking for sound.';
-const SILENCE_ROW_HINT = 'silence is an option like the others: it has a weight, it takes ' +
-  'turns, and it keeps a ledger. It is the only one you cannot tap.';
-const SILENCE_W_HINT = 'silence’s own weight, computed live as p/(1−p)·ΣW so the ' +
-  'PROBABILITY of silence stays where you set it however many voices are in the pool.';
+const WEIGHT_HINT = 'this voice’s share of the stress the pattern spends';
+const LEDGER_HINT = 'turns this option has taken, less the turns its weight entitled';
+const TAP_HINT = 'play this voice now and charge it to the books';
+const SILENCE_ROW_HINT = 'silence, an option with its own weight, turns and ledger';
+const SILENCE_W_HINT = 'silence’s own weight, computed live to hold its probability';
 
 const ledCells = [];       // per option: { fill, glow }
 let silWeightEl = null;
@@ -768,27 +758,19 @@ let tHet = null;
 const dHet = Lab.ui.dial({
   label: 'heterogeneity', min: 0, max: 2, step: 0.01, value: params.het,
   fmt: v => v.toFixed(2),
-  hint: 'how regular the turns are, and only that. 0 is as regular as the pool ' +
-        'allows — a strict rotation only with equal weights, a flat stress and no ' +
-        'silence; 2 is loose, nearly dice. The proportions ' +
-        'are held exactly all the way across: what loosens is WHEN each option ' +
-        'comes round, and the rare voices loosen far more than the common ones.',
+  hint: 'how regular the turns come round: 0 strict rotation, 2 nearly dice',
   onInput: v => { params.het = v; if (tHet) tHet.show(v); },
   onDefault: () => dHet.set(DEFAULT_HET)
 });
 tHet = Lab.ui.dial({
   label: 'heterogeneity', min: 0, max: 2, step: 0.01, value: params.het,
   fmt: v => v.toFixed(2),
-  hint: 'how loosely the books are read. At 0 each voice comes round as regularly as ' +
-        'its weight allows; turn it up and the same shares arrive with less grain, ' +
-        'toward plain dice.',
+  hint: 'how regular the turns come round: 0 strict rotation, 2 nearly dice',
   onInput: v => { params.het = v; dHet.show(v); },
   onDefault: () => dHet.set(DEFAULT_HET)
 });
 
-const SILENCE_HINT = 'how much of the pulse goes to silence. It is a probability and it ' +
-  'holds: take voices out or change their weights and this stays where you put it. The ' +
-  'control tops out at 0.95 — at 1 nothing else could ever be chosen.';
+const SILENCE_HINT = 'how much of the pulse goes to silence';
 const gSilence = Lab.ui.gate({
   value: params.silence, def: DEFAULT_SILENCE, left: '0', right: '.95', width: 108,
   label: 'silence', hint: SILENCE_HINT,
@@ -806,10 +788,7 @@ const silenceCtl = Lab.ui.inline('silence', gSilence, SILENCE_HINT);
    the arrows, so the contour can be drawn from a keyboard one bar
    at a time.
    ============================================================ */
-const STRESS_HINT = 'the eight-step loop of stress, looping with the ticks. Stress scales ' +
-  'what a turn COSTS, never the odds: a voice taken on a heavy step pays more and stays ' +
-  'away longer, so the metre is something the ledger produces rather than something ' +
-  'anyone sequenced. Drag along the row to draw the shape; double-click a bar to reset it.';
+const STRESS_HINT = 'the eight-step stress loop: what a turn costs on each step';
 
 const stressEl = document.createElement('div');
 stressEl.className = 'stress';
@@ -988,10 +967,7 @@ function resetAll() {
 const resetBtn = Lab.ui.confirm({
   text: 'reset',
   armed: 'reset — sure?',
-  hint: 'put every setting back where it opened — the six weights, the stress shape, ' +
-        'tempo, heterogeneity, silence and the mix — and clear the ' +
-        'ledger. The master chain stays. It asks twice: there is no undo, and the ' +
-        'autosave means a reload will not bring your settings back.',
+  hint: 'put every setting back where it opened and clear the ledger',
   onArm: () => {
     if (!atDefaults()) return true;
     Lab.ui.status('everything is already where it opened and the books are clear');
@@ -1038,8 +1014,7 @@ page = Lab.page.build({
   site: 'https://noisewrangler.art',
 
   transport: {
-    hint: 'start and stop the pulse. The books survive a stop — the ledger is what the ' +
-          'instrument remembers, and the transport does not reset it.',
+    hint: 'start and stop the pulse [Space]',
     onStart: async function () {
       await Lab.voices.ensureRendered();
       Lab.audio.fadeIn(0.03);
@@ -1061,8 +1036,7 @@ page = Lab.page.build({
      law counts turns, not seconds, so the tempo moves no proportion. */
   bpm: {
     min: BPM.min, max: BPM.max, def: DEFAULT_BPM, value: params.bpm,
-    hint: 'the tempo. One turn is an eighth note, so the eight-step stress loop is one ' +
-          'bar. The law counts turns, not seconds, so this changes no proportion.',
+    hint: 'the tempo, one turn per eighth note',
     says: 'that is bpm, the tempo — one turn is an eighth note, and the law counts ' +
           'turns, so it moves no proportion',
     onChange: v => { params.bpm = v; }

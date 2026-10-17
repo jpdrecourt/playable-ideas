@@ -677,9 +677,7 @@ let vizEvents = [];      // { time, id, gain, mark: null|'score'|'extra'|'ghost'
 const timelineEl = document.createElement('canvas');
 timelineEl.id = 'timeline';
 timelineEl.className = 'tl';
-timelineEl.dataset.hint = 'the last few seconds, one lane per voice: filled means it ' +
-  'sounded, a white outline means that voice is playing its memory, a dashed one ' +
-  'means the law invented it, and an empty outline is an event that stayed silent.';
+timelineEl.dataset.hint = 'the last few seconds of events, one lane per voice';
 timelineEl.title = timelineEl.dataset.hint;
 const timelineCtx = timelineEl.getContext('2d');
 
@@ -883,9 +881,9 @@ function frame() {
 /* ============================================================
    The rack's own columns, and the session controls.
    ============================================================ */
-const DENSITY_HINT = 'chance this voice sounds at each of its own opportunities — the sole rate control, live with MEM on or off';
-const FIDELITY_HINT = 'how remembered this voice is — 1 verbatim, 0 pure generation with the memory still held, between them a blend at the same density';
-const MEM_HINT = 'claim the last two bars this voice played — lands on the bar line and snaps fidelity to 1';
+const DENSITY_HINT = 'chance this voice sounds at each of its opportunities';
+const FIDELITY_HINT = 'how remembered this voice is: 1 verbatim, 0 pure generation';
+const MEM_HINT = 'replay the last two bars this voice played [1–5]';
 
 const memDots = {};
 let rack = null;          // the composition builds it; freezeScore writes through it
@@ -918,10 +916,8 @@ function renderMem(id) {
    as at entry), and the dial shows the five's mean on every
    paint, which is the value itself whenever they agree.
    ============================================================ */
-const MEMALL_HINT = 'claim the last two bars every voice played — lands on the bar line ' +
-  'and snaps fidelity to 1; press again to let every memory go';
-const FIDALL_HINT = 'how remembered all five voices are — 1 verbatim, 0 pure generation ' +
-  'with the memory still held';
+const MEMALL_HINT = 'replay every voice’s last two bars, or let them all go';
+const FIDALL_HINT = 'how remembered all five voices are: 1 verbatim, 0 pure generation';
 
 function throwAll() {
   const claim = !LANE_IDS.every(id => mem[id].want);
@@ -1021,10 +1017,7 @@ function resetVoices() {
 const resetBtn = Lab.ui.confirm({
   text: 'reset',
   armed: 'reset — sure?',
-  hint: 'put the five voices back where they opened — density, rate, fidelity, ' +
-        'level, pan and mute — and let go of every memory. The seed, the tempo ' +
-        'and the master chain stay. It asks twice: there is no undo, and the ' +
-        'autosave means a reload will not bring your settings back.',
+  hint: 'put the five voices back where they opened and forget every memory',
   onArm: () => {
     if (!atDefaults()) return true;
     Lab.ui.status('the voices are already where they opened');
@@ -1033,7 +1026,7 @@ const resetBtn = Lab.ui.confirm({
   onConfirm: resetVoices
 });
 
-const RESEED_HINT = 'new event stream — the palette and the frozen memories are untouched';
+const RESEED_HINT = 'draw a new stream of events';
 const reseedBtn = document.createElement('button');
 reseedBtn.type = 'button';
 reseedBtn.textContent = 'reseed';
@@ -1069,7 +1062,7 @@ const page = Lab.page.build({
   site: 'https://noisewrangler.art',
 
   transport: {
-    hint: 'start / stop the piece — Space does the same',
+    hint: 'start and stop the piece [Space]',
     onStart: async function () {
       await Lab.voices.ensureRendered();
       Lab.audio.fadeIn(0.03);
@@ -1094,7 +1087,7 @@ const page = Lab.page.build({
   // on, and it belongs with the other globals.
   bpm: {
     min: BPM.min, max: BPM.max, def: BPM.def, value: params.bpm,
-    hint: 'the shared pulse — one grid cell is an 8th note',
+    hint: 'the shared pulse, one grid cell an 8th note',
     onChange: v => { params.bpm = v; }
   },
   master: saved && saved.fx ? saved.fx : {},
@@ -1170,7 +1163,7 @@ const page = Lab.page.build({
             label: 'rate', min: 0, max: RATE_STEPS.length - 1, step: 1,
             value: rateIndex(p.rate), def: rateIndex(VOICE_DEF[c.key].rate),
             fmt: i => String(RATE_STEPS[Math.round(i)]),
-            hint: 'grid cells between this voice’s opportunities — 1, 2, 4, 8 or 16',
+            hint: 'grid cells between this voice’s opportunities: 1, 2, 4, 8 or 16',
             onChange: i => { p.rate = RATE_STEPS[Math.round(i)]; }
           });
         } },

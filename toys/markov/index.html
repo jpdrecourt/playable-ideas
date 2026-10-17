@@ -231,12 +231,10 @@ function captionFor(wi) {
 
 function captionHintFor(wi) {
   const out = {
-    name: WALKERS[wi].name + ' — four states, sixteen weights, and it shares ' +
-      'nothing with the other walker but the grid it steps on'
+    name: WALKERS[wi].name + ': four states and their sixteen weights'
   };
   for (let c = 0; c < S; c++) {
-    out['n' + c] = 'the column of weights into ' + stName(wi, c) + ' — a cell here ' +
-      'is how often ' + stName(wi, c) + ' may follow that strip’s state';
+    out['n' + c] = 'how often ' + stName(wi, c) + ' may follow each strip’s state';
   }
   return out;
 }
@@ -653,10 +651,8 @@ function weightCell(ctx, c) {
   b.className = 'wc' + (c === 0 ? ' torest' : '');
   b.appendChild(document.createElement('i'));
   b.dataset.hint = c === 0
-    ? 'how often a rest may follow ' + stName(at.w, at.s) +
-      ' — weight here asks for a hole, and a heavier one asks for a longer silence'
-    : 'how often ' + stName(at.w, c) + ' may follow ' + stName(at.w, at.s) +
-      '. Tap to add a step; tap past full, or hold, to clear it';
+    ? 'how often a rest may follow ' + stName(at.w, at.s) + ', hold to clear'
+    : 'how often ' + stName(at.w, c) + ' may follow ' + stName(at.w, at.s) + ', hold to clear';
   b.title = b.dataset.hint;
   wireCell(b, at.w, at.s, c);
   cellsEl[at.w][at.s * S + c] = b;
@@ -686,9 +682,7 @@ const nextColumns = NEXT_KEYS.map(function (k, c) {
 const clearBtn = Lab.ui.confirm({
   text: 'clear',
   armed: 'clear — sure?',
-  hint: 'empty every weight of both matrices and start again from nothing. It asks ' +
-        'twice, because there is no undo and the autosave means a reload will not ' +
-        'bring it back.',
+  hint: 'empty every weight of both matrices',
   onArm: () => {
     if (weightsSet()) return true;
     Lab.ui.status('there is nothing built yet');
@@ -716,9 +710,7 @@ renderSeed();
 const reseedBtn = document.createElement('button');
 reseedBtn.type = 'button';
 reseedBtn.textContent = 'reseed';
-reseedBtn.dataset.hint = 'a different roll of the same dice — every weight, both sounds ' +
-  'and the tempo are untouched, and the walks go somewhere else. What a matrix holds ' +
-  'is a grammar, not a pattern.';
+reseedBtn.dataset.hint = 'reroll the dice: same weights, new walks';
 reseedBtn.title = reseedBtn.dataset.hint;
 reseedBtn.addEventListener('click', () => {
   params.seed = Lab.prng.newSeed();
@@ -738,10 +730,7 @@ reseedBtn.addEventListener('click', () => {
    is CSS over one DOM: a desktop without it could play a blended
    chain with nothing on screen saying so.
    ============================================================ */
-const STRUCT_HINT = 'how closely the two walks read their matrices. At 1 they ' +
-  'follow the weights as written, and the walk has a style; at 0 every next ' +
-  'state is a quarter chance, a plain random draw. The weights themselves are ' +
-  'not changed.';
+const STRUCT_HINT = 'how closely the walks follow their matrices: 1 as written, 0 random';
 const STRUCT_DEF = 1;
 let tStruct = null;
 const dStruct = Lab.ui.dial({
@@ -753,8 +742,7 @@ const dStruct = Lab.ui.dial({
 tStruct = Lab.ui.dial({
   label: 'structure', min: 0, max: 1, step: 0.01, value: params.structure,
   fmt: v => v.toFixed(2),
-  hint: 'turn it down and the grammar dissolves into a random draw, a quarter ' +
-        'chance for each state; turn it up and the example’s grammar comes back.',
+  hint: 'how closely the walks follow their matrices: 1 as written, 0 random',
   onInput: v => { params.structure = v; dStruct.show(v); },
   onDefault: () => dStruct.set(STRUCT_DEF)
 });
@@ -792,7 +780,7 @@ const page = Lab.page.build({
      nothing, which would be the page's first lie. */
   bpm: {
     min: BPM.min, max: BPM.max, def: BPM.def, value: params.bpm,
-    hint: 'the pulse both walkers step on — one cell is a sixteenth',
+    hint: 'the pulse both walkers step on, one cell a sixteenth',
     onChange: v => { params.bpm = v; }
   },
   master: saved && saved.fx ? saved.fx : {},

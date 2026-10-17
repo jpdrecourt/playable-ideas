@@ -154,18 +154,18 @@
 
    On the phone each row also carries that voice's due bar, the same bar the
    desktop rack shows in its row, so the phone sees the cause beside the
-   effect. The bars are display only: nothing in the gutter takes a press. */
+   effect. The bars are display only: nothing in the gutter takes a press.
+   They are `pp-phone`, and their width is what widens the gutter there: 72 px
+   holds the names, 78 px of bar and the 6 px gap make it 84. */
 .recbox { display: flex; align-items: stretch; height: 196px; min-width: 0 }
 .recbox #record { height: 100%; flex: 1 1 auto; min-width: 0 }
-.lanegut { display: flex; flex-direction: column; flex: 0 0 auto; width: 72px;
+.lanegut { display: flex; flex-direction: column; flex: 0 0 auto; min-width: 72px;
   padding: 1px 6px 1px 0 }
 .lgrow { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;
   justify-content: center; align-items: flex-end; gap: 3px }
 .lgname { font-size: 12px; line-height: 1; color: var(--dim); white-space: nowrap }
-.lgdue { display: none; width: 100%; height: 9px }
+.lgdue { width: 78px; height: 9px }
 .lgdue .lfill { top: 1px; bottom: 1px }
-.recbox.small .lanegut { width: 84px }
-.recbox.small .lgdue { display: block }
 </style>
 </head>
 <body>
@@ -634,18 +634,10 @@ recordEl.setAttribute('aria-label', RECORD_HINT);
 recordEl.dataset.hint = RECORD_HINT;
 recordEl.title = RECORD_HINT;
 
-/* WORKAROUND, and a bend in the library: `Lab.roll` draws each lane's name
-   inside the canvas at its left edge, under the oldest blocks, and has no
-   option to leave it out. A lane declared with a one-space name draws nothing
-   readable and keeps its colour from the voice; the names go in the gutter
-   below. The library should take `labels: false` (or draw a gutter of its
-   own), and this table goes when it does. */
-const BLANK_LANES = {};
-VOICE_IDS.forEach(id => { BLANK_LANES[id] = { name: ' ' }; });
-
+/* The lane names go in the gutter below, not inside the canvas. */
 const roll = Lab.roll.attach(recordEl, {
   laneIds: VOICE_IDS,
-  lanes: BLANK_LANES,
+  labels: false,
   gridSec: () => 30 / params.bpm,
   origin: () => tickTime,
   originIndex: () => tickIndex,
@@ -657,7 +649,11 @@ const roll = Lab.roll.attach(recordEl, {
 
 /* The gutter: one row per lane, the name, and on the phone the due bar. Its
    bars join the rack's in `dueViews`, so the frame loop drives both from the
-   same released books and the phone's bar moves exactly as the desktop's. */
+   same released books and the phone's bar moves exactly as the desktop's.
+   The bars are the phone's (`pp-phone`): the desktop reads the same bars in
+   its rack, one row from the weight that drives them, and a second copy
+   beside the roll would draw the books twice. Each bar carries the hint, so
+   it is offered only where the bars are drawn. */
 const DUE_GUT_HINT = 'each voice’s due bar: right of centre, it is due to play';
 const dueViews = [];                     // per option: [{ fill, glow }, …]
 function addDueView(index, box) {
@@ -677,8 +673,10 @@ VOICE_IDS.forEach((id, i) => {
   name.className = 'lgname';
   name.textContent = nameOf(id);
   const due = document.createElement('div');
-  due.className = 'led lgdue';
+  due.className = 'led lgdue pp-phone';
   due.style.color = colorOf(id);
+  due.dataset.hint = DUE_GUT_HINT;
+  due.title = DUE_GUT_HINT;
   addDueView(i, due);
   row.append(name, due);
   laneGut.appendChild(row);
@@ -687,22 +685,6 @@ VOICE_IDS.forEach((id, i) => {
 const recordBox = document.createElement('div');
 recordBox.className = 'recbox';
 recordBox.append(laneGut, recordEl);
-
-/* The bars in the gutter are the phone's: the desktop reads the same bars in
-   its rack, one row from the weight that drives them, and a second copy beside
-   the roll would draw the books twice. The library marks what the desktop
-   alone shows (`pp-desk`) and has no mark for what the phone alone shows, so
-   the page reads the collection's own breakpoint query and says it with a
-   class. The hint rides on the gutter only where the bars are drawn. */
-const smallQ = window.matchMedia(Lab.shell.env.teaserQuery);
-function markSmall() {
-  recordBox.classList.toggle('small', smallQ.matches);
-  if (smallQ.matches) { laneGut.dataset.hint = DUE_GUT_HINT; laneGut.title = DUE_GUT_HINT; }
-  else { delete laneGut.dataset.hint; laneGut.removeAttribute('title'); }
-}
-if (smallQ.addEventListener) smallQ.addEventListener('change', markSmall);
-else smallQ.addListener(markSmall);
-markSmall();
 
 /* ============================================================
    THE RACK — one row per option, silence included.

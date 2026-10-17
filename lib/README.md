@@ -234,6 +234,10 @@ Options (functions are read live each frame):
   what a returning visitor wants is the stretch of time they came back to.
   `queued` reads the count, because a bound nobody can read is a bound nobody
   can check.
+- `labels` — default `true`. `false` draws no lane names at all, for a page that
+  names its lanes in a gutter of its own beside the canvas: a name drawn inside
+  sits under the oldest blocks. The colour edge stays, and no space is reserved
+  for names in either case, since they are drawn over the lane's left end.
 - `gridSec` — FUNCTION: the cell duration.
 - `origin`, `originIndex` — grid anchor: cell edges sit at `origin + k*gridSec` and
   the cell at `origin` has index `originIndex` (keeps the accent/strong hierarchy
@@ -426,8 +430,10 @@ can never start disagreeing):
 - `Lab.ui.gate({value, def=1, onChange, left?, right?, width?, hint?, label?})` — the Bernoulli
   probability bar; pass the toy's own `def` when the resting probability isn't 1.
   The ends read **low** and **high** unless the toy passes its own `left` /
-  `right`; the default 104 px is the narrowest bar where those words and a
-  centred `100%` sit apart, so a narrower `width` wants shorter ends.
+  `right`. Each word and the percentage sit on a black chip, so the fill edge
+  never splits one black-and-white. The default 104 px is the narrowest bar
+  where those chips and a centred `100%` sit apart, so a narrower `width` wants
+  shorter ends.
   Reachable by **Tab** and moved by the **arrows** (Page / Home / End too, Shift
   for a tenth), `role="slider"` with the aria value pair — the same keyboard
   `knob` and `dial` answer, because a hand learns the grammar once. `label`
@@ -817,8 +823,10 @@ so a toy never draws its own.
   asks here, and `.small` is `matchMedia(.teaserQuery)`.
 
   `lab.css` declares `--teaser` once, uses no other width of its own, and
-  carries exactly one literal of the number: the `@media` block at its foot,
-  which exists because a media query cannot read a custom property. `shell.js`
+  carries two literals of the number, side by side at its foot: the `@media`
+  block and its negation (the phone's rules, then `pp-phone`'s hiding above
+  the width), which exist because a media query cannot read a custom property
+  and CSS has no "else" for one. `shell.js`
   carries a second, as the documented fallback for a page whose stylesheet did
   not load. Beyond the library, `toys/vagalume/` and `toys/virtualisation/`
   each still hard-code `720` in a media query of their own — a drift for their
@@ -960,7 +968,13 @@ const page = Lab.page.build({
   nothing. The footer's `keys` line says `Space play or stop` and leaves the
   focused-button rule to this page.
 - **The owned-names check** warns when a page's own `<style>` defines one of
-  the short list of class names `lab.css` holds (`.bar`, `.dot`, …). It runs
+  the short list of class names `lab.css` holds (`.bar`, `.dot`, …) rather
+  than restyling it. A compound that puts the class in a state is a restyle
+  and stays quiet: a pseudo-class (`.dot:hover`), an attribute, or a state
+  class the library toggles (`on`, `off`, `muted`, `armed`, `ro`), so
+  `.dot.mem.on` passes. The class alone (`.dot {`, `.trail .bar`) or beside
+  only plain classes (`.tsl.bar`, the case that produced the check) is a
+  collision and is named with its rule. It runs
   only on a builder's host: a `file:` page, localhost, 127.0.0.1, [::1], or
   any host with `?dev` in the query. The public host stays quiet, because the
   toys ship as the files they are written in and there is no build step to
@@ -1037,6 +1051,11 @@ same engine runs under both. A toy declares it; the composition does the rest.
   the phone reads controls, then what they move, then the invitation. With
   nothing kept, the stage and the instrument are desk too. A page with **no**
   teaser marks nothing: below the teaser width it is the desktop page, whole.
+- **The phone's own.** `pp-phone` is the inverse mark, for a toy's element that
+  only the phone shows (a bar beside the roll that the desktop reads in its
+  rack). `lab.css` hides it above `--teaser`, with `!important` for the same
+  reason, and leaves it alone below, so it takes the toy's own `display` there.
+  The library marks nothing with it; it is the toy's to place.
 - **Everything in `controls` arms.** On an arm page the box is another root of
   the arm; on a transport page it joins the arm the globals use, so a control
   pressed from cold presses Play first and then acts. On the phone those one or

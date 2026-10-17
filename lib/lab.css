@@ -88,10 +88,12 @@
 
      A media query cannot read a custom property: `@media (max-width:var(…))`
      is not a thing in any engine, and there is no honest way to make it one.
-     So there is exactly ONE unavoidable copy of this number in the whole
-     collection — the `@media (max-width:720px)` block at the foot of this
-     file, which has to sit there rather than here because it overrides rules
-     declared in between. It is the only other place 720 may be written.
+     So the number is written only where a media query cannot do without it:
+     the `@media (max-width:720px)` block at the foot of this file and its
+     negation directly after it (one hides `pp-desk` below the width, the
+     other `pp-phone` above it), which sit there rather than here because they override
+     rules declared in between. They are the only other places 720 may be
+     written.
      Every other reader, CSS or JS, comes through this property. */
   --teaser:720px;
 }
@@ -267,17 +269,24 @@ input[type=range].kn{flex:1;min-width:0;width:auto;height:14px;accent-color:var(
   text-transform:uppercase;color:var(--faint);line-height:1.6}
 .blk-head b{color:var(--dim);font-weight:700}
 
-/* Bernoulli gate — the standard PROBABILITY control, low → high. 104 px is
-   the narrowest bar where the default end words and a centred "100%" sit
-   apart at 12 px bold: low 21 px, high 28 px, 100% 28 px, 5 px insets. */
+/* Bernoulli gate — the standard PROBABILITY control, low → high.
+   Every word on the bar sits on a black chip of its own: white on black over
+   the white fill and over the empty bar alike, at every value. A difference
+   blend reads on both grounds too, but splits a word black-and-white wherever
+   the fill edge crosses it: "low" at 14% and "50%" at 50% read as two halves.
+   Over the empty bar a chip is invisible, which is the point.
+   104 px is the narrowest bar where the default end words and a centred
+   "100%" keep apart on their chips at 12 px bold: low 21 px, high and 100%
+   28 px, plus 1 px of chip each side and 3 px insets, leaving 3 px between
+   "100%" and "high". */
 .gate{position:relative;width:104px;flex:0 0 104px;height:20px;border:1px solid var(--line2);
   border-radius:5px;background:#000;overflow:hidden;cursor:ew-resize;user-select:none;touch-action:none}
 .gate .gfill{position:absolute;left:0;top:0;bottom:0;background:#fff}
-/* white text + difference blend → black over the white fill, white over the black — reads on both */
-.gate .gk,.gate .gpct{position:absolute;top:50%;color:#fff;font-weight:700;pointer-events:none;mix-blend-mode:difference}
-.gate .gk{transform:translateY(-50%);font-size:12px}
-.gate .gk.l{left:5px} .gate .gk.r{right:5px}
-.gate .gpct{left:50%;transform:translate(-50%,-50%);font-size:12px}
+.gate .gk,.gate .gpct{position:absolute;top:50%;color:#fff;background:#000;font-weight:700;
+  font-size:12px;line-height:16px;padding:0 1px;border-radius:3px;pointer-events:none}
+.gate .gk{transform:translateY(-50%)}
+.gate .gk.l{left:3px} .gate .gk.r{right:3px}
+.gate .gpct{left:50%;transform:translate(-50%,-50%)}
 
 /* timeline canvas — the hero (toys override height per view) */
 canvas.tl{flex:1;min-width:0;width:100%;height:42px;display:block;background:#0d0f13;
@@ -486,10 +495,10 @@ body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cur
   .pp-hintbtn{width:44px;height:44px}
 }
 /* THE TEASER WIDTH — the collection's one named breakpoint, declared as
-   `--teaser` at the top of this file. This block is the single copy of the
-   number that CSS cannot avoid (a media query cannot read a custom property);
-   it lives down here rather than beside the declaration because it overrides
-   rules stated in between. Change one, change the other.
+   `--teaser` at the top of this file. This block and its negation below are
+   the copies of the number that CSS cannot avoid (a media query cannot read a
+   custom property); they live down here rather than beside the declaration
+   because they override rules stated in between. Change all three together.
 
    It is also the ONLY width in this stylesheet. There used to be an unnamed
    760 px block forty pixels above it, narrowing the fixed control cluster and
@@ -520,4 +529,14 @@ body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cur
      to a teaser page's stage, so no page without one changes here. */
   .pp-stage.pp-teased > *{margin-top:0}
   .pp-stage.pp-teased > :not(.pp-desk) ~ :not(.pp-desk){margin-top:13px}
+}
+/* THE PHONE'S SIDE, the inverse of `pp-desk`: an element only the phone
+   shows. It is hidden ABOVE the teaser width and left alone below it, so the
+   toy's own `display` (a flex row, a block bar) is what the phone gets; a
+   rule that SHOWED it below the width would have to name one display for
+   every element. CSS has no "else" for a media block, so this is the block's
+   negation and the second literal of the number, written beside the first.
+   Change both with `--teaser`. */
+@media not all and (max-width:720px){
+  .pp-phone{display:none!important}
 }

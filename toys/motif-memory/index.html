@@ -117,14 +117,6 @@
     .dot.mem.armed { animation: none; opacity: .75 }
   }
 
-  /* The density readout sits on a black chip of its own. The bench draws it
-     with a difference blend, which splits a digit black-and-white wherever the
-     fill edge crosses it; at 50% the edge runs through the middle of the
-     number and "50%" read "5O%". On the chip it is white on black at every
-     value, over the fill and over the empty bar alike. */
-  .rack .gate .gpct { mix-blend-mode: normal; background: #000; color: #fff;
-    padding: 0 3px; border-radius: 3px; line-height: 16px; }
-
   /* The roll's legend: one line per mark, each beside a small copy of it. */
   #mm-legend { display: flex; flex-wrap: wrap; gap: 4px 22px; margin: 8px 2px 0;
     font-family: var(--fp); font-size: 14px; line-height: 1.4; color: var(--dim); }

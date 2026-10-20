@@ -738,8 +738,9 @@ so a toy never draws its own.
   no hash, no state in the link, and nothing collected. The button carries its
   own `data-hint`. `Lab.page` places it at the foot of a declared teaser
   (`teaser.share`); a page without one may place it itself.
-- `Lab.shell.feedback({endpoint?})` → `{el, field, send}`. **One text field
-  to the maker**: a `form.pp-feedback` holding a three-row textarea
+- `Lab.shell.feedback({endpoint?})` → `{box, el, field, send}`. **One text
+  field to the maker**: `box` is a titled panel (`Lab.ui.panel`) headed
+  **Feedback**, holding `el`, a `form.pp-feedback` with a three-row textarea
   (`field`), a hidden honeypot and a **Send** button. **The page sends
   nothing unless the visitor presses Send, and then nothing but the message
   and the page's own URL**, posted as JSON `{message, page}` to `endpoint`,
@@ -1133,8 +1134,9 @@ text, small }` (`small` reads whether the page is in its teaser mode now), or
 
 **The feedback field** (`Lab.shell.feedback`) sits after the keys line and
 before the footer, at every width and outside the armed region, so a press
-or a key in it never starts the audio. It is a bare block, not a titled
-panel. `page.feedback` is the component's `{el, field, send}`, or `null`
+or a key in it never starts the audio. It is the house titled panel, headed
+**Feedback**, and the page appends its `box`. `page.feedback` is the
+component's `{box, el, field, send}`, or `null`
 under `feedback: false`; an object passed as `feedback` is the component's
 options.
 

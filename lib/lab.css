@@ -437,11 +437,12 @@ code{color:var(--duple);font-size:.9em}
 .pp-teaser-foot .pp-invite{margin:0 0 12px}
 
 /* ---- the feedback field (Lab.shell.feedback) ----
-   On every page, at every width, after the standing text: a field the width
-   of the text column with Send beside it, wrapping beneath where the row is
-   too narrow, as a `.bar` wraps. White on black, like every interactive
-   thing here; no hue. */
-.pp-feedback{display:flex;flex-wrap:wrap;gap:11px;align-items:flex-end;max-width:900px;margin:24px 0 0}
+   On every page, at every width, after the standing text: a titled panel
+   (`.blk`) as wide as the text column, holding a field with Send beside it,
+   wrapping beneath where the row is too narrow, as a `.bar` wraps. White on
+   black, like every interactive thing here; no hue. */
+.pp-feedback-box{max-width:900px;margin:24px 0 0}
+.pp-feedback{display:flex;flex-wrap:wrap;gap:11px;align-items:flex-end}
 .pp-feedback-field{flex:1 1 320px;min-width:0;background:#0a0b0f;color:var(--ink);
   border:1px solid var(--line2);border-radius:6px;padding:8px 10px;font:inherit;font-size:15px;
   line-height:1.45;resize:vertical}

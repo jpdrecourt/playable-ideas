@@ -727,8 +727,8 @@ so a toy never draws its own.
   tells a phone visitor once that the toys are built for a large screen. It
   shows below the teaser width, and on a page with a teaser the composition
   moves it from the head to the teaser's foot.
-- `Lab.shell.share({text, url?, label?, hint?})` → `{el}`. **"Send this to
-  myself"**: a bench button that hands the page's link to the phone's share
+- `Lab.shell.share({text, url?, label?, hint?})` → `{el}`. A bench
+  button labelled **Share** that hands the page's link to the phone's share
   sheet (`navigator.share` with `document.title`, `text` and the url, where it
   exists and `canShare` agrees). Where there is no sheet it copies the link
   (`navigator.clipboard.writeText`) and the toast says `link copied`; where
@@ -738,6 +738,25 @@ so a toy never draws its own.
   no hash, no state in the link, and nothing collected. The button carries its
   own `data-hint`. `Lab.page` places it at the foot of a declared teaser
   (`teaser.share`); a page without one may place it itself.
+- `Lab.shell.feedback({endpoint?})` → `{el, field, send}`. **One text field
+  to the maker**: a `form.pp-feedback` holding a three-row textarea
+  (`field`), a hidden honeypot and a **Send** button. **The page sends
+  nothing unless the visitor presses Send, and then nothing but the message
+  and the page's own URL**, posted as JSON `{message, page}` to `endpoint`,
+  which defaults to the collection's one Formspree form, `FEEDBACK_ENDPOINT`
+  at the top of the share and feedback section of `shell.js`
+  (`https://formspree.io/f/mwlvdvyy`). The guard stays for a site that copies
+  the component: an endpoint still holding the `FORM_ID` placeholder warns
+  once at build, and a Send says `not wired yet` instead of fetching. An empty field sends
+  nothing and takes the caret back; a filled honeypot (`_gotcha`, off-screen
+  rather than `display:none`, which bots skip) looks like a success and sends
+  nothing. In flight the button reads `Sending…` and the field is read-only;
+  a success clears it and toasts `sent, thank you`, anything else toasts
+  `not sent; try again later` and keeps the text. Ctrl+Enter or Cmd+Enter in
+  the field sends. **The field keeps its keys**: a key typed in it stops at
+  the form, so no window-level shortcut a toy binds hears it, whether or not
+  that toy checks for a text field. `send()` is the Send press without a
+  press. `Lab.page` places it on every page; `feedback: false` drops it.
 - `Lab.shell.start({button, onStart, onStop, labels?})` → `{el, running, blocked, press(), stop()}`.
   The **audio start gesture**, Ciechanowski-style: no modal "click to begin",
   the first press on the instrument is the unlock, so the toy's own transport
@@ -842,7 +861,7 @@ them out and it does not choose the order, because the order is the
 collection's (`../DESIGN.md`, "The page, top to bottom"):
 
 > nameplate → master strip → start line → **instrument** → session bar →
-> standing text → keys → footer
+> standing text → keys → feedback → footer
 
 `Lab.page.build(decl)` builds all of it and returns the regions. New toys start
 from `toys/_template/`, which is a complete page with no mechanism built this
@@ -882,6 +901,8 @@ const page = Lab.page.build({
   writeKeys: ['Escape', {key:'KeyA', el: writeBtn | (() => el)}] | (e => bool),
   keys: '<kbd>?</kbd> …',
   onStart: () => {},                          // after the arm confirms audio
+
+  feedback: { endpoint? } | false,            // the field before the footer; on by default
 
   teaser: {                                   // the phone mode — see below
     controls: [Element | { el, hint? }],      // one or two, built by the toy
@@ -997,7 +1018,9 @@ const page = Lab.page.build({
   have been explained. `el` may be a **function**, read when the key fires: the
   controls a key stands for are often built after the page and rebuilt when the
   material changes. A plain entry disarms and nothing more. The confirm's own
-  key stays exempt exactly as its own press is.
+  key stays exempt exactly as its own press is. A key typed into a text field
+  (a textarea, a text input, a select, a contenteditable) is typing and never
+  a write key.
 
   **And `el` is what the key's exemption is read off, never the focus.** A
   confirm is not disarmed by a press on itself, or a confirm sitting inside the
@@ -1047,8 +1070,8 @@ same engine runs under both. A toy declares it; the composition does the rest.
 - **The desk.** The master strip, the rack, the session bar, the standing
   text, the keys line and every stage member not kept are marked `pp-desk`, which `lab.css` hides under
   `--teaser` (with `!important`, because a stage member is often styled by id in
-  the toy's own block). The nameplate, the start line and the footer are both
-  pages'; the standing text is the desk's, and the phone has its own
+  the toy's own block). The nameplate, the start line, the feedback field and
+  the footer are both pages'; the standing text is the desk's, and the phone has its own
   (`teaser.text`, below). **Nothing moves on resize**: the mode is CSS over one
   DOM, so the engine never learns the width changed. The kept stage members stay
   on the stage — one node cannot be both in a box the desktop hides and on the
@@ -1108,8 +1131,15 @@ control stands for.
 text, small }` (`small` reads whether the page is in its teaser mode now), or
 `null` without a teaser.
 
+**The feedback field** (`Lab.shell.feedback`) sits after the keys line and
+before the footer, at every width and outside the armed region, so a press
+or a key in it never starts the audio. It is a bare block, not a titled
+panel. `page.feedback` is the component's `{el, field, send}`, or `null`
+under `feedback: false`; an object passed as `feedback` is the component's
+options.
+
 **Returns** `{ wrap, bar, barSpacer, startLine, instrumentEl, stage, rack,
-rackWrap, globals, controls, session, textEl, setText, keysEl, statusEl,
+rackWrap, globals, controls, session, textEl, setText, keysEl, feedback, statusEl,
 setStatus, footer, h1, sub, hints, midi, bpmKnob, masterKnobs, arm | transport,
 teaser, started, everStarted, stop(), paint(), signpost(text, ms, warn),
 answer(text), declineCell(el, reason), state(), disarmConfirms() }`.

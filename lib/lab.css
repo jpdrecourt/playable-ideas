@@ -432,9 +432,26 @@ code{color:var(--duple);font-size:.9em}
 .pp-teaser input[type=range]{height:44px;width:100%}
 .pp-teaser .ictl{width:100%;gap:10px}
 .pp-teaser .kl,.pp-teaser .dial-label{font-size:13px}
-/* the foot: the invitation, then "Send this to myself" */
+/* the foot: the invitation, then the Share button */
 .pp-teaser-foot{margin:0 0 13px}
 .pp-teaser-foot .pp-invite{margin:0 0 12px}
+
+/* ---- the feedback field (Lab.shell.feedback) ----
+   On every page, at every width, after the standing text: a field the width
+   of the text column with Send beside it, wrapping beneath where the row is
+   too narrow, as a `.bar` wraps. White on black, like every interactive
+   thing here; no hue. */
+.pp-feedback{display:flex;flex-wrap:wrap;gap:11px;align-items:flex-end;max-width:900px;margin:24px 0 0}
+.pp-feedback-field{flex:1 1 320px;min-width:0;background:#0a0b0f;color:var(--ink);
+  border:1px solid var(--line2);border-radius:6px;padding:8px 10px;font:inherit;font-size:15px;
+  line-height:1.45;resize:vertical}
+.pp-feedback-field::placeholder{color:var(--faint);opacity:1}
+.pp-feedback-field:hover{border-color:var(--accent)}
+.pp-feedback-send{flex:0 0 auto}
+.pp-feedback-send:disabled{opacity:.6;cursor:default}
+/* the honeypot: drawn off-screen rather than not drawn, because a bot skips
+   what is `display:none` */
+.pp-feedback-trap{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
 
 /* the "?" toggle and the bubble it reveals.
    A tooltip renders on no touch device at all, so the hint has to become a
@@ -524,6 +541,9 @@ body.pp-hints [data-hint]{outline:1px dashed var(--line2);outline-offset:2px;cur
   .pp-desk{display:none!important}
   .pp-teaser{display:flex}
   .pp-teaser-foot,.pp-teaser-text{display:block}
+  /* the touch floor, and 16 px type so a phone does not zoom on focus */
+  .pp-feedback-field{flex-basis:100%;font-size:16px}
+  .pp-feedback-send{width:100%;min-height:44px;font-size:16px}
   /* the stage's gutter goes between the members the phone KEEPS: a hidden
      first member must not leave its successor a margin above nothing. Scoped
      to a teaser page's stage, so no page without one changes here. */

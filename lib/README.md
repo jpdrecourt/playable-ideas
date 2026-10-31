@@ -241,17 +241,20 @@ and arrives on another machine with its sample lanes empty.
 
 ## field-kit.js — the field kit
 
-A second kit for the drum set: eight field recordings by Jean-Philippe
-Drecourt standing in for `kick`, `snare`, `hat`, `tom`, `rim`, `cowbell`,
-`crash` and `pluck`, behind one switch every page inherits. Either kit plays,
-never a mix.
+A second kit: eight field recordings by Jean-Philippe Drecourt, each standing
+in for the ids the clip names, behind one switch every page inherits. Between
+them they cover eleven ids: `kick`, `snare`, `hat`, `tom`, `rim`, `cowbell`,
+`crash` and `pluck`, and the render voices `click`, `knock` and `hum`. Either
+kit plays, never a mix.
 
 - **Include** `samples.js`, `field-kit-data.js`, `field-kit.js`, in that order,
   after `voices.js` (the include block above). Without the data script it warns
   once in the console and is `null`; the page keeps its drums and has no switch.
 - **The material** is `lib/field/`: the WAVs and `kit.json`, one line per clip
-  with its id, its file, the drum id it `standsFor`, its `trim_db` and where it
-  was cut from. The mapping is that file, re-tuned by ear one line at a time.
+  with its id, its file, `standsFor` (an array: the ids the clip names, one or
+  more), its `trim_db` and where it was cut from. The mapping is that file,
+  re-tuned by ear one line at a time; a clip naming several ids is one buffer
+  sounding for each of them.
   `tools/pack-field-kit.py` encodes the WAVs to 128 kbit/s mono MP3 and writes
   `lib/field-kit-data.js` (`Lab.fieldKitData.clips`), base64 in a classic
   script, so the kit decodes on a page opened from disk. Regenerate after any
@@ -261,8 +264,8 @@ never a mix.
   `trimTail`, and scaled by
   10^(trim_db/20), the loudness match down to the quietest clip.
   `Lab.fieldKit.ready` is the promise of all eight.
-- `Lab.fieldKit.use(on)` stands every clip in for its drum id, or clears every
-  one (`Lab.voices.standIn`), waiting for `ready` if it has to, and stores the
+- `Lab.fieldKit.use(on)` stands every clip in for the ids it names, or clears
+  every one (`Lab.voices.standIn`), waiting for `ready` if it has to, and stores the
   choice; `Lab.fieldKit.active()` → `'field'` or `'drums'`. The page applies
   the stored choice at load, without writing it back.
 - **The choice is lib-wide**: `localStorage['lab:kit']` holds `'field'` or
@@ -279,13 +282,20 @@ never a mix.
   `defaults.gain`. A toy passing a gain it set by ear for a synth voice passes
   it to the recording too.
 - **A toy owes the kit nothing** but the three script tags. It must not call
-  `standIn` for the eight ids itself, or the switch and the sound disagree.
-  An id outside the eight (`knock`, `click`, a toy's own voice) keeps its own
-  sound under either kit. A toy that takes a voice's `synth` into a chain of its
-  own, rather than calling `Lab.voices.play`, never hears a stand-in, and must
-  not load the kit.
-- **Who carries it**: the template, markov, possibles and statistical-feedback
-  load the kit; virtualisation does not, because its mechanism is the synth
+  `standIn` for the kit's ids itself, or the switch and the sound disagree.
+  A sustained voice stood in for (`hum`) draws on the roll at the clip's
+  length, since a hit's `dur` is the buffer's. A toy that takes a voice's
+  `synth` into a chain of its own, rather than calling `Lab.voices.play`, never
+  hears a stand-in, and must not load the kit.
+- **The rule: every toy on the kit draws its field setup from the same eight
+  clips**, whatever ids it plays, one clip serving several ids where needed.
+  The switch is wholesale, so every voice a toy on the kit plays has a clip:
+  a new voice is its id added to a clip's line in `kit.json`, never a new
+  recording. The mechanism alone leaves an id no clip names (`ping`, `thump`)
+  on its own sound under either kit, a drum among recordings, which is the mix
+  the rule exists to prevent. No toy on the kit plays such an id.
+- **Who carries it**: the template, markov, possibles, statistical-feedback
+  and motif-memory load the kit; virtualisation does not, because its mechanism is the synth
   voices' own parameters, which a recording does not have.
 
 ## roll.js — grid piano roll

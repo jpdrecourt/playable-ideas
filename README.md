@@ -9,4 +9,4 @@ Browser audio toys, each built around one mechanism, served at [play.noisewrangl
 
 Every toy has a `spec.md` beside its page, written so an agent can rebuild the mechanism from it alone in another language, framework or hardware; `llms.txt` indexes them.
 
-CC BY 4.0 — see `LICENSE`; credit Jean-Philippe Drecourt, noisewrangler.art. This repository is the export of a private working repository; changes are made there. By [noisewrangler.art](https://noisewrangler.art).
+CC BY 4.0 — see `LICENSE`; credit Jean-Philippe Drecourt at noisewrangler.art. This repository is the export of a private working repository; changes are made there. By [noisewrangler.art](https://noisewrangler.art).

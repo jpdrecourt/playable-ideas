@@ -20,7 +20,7 @@ needs it reads the code.
 
 The mechanism is a variant of Charles Ames' statistical feedback (§1).
 
-**Licence: CC BY 4.0.** Copy it, port it, sell it; credit the author.
+**Licence: CC BY 4.0.** Copy it, port it, sell it; credit Jean-Philippe Drecourt at noisewrangler.art.
 This page lives in the Playable Ideas
 repository — <https://github.com/jpdrecourt/playable-ideas> — and its author at
 [noisewrangler.art](https://noisewrangler.art).

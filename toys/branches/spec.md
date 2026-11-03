@@ -23,7 +23,7 @@ needs it reads the code.
 The tree is the dictionary of Incremental Parsing as Assayag and Dubnov use it
 for machine improvisation (§1), with its learning half removed.
 
-**Licence: CC BY 4.0.** Copy it, port it, sell it; credit the author.
+**Licence: CC BY 4.0.** Copy it, port it, sell it; credit Jean-Philippe Drecourt at noisewrangler.art.
 This page lives in the Playable Ideas
 repository — <https://github.com/jpdrecourt/playable-ideas> — and its author at
 [noisewrangler.art](https://noisewrangler.art).

@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>statistical-feedback</title>
-<meta name="description" content="Randomness that keeps count. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
+<meta name="description" content="Dice with memories.">
 <meta property="og:title" content="statistical-feedback — Playable Ideas">
-<meta property="og:description" content="Randomness that keeps count. One option per pulse, from six voices and a silence. Based on Charles Ames’ statistical feedback.">
-<meta property="og:image" content="https://play.noisewrangler.art/statistical-feedback/og.png">
-<meta property="og:url" content="https://play.noisewrangler.art/statistical-feedback/">
+<meta property="og:description" content="Dice with memories.">
+<meta property="og:image" content="https://play.noisewrangler.art/toys/statistical-feedback/og.png">
+<meta property="og:url" content="https://play.noisewrangler.art/toys/statistical-feedback/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Noise Wrangler">
 <link rel="alternate" type="text/markdown" href="spec.md" title="statistical-feedback — mechanism spec">
@@ -188,6 +188,7 @@
 <script src="../../lib/audio.js"></script>
 <script src="../../lib/clock.js"></script>
 <script src="../../lib/voices.js"></script>
+<script src="../../lib/samples.js"></script>
 <script src="../../lib/roll.js"></script>
 <script src="../../lib/ui.js"></script>
 <script src="../../lib/shell.js"></script>
@@ -1140,10 +1141,7 @@ const RUNNING = {
 
 page = Lab.page.build({
   title: 'statistical-feedback',
-  /* Two lines at 1440. The clause after Ames' name says what he noticed, so
-     the name is a credit and not a gate. */
-  shows: 'Randomness that keeps count. One option per pulse, from six voices and a silence. ' +
-    'Based on Charles Ames’ statistical feedback: the option furthest behind its fair share plays next.',
+  shows: 'Dice with memories.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING (no remote configured yet)
   site: 'https://noisewrangler.art',
@@ -1245,13 +1243,8 @@ page = Lab.page.build({
   session: [resetBtn, Lab.state.buttons()],
 
   text: [
-    { head: 'Press Play.', body: 'One option is chosen per pulse. The bar beside each option ' +
-      'shows how much it is due. The further right, the likelier it plays next.' },
-    { head: 'Weight and stress.', body: 'Weight is how often. Stress makes a turn cost more, ' +
-      'so a voice taken on a heavy step stays away longer.' },
-    { head: 'Heterogeneity.', body: 'A low weight makes a voice rare. At 0 a rare voice comes ' +
-      'round at even gaps. Turn it up and the gaps grow uneven, while every voice keeps ' +
-      'its share.' }
+    { head: 'Listen.', body: 'Turn heterogeneity up. The gaps between a voice’s turns become ' +
+      'irregular, but each voice still plays as often.' }
   ],
 
   keys: '<kbd>Space</kbd> play or stop · ' +
@@ -1276,13 +1269,10 @@ page = Lab.page.build({
             'desktop page.',
       running: () => (lastHand === 'het' ? RUNNING.het : RUNNING.idle)()
     },
-    share: { text: 'Six voices take turns by who is most due. The weights are on the desktop page.' },
-    /* The phone's standing text: only what the phone shows — Play, the dial
-       and the record — and the claim in the visitor's words. */
-    text: [{ head: 'Press Play.', body: 'One option is chosen per pulse, from six voices and a ' +
-      'silence. The bar beside each lane shows how much that voice is due: it grows while ' +
-      'the voice waits and drops when it plays. At heterogeneity 0 a rare voice comes round ' +
-      'at even gaps; turn it up and the gaps grow uneven. The desktop page sets the weights.' }]
+    share: { text: 'Dice with memories.' },
+    /* The phone's standing text: one listening instruction for the phone's dial. */
+    text: [{ head: 'Listen.', body: 'Turn heterogeneity up. The gaps between a voice’s turns become ' +
+      'irregular, but each voice still plays as often.' }]
   }
 });
 

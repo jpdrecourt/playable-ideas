@@ -20,7 +20,9 @@ the lib at `../../lib/`):
 <script src="../../lib/audio.js"></script>
 <script src="../../lib/clock.js"></script>
 <script src="../../lib/voices.js"></script>
-<script src="../../lib/samples.js"></script>   <!-- only if the toy loads audio files -->
+<script src="../../lib/samples.js"></script>   <!-- if the toy loads audio files, or the field kit -->
+<script src="../../lib/field-kit-data.js"></script>  <!-- the field kit: its material… -->
+<script src="../../lib/field-kit.js"></script>       <!-- …and the switch; after voices.js and samples.js -->
 <script src="../../lib/roll.js"></script>
 <script src="../../lib/ui.js"></script>
 <script src="../../lib/shell.js"></script>     <!-- after ui.js: start() reports through Lab.ui.status -->
@@ -30,6 +32,8 @@ the lib at `../../lib/`):
 ```
 
 `audio.js` stands alone; `clock.js`, `voices.js`, `roll.js`, `samples.js` each need `audio.js`;
+`field-kit.js` needs `voices.js`, `samples.js` and `field-kit-data.js` before it, and `Lab.ui`
+by the time `Lab.page` builds;
 `roll.js` auto-subscribes to `voices.js` when present but also works on manual
 `push()` alone. `ui.js` depends only on `lab.css` markup conventions —
 audio-independent except `masterFx`, which drives `Lab.audio`, and `rack`, whose
@@ -97,6 +101,18 @@ to threshold `−30·g` dB and ratio `1+3·g` (0 = transparent, 1 = heavy; the d
     repitched via playbackRate under a 2 ms fade-in that declicks an editor's hard
     cut. `setSample(id, null)` empties it again; a voice with no buffer is silent —
     `play` returns `false`, so a toy can run its lanes empty-handed.
+  - **A stand-in**, for a voice of any kind: `Lab.voices.standIn(id, buffer)` sets
+    a buffer that sounds *instead of* the voice's own sound, and
+    `standIn(id, null)` gives the sound back; `Lab.voices.standingIn()` lists the
+    ids currently stood in for. While one is set, `play(id)` takes the sample
+    path with that buffer — repitch, 2 ms fade-in, `hold`/`holdFrac`, `steal` as
+    the call or the voice's defaults say — and ignores `decay`, which shapes the
+    synth envelope. The gain is `opts.gain` if the call gives one, else **1**:
+    never `defaults.gain`, which is an ear's trim for the voice's own sound,
+    while a stand-in carries its own loudness match in the buffer. The event has
+    the usual shape, `dur` from the buffer. The swap is read inside `play`, so a
+    hit already scheduled keeps the source it was scheduled with. The field kit
+    (`field-kit.js`, below) is built on it.
   - `defaults`: `{ gain, decay, semi, pan, steal }`.
 - `Lab.voices.play(id, when, opts)` — opts
   `{ gain, semi, decay, pan, steal, shade, hold, holdFrac }` over the voice
@@ -188,14 +204,31 @@ autosave.
   all of those cases.
 - `Lab.samples.decode(file)` → Promise&lt;AudioBuffer&gt;, peak-normalized to 0.9 so
   a toy's gain knobs mean the same thing whatever the file was mastered at. Rejects
-  on a file the browser can't decode; works before the first gesture (a suspended
-  context decodes fine).
+  on a file the browser can't decode; works before the first gesture.
+
+  **Decoding never builds the live AudioContext**, because a page decodes at
+  load and GROUNDING has the context constructed inside a gesture. Every decode
+  uses `Lab.audio.ctx` when it already exists, and otherwise a one-frame
+  `OfflineAudioContext` at 44.1 kHz kept for decoding alone. A buffer decoded
+  there plays on a 48 kHz context unchanged: the buffer source resamples it.
+- `Lab.samples.trimLead(buf, thresholdDb = -40, preMs = 2)` → a new AudioBuffer
+  starting `preMs` before the first sample whose absolute value exceeds the
+  buffer's peak × 10^(thresholdDb/20), same channels and rate; the input itself
+  when nothing exceeds. An MP3 carries about 25 ms of encoder and decoder
+  padding ahead of the sound, and browsers differ on whether they strip it, so
+  trimming on the onset is what makes the sound start when the schedule says,
+  whatever the decoder did. `Lab.samples.trimTail(buf, thresholdDb = -60,
+  postMs = 5)` is its other end: a new AudioBuffer ending `postMs` after the
+  last sample above the peak × 10^(thresholdDb/20), the input itself when
+  nothing exceeds. The same padding follows the sound, and without the cut a
+  buffer's duration, which is a hit's `dur` and what `holdFrac` is a fraction
+  of, runs about 25 ms past the last audible sample. Its threshold is lower
+  because a tail is a fade.
 - `Lab.samples.peek(key)` → `{ name }` or null — **what is stored, without
-  waking the audio.** `restore` decodes and decoding calls `Lab.audio.init`, so
-  a page restoring a persisted sample at load builds its AudioContext there,
-  which GROUNDING forbids. `take(key)` → `{ name, decode() }` hands back the
-  record with the decode behind a call the page makes once a gesture has
-  happened: show the name on the lane, decode at the first press.
+  decoding it**: the name for the lane at load, at the cost of one IndexedDB
+  read. `take(key)` → `{ name, decode() }` hands back the record with the
+  decode behind a call the page makes when it wants the audio, typically at
+  the first press, which then decodes into the context that press built.
 - `Lab.samples.store(key, file)` / `restore(key)` → `{ name, buffer }` or null /
   `clear(key)` — IndexedDB (`lab-samples`), string keys, one record per key. The
   FILE is what's stored, not the decoded buffer: decoding is cheap and the context's
@@ -205,6 +238,65 @@ autosave.
 Pair it with `Lab.state` by keeping only the *filename* in the toy's params (display
 state) and letting IndexedDB hold the audio — a state file stays small and portable,
 and arrives on another machine with its sample lanes empty.
+
+## field-kit.js — the field kit
+
+A second kit: eight field recordings by Jean-Philippe Drecourt, each standing
+in for the ids the clip names, behind one switch every page inherits. Between
+them they cover eleven ids: `kick`, `snare`, `hat`, `tom`, `rim`, `cowbell`,
+`crash` and `pluck`, and the render voices `click`, `knock` and `hum`. Either
+kit plays, never a mix.
+
+- **Include** `samples.js`, `field-kit-data.js`, `field-kit.js`, in that order,
+  after `voices.js` (the include block above). Without the data script it warns
+  once in the console and is `null`; the page keeps its drums and has no switch.
+- **The material** is `lib/field/`: the WAVs and `kit.json`, one line per clip
+  with its id, its file, `standsFor` (an array: the ids the clip names, one or
+  more), its `trim_db` and where it was cut from. The mapping is that file,
+  re-tuned by ear one line at a time; a clip naming several ids is one buffer
+  sounding for each of them.
+  `tools/pack-field-kit.py` encodes the WAVs to 128 kbit/s mono MP3 and writes
+  `lib/field-kit-data.js` (`Lab.fieldKitData.clips`), base64 in a classic
+  script, so the kit decodes on a page opened from disk. Regenerate after any
+  change in `lib/field/` and commit the three together.
+- **At load** every clip is decoded with `Lab.samples.decodeBase64`,
+  unconditionally, trimmed to its onset and its tail with `trimLead` and
+  `trimTail`, and scaled by
+  10^(trim_db/20), the loudness match down to the quietest clip.
+  `Lab.fieldKit.ready` is the promise of all eight.
+- `Lab.fieldKit.use(on)` stands every clip in for the ids it names, or clears
+  every one (`Lab.voices.standIn`), waiting for `ready` if it has to, and stores the
+  choice; `Lab.fieldKit.active()` → `'field'` or `'drums'`. The page applies
+  the stored choice at load, without writing it back.
+- **The choice is lib-wide**: `localStorage['lab:kit']` holds `'field'` or
+  `'drums'`, so one choice follows a visitor across the toys. Anything but
+  `'field'`, a missing key and a garbage value included, is drums; storage that
+  throws is a page without memory of the choice, not a broken page.
+- `Lab.fieldKit.control()` → the switch, `Lab.ui.inline('sounds', button)`
+  with the button's face reading `drums` or `field` and a `data-hint`;
+  `Lab.fieldKit.says` is its cold-hand reason. A press while the kit is still
+  decoding waits for it, then flips. **`Lab.page` lays the switch out itself**,
+  after the toy's own `controls` in the master strip, so a toy declares nothing.
+- **The gain rule** is the stand-in's: a call's own `gain` is kept, and a call
+  with none sounds the recording at unity, never at the synth's
+  `defaults.gain`. A toy passing a gain it set by ear for a synth voice passes
+  it to the recording too.
+- **A toy owes the kit nothing** but the three script tags. It must not call
+  `standIn` for the kit's ids itself, or the switch and the sound disagree.
+  A sustained voice stood in for (`hum`) draws on the roll at the clip's
+  length, since a hit's `dur` is the buffer's. A toy that takes a voice's
+  `synth` into a chain of its own, rather than calling `Lab.voices.play`, never
+  hears a stand-in, and must not load the kit.
+- **The rule: every toy on the kit draws its field setup from the same eight
+  clips**, whatever ids it plays, one clip serving several ids where needed.
+  The switch is wholesale, so every voice a toy on the kit plays has a clip:
+  a new voice is its id added to a clip's line in `kit.json`, never a new
+  recording. The mechanism alone leaves an id no clip names (`ping`, `thump`)
+  on its own sound under either kit, a drum among recordings, which is the mix
+  the rule exists to prevent. No toy on the kit plays such an id.
+- **Who carries it**: the template, markov, branches, statistical-feedback
+  and motif-memory load the kit; virtualisation does not, because its mechanism is the synth
+  voices' own parameters, which a recording does not have.
 
 ## roll.js — grid piano roll
 
@@ -700,7 +792,7 @@ The head carries one obligation of the same kind: the collection's icon lives in
 `lib/icon` and every page links it with the five tags `toys/_template/` carries,
 so a toy never draws its own.
 
-- `Lab.shell.frame({title, shows, spec?, repo?, site?, licence?, invite?, home?, mount?})`
+- `Lab.shell.frame({title, shows, spec?, repo?, site?, licence?, licenceUrl?, invite?, home?, mount?})`
   → `{h1, sub, invite|null, footer}`. Inserts the nameplate at the top of the mount
   (default `.wrap`) and the footer at the end, and sets `document.title`.
 
@@ -722,9 +814,9 @@ so a toy never draws its own.
   already ends on: all toys · spec · source · site · licence. **All toys** links
   back to the toy list, `../../` from a toy page; `home:` points it elsewhere and
   `home: false` drops it. The **invitation** exists
-  only when the toy passes `invite:` a non-empty string, and `invite` is null
-  otherwise. The library has no invitation text of its own: the front page
-  tells a phone visitor once that the toys are built for a large screen. It
+  only when `invite:` is a non-empty string, and `invite` is null otherwise;
+  `Lab.page` passes its own sentence (`Lab.page.INVITE`) on every page with a
+  teaser, so a toy only names one to override it. It
   shows below the teaser width, and on a page with a teaser the composition
   moves it from the head to the teaser's foot.
 - `Lab.shell.share({text, url?, label?, hint?})` → `{el}`. A bench
@@ -870,7 +962,7 @@ way; read it beside this section.
 
 ```js
 const page = Lab.page.build({
-  title, shows, spec, repo, site, licence, invite,   // → Lab.shell.frame
+  title, shows, spec, repo, site, licence, licenceUrl, invite,   // → Lab.shell.frame
   mount: '.wrap',
 
   master: {} | false,          // masterFx opts, or no master chain
@@ -939,7 +1031,9 @@ const page = Lab.page.build({
   presses Play first and then acts. `controls` is the other master-strip slot,
   for a toy-global control that only shapes the page: it stays outside the arm
   and answers a cold hand, exactly as the master chain does. Pass an element, or
-  `{el, says}` for its own sentence.
+  `{el, says}` for its own sentence. On a page that loads `field-kit.js`, the
+  composition appends `Lab.fieldKit.control()` after the toy's own controls,
+  with `Lab.fieldKit.says` as its reason, so no toy declares the kit switch.
 - **The start line.** One computed state — *not started · nothing built ·
   stuck · shut · running* — worded by the toy, painted only when its text
   changes (it is `role="status"`, and a status rewritten five times a second is
@@ -1109,8 +1203,9 @@ same engine runs under both. A toy declares it; the composition does the rest.
   gate, a dot and a slider are at least 44 px, a button is as wide as the
   column, the gaps are a thumb apart, labels are visible. The region fits 390 px
   with no horizontal overflow.
-- **The invitation** is `teaser.invite`, else the page's `invite`; with
-  neither there is none. **The share
+- **The invitation** is `teaser.invite`, else the page's `invite`, else
+  `Lab.page.INVITE` ("This is the phone version. Open this page on a computer
+  for all the controls."); `invite: false` drops it. **The share
   button** is `Lab.shell.share(teaser.share)`; `share: false` drops it.
 - **The phone's standing text** is `teaser.text`. The page's own standing
   text describes the desk — the rack, the strips, the session bar — so with a

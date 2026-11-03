@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>markov</title>
-<meta name="description" content="Two first-order Markov chains, four states each, thirty-two weights. Each voice looks one step ahead. Set the weights by hand and listen to what one step of memory gives you.">
+<meta name="description" content="Chain events by probability, with one step of memory.">
 <meta property="og:title" content="markov — Playable Ideas">
-<meta property="og:description" content="Two voices, three sounds and a rest each. Each looks one step ahead: a matrix of what may follow what, and a dial for how strictly it is followed.">
-<meta property="og:image" content="https://play.noisewrangler.art/markov/og.png">
-<meta property="og:url" content="https://play.noisewrangler.art/markov/">
+<meta property="og:description" content="Chain events by probability, with one step of memory.">
+<meta property="og:image" content="https://play.noisewrangler.art/toys/markov/og.png">
+<meta property="og:url" content="https://play.noisewrangler.art/toys/markov/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Noise Wrangler">
 <link rel="alternate" type="text/markdown" href="spec.md" title="markov — mechanism spec">
@@ -195,6 +195,7 @@
 <script src="../../lib/audio.js"></script>
 <script src="../../lib/clock.js"></script>
 <script src="../../lib/voices.js"></script>
+<script src="../../lib/samples.js"></script>
 <script src="../../lib/ui.js"></script>
 <script src="../../lib/shell.js"></script>
 <script src="../../lib/page.js"></script>
@@ -874,8 +875,7 @@ function allMuted() {
 
 const page = Lab.page.build({
   title: 'markov',
-  shows: 'Two voices, three sounds and a rest each. Each looks one step ahead: ' +
-         'a matrix of what may follow what, and a dial for how strictly it is followed.',
+  shows: 'Chain events by probability, with one step of memory.',
   spec: 'spec.md',
   // repo: '…',            ← SET BEFORE PUBLISHING
   site: 'https://noisewrangler.art',
@@ -984,16 +984,8 @@ const page = Lab.page.build({
   session: [clearBtn, reseedBtn, seedEl, Lab.state.buttons()],
 
   text: [
-    { head: 'Write.', body: 'A strip is a sound, or the rest. Its four cells set ' +
-      'what may follow it. Tap a cell to add weight, hold it to clear. Each voice ' +
-      'steps through the strips, one step per sixteenth.' },
-    { head: 'Listen.', body: 'Lean kick toward hat, hat toward snare, snare back ' +
-      'toward kick. Each step depends on the one before, so the result has a style ' +
-      'and it varies from bar to bar.' },
-    { head: 'Two steps.', body: 'Build kick, hat, kick, snare. After any kick the ' +
-      'walker picks hat or snare by its weights alone: it remembers one step, not ' +
-      'two. Watch the trail: kick hat kick hat and kick snare kick snare keep ' +
-      'turning up.' }
+    { head: 'Listen.', body: 'Give kick a high weight to hat, hat to snare, snare to kick. You hear ' +
+      'a style, but never the same phrase twice.' }
   ],
 
   keys: '<kbd>Space</kbd> play or stop · ' +
@@ -1021,15 +1013,9 @@ const page = Lab.page.build({
         ? 'turn structure down and the steps stop following the squares.'
         : 'turn structure up and the steps follow the squares again.')
     },
-    share: { text: 'Two voices, one step of memory each. The desktop page writes ' +
-                   'the matrices.' },
-    /* The phone's standing text: only what the phone shows, the matrices, the
-       dial and the trail. */
-    text: [{ head: 'Watch, then turn.', body: 'Each row of a matrix is a sound. Its ' +
-      'squares say what may come next, in that sound’s colour: an empty cell ' +
-      'never, a small square sometimes, a big one often. The lit row is where ' +
-      'each walker stands. At structure 1 the walkers follow the ' +
-      'squares; at 0 every step is a quarter chance.' }]
+    share: { text: 'Chain events by probability, with one step of memory.' },
+    /* The phone's standing text: one listening instruction for the phone's dial. */
+    text: [{ head: 'Listen.', body: 'Turn structure down and listen to the style disappear.' }]
   }
 });
 

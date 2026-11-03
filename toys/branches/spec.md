@@ -1,4 +1,4 @@
-# possibles — mechanism spec
+# branches — mechanism spec
 
 A tree of symbols, written by hand, is read aloud on a fixed lattice of one
 symbol per cell. Each node is a motif, spelled by its path from the root, and
@@ -23,8 +23,8 @@ needs it reads the code.
 The tree is the dictionary of Incremental Parsing as Assayag and Dubnov use it
 for machine improvisation (§1), with its learning half removed.
 
-**Licence: CC0.** Copy it, port it, sell it, no attribution required.
-Attribution is nonetheless welcome: this page lives in the Playable Ideas
+**Licence: CC BY 4.0.** Copy it, port it, sell it; credit the author.
+This page lives in the Playable Ideas
 repository — <https://github.com/jpdrecourt/playable-ideas> — and its author at
 [noisewrangler.art](https://noisewrangler.art).
 

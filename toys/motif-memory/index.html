@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>motif-memory</title>
-<meta name="description" content="Five random voices on one pulse. A switch makes a voice loop the last two bars it played; a fidelity dial degrades the loop back into invention.">
+<meta name="description" content="Memorise the last two bars, replay them, and hear how far you can degrade them.">
 <meta property="og:title" content="motif-memory — Playable Ideas">
-<meta property="og:description" content="A voice loops the two bars it just played. One dial degrades the loop toward invention; try to hear where the memory ends.">
-<meta property="og:image" content="https://play.noisewrangler.art/motif-memory/og.png">
-<meta property="og:url" content="https://play.noisewrangler.art/motif-memory/">
+<meta property="og:description" content="Memorise the last two bars, replay them, and hear how far you can degrade them.">
+<meta property="og:image" content="https://play.noisewrangler.art/toys/motif-memory/og.png">
+<meta property="og:url" content="https://play.noisewrangler.art/toys/motif-memory/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Noise Wrangler">
 <link rel="alternate" type="text/markdown" href="spec.md" title="motif-memory — mechanism spec">
@@ -144,6 +144,7 @@
 <script src="../../lib/audio.js"></script>
 <script src="../../lib/clock.js"></script>
 <script src="../../lib/voices.js"></script>
+<script src="../../lib/samples.js"></script>
 <script src="../../lib/ui.js"></script>
 <script src="../../lib/shell.js"></script>
 <script src="../../lib/page.js"></script>
@@ -1140,8 +1141,7 @@ const PHONE_RUNNING = {
 };
 
 /* The blurb, in the nameplate. */
-const shows = 'Five random voices on one pulse. Choose to replay the last two bars, ' +
-  'and how far to degrade the loops.';
+const shows = 'Memorise the last two bars, replay them, and hear how far you can degrade them.';
 
 /* ============================================================
    THE PAGE
@@ -1297,11 +1297,8 @@ const page = Lab.page.build({
   session: [resetBtn, reseedBtn, seedEl, Lab.state.buttons()],
 
   text: [
-    { head: 'Replay.', body: 'Every voice memorises the last two bars it played. ' +
-      'Throw its MEM switch and it loops them indefinitely.' },
-    { head: 'Degrade.', body: 'Dial fidelity down and replay gives way to invention.' },
-    { head: 'The claim.', body: 'Memory is a state of a voice. Try to hear where it ' +
-      'ends as you degrade it.' }
+    { head: 'Listen.', body: 'Press MEM on a voice, then turn its fidelity down. Try to hear where ' +
+      'the memory ends.' }
   ],
 
   keys: '<kbd>Space</kbd> play or stop · ' +
@@ -1328,12 +1325,9 @@ const page = Lab.page.build({
             'page can change that.',
       running: () => PHONE_RUNNING[handState()]
     },
-    /* The phone's standing text: what the phone shows, and the claim. */
-    text: [{ head: 'Replay, then degrade.', body: 'Press all: from the next bar ' +
-      'each voice loops the last two bars it played. Dial fidelity down and replay ' +
-      'gives way to invention. Try to hear where the memory ends.' }],
-    share: { text: 'Five random voices loop what they just played; one dial degrades ' +
-                   'the loops. The full rack wants a desktop.' }
+    /* The phone's standing text: one listening instruction for the phone's dial. */
+    text: [{ head: 'Listen.', body: 'Press all, then turn fidelity down. Try to hear where the memory ends.' }],
+    share: { text: 'Memorise the last two bars, replay them, and hear how far you can degrade them.' }
   }
 });
 
